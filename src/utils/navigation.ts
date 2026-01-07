@@ -154,7 +154,7 @@ export const NavigationConfig = {
         baseUrl: ''
     },
     production: {
-        baseUrl: '/blog' // Set this for GitHub Pages deployment
+        baseUrl: '' // Empty for custom domain (victor-retamal.com)
     }
 };
 

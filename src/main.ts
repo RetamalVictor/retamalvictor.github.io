@@ -47,9 +47,9 @@ class Portfolio {
         const siteConfig = config.getSiteConfig();
         const pages = siteConfig.pages;
 
-        // Set base path for production
+        // Set base path - empty for custom domain (victor-retamal.com)
         const environment = process.env.NODE_ENV === 'production' ? 'production' : 'development';
-        const basePath = environment === 'production' ? '/blog' : '';
+        const basePath = '';
 
         this.router = new Router(basePath);
         this.router.addRoute('/', this.renderHomePage.bind(this), pages.home);
