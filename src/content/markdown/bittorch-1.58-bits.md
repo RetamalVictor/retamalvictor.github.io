@@ -322,6 +322,18 @@ This project also reinforced a quieter lesson: correctness comes first. Quantiza
 
 If any of this sounds familiar, you're probably the intended audience.
 
+---
+
+## Live Demo
+
+Want to see ternary inference in action? The demo below runs a character-level language model entirely in your browser using WebGPU. The model uses 1.58-bit ternary weights—the same technique described above.
+
+<div id="ternary-lm-demo" class="my-8 not-prose"></div>
+
+Type a prompt and click "Generate" to watch character-by-character text generation powered by {-1, 0, +1} weights. Click "Under the Hood" to see memory savings and model architecture.
+
+---
+
 ### Try it yourself
 
 The code lives here:

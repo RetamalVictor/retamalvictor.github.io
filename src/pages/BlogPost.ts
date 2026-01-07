@@ -34,6 +34,7 @@ export class BlogPostPage {
     private allPosts: BlogPost[] = [];
     private prevPost: BlogPost | null = null;
     private nextPost: BlogPost | null = null;
+    private ternaryDemo: any = null;  // TernaryLMDemo instance
 
     constructor(container: HTMLElement) {
         this.container = container;
@@ -281,6 +282,9 @@ export class BlogPostPage {
         // Initialize math rendering if content contains math
         this.initializeMathRendering();
         this.initializeSyntaxHighlighting();
+
+        // Initialize embedded demos
+        this.initializeEmbeddedDemos();
     }
 
     private renderNotFound(): void {
@@ -403,6 +407,29 @@ export class BlogPostPage {
         }
     }
 
+    private initializeEmbeddedDemos(): void {
+        // Check for ternary LM demo container
+        const ternaryContainer = document.getElementById('ternary-lm-demo');
+        if (ternaryContainer) {
+            // Lazy load the demo component
+            import('../components/ternary').then(({ TernaryLMDemo }) => {
+                try {
+                    this.ternaryDemo = new TernaryLMDemo({
+                        containerId: 'ternary-lm-demo',
+                        modelPath: '/assets/models/browser_char_lm.tbin',
+                        maxTokens: 150,
+                        defaultPrompt: 'ROMEO: ',
+                    });
+                    console.log('Ternary LM demo initialized');
+                } catch (error) {
+                    console.error('Failed to initialize ternary demo:', error);
+                }
+            }).catch(error => {
+                console.error('Failed to load ternary demo module:', error);
+            });
+        }
+    }
+
     private addCopyButton(pre: HTMLElement, codeBlock: HTMLElement): void {
         // Create copy button
         const copyBtn = createElement('button',
@@ -483,6 +510,10 @@ export class BlogPostPage {
     }
 
     public destroy(): void {
-        // Cleanup if needed
+        // Cleanup demos
+        if (this.ternaryDemo) {
+            this.ternaryDemo.destroy();
+            this.ternaryDemo = null;
+        }
     }
 }

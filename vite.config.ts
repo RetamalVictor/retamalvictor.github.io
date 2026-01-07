@@ -4,6 +4,8 @@ import { resolve } from 'path';
 export default defineConfig({
   // Use root base for custom domain deployment
   base: '/',
+  // Include binary model files as assets
+  assetsInclude: ['**/*.tbin'],
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),

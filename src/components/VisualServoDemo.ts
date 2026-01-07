@@ -61,8 +61,8 @@ export class VisualServoDemo {
 
     // Constants
     private readonly TARGET_SIZE = 1.0;
-    private readonly CAMERA_WIDTH = 192;
-    private readonly CAMERA_HEIGHT = 144;
+    private cameraWidth: number = 192;
+    private cameraHeight: number = 144;
 
     constructor(config: VisualServoDemoConfig) {
         this.container = document.getElementById(config.containerId)!;
@@ -81,6 +81,11 @@ export class VisualServoDemo {
 
     private async init(): Promise<void> {
         this.container.innerHTML = '';
+
+        // Set camera panel size based on screen width (responsive)
+        const isMobile = window.innerWidth < 640;
+        this.cameraWidth = isMobile ? 120 : 192;
+        this.cameraHeight = isMobile ? 90 : 144;
 
         try {
             this.setupRenderer();
@@ -308,8 +313,8 @@ export class VisualServoDemo {
         // Create drone's camera
         this.droneCamera = new PinholeCamera({
             focalLength: 8,
-            sensorWidth: this.CAMERA_WIDTH,
-            sensorHeight: this.CAMERA_HEIGHT,
+            sensorWidth: this.cameraWidth,
+            sensorHeight: this.cameraHeight,
             sensorSizeMM: 36
         });
 
@@ -364,21 +369,22 @@ export class VisualServoDemo {
 
     private createCameraView(): void {
         this.cameraPipContainer = document.createElement('div');
-        this.cameraPipContainer.className = 'absolute bottom-3 left-3 rounded-lg overflow-hidden border border-dark-border bg-dark-surface/90 shadow-lg';
-        this.cameraPipContainer.style.width = `${this.CAMERA_WIDTH}px`;
+        this.cameraPipContainer.className = 'absolute bottom-2 left-2 sm:bottom-3 sm:left-3 rounded-lg overflow-hidden border border-dark-border bg-dark-surface/90 shadow-lg';
+        this.cameraPipContainer.style.width = `${this.cameraWidth}px`;
         this.cameraPipContainer.style.zIndex = '10';
 
         this.cameraCanvas = document.createElement('canvas');
-        this.cameraCanvas.width = this.CAMERA_WIDTH;
-        this.cameraCanvas.height = this.CAMERA_HEIGHT;
+        this.cameraCanvas.width = this.cameraWidth;
+        this.cameraCanvas.height = this.cameraHeight;
         this.cameraCanvas.className = 'block';
         this.cameraPipContainer.appendChild(this.cameraCanvas);
 
         this.cameraCtx = this.cameraCanvas.getContext('2d')!;
 
-        // Control bar
+        // Control bar (smaller on mobile)
+        const isMobile = window.innerWidth < 640;
         const controlBar = document.createElement('div');
-        controlBar.className = 'flex items-center justify-between px-2 py-1 bg-dark-bg/50 text-xs';
+        controlBar.className = `flex items-center justify-between px-1.5 py-0.5 sm:px-2 sm:py-1 bg-dark-bg/50 ${isMobile ? 'text-[10px]' : 'text-xs'}`;
 
         const toggleBtn = document.createElement('button');
         toggleBtn.className = 'text-gray-400 hover:text-accent-cyan transition-colors';
@@ -401,8 +407,8 @@ export class VisualServoDemo {
 
     private renderCameraView(): void {
         const ctx = this.cameraCtx;
-        const w = this.CAMERA_WIDTH;
-        const h = this.CAMERA_HEIGHT;
+        const w = this.cameraWidth;
+        const h = this.cameraHeight;
 
         ctx.fillStyle = '#12121a';
         ctx.fillRect(0, 0, w, h);
@@ -430,8 +436,8 @@ export class VisualServoDemo {
         currentFeatures: Float32Array,
         visible: boolean[]
     ): void {
-        const w = this.CAMERA_WIDTH;
-        const h = this.CAMERA_HEIGHT;
+        const w = this.cameraWidth;
+        const h = this.cameraHeight;
 
         // Crosshair
         ctx.strokeStyle = '#333';
