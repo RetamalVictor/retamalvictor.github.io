@@ -9,6 +9,7 @@ import heroTemplate from './hero.html?raw';
 import headerTemplate from './header.html?raw';
 import projectDetailTemplate from './project-detail.html?raw';
 import projectNotFoundTemplate from './project-not-found.html?raw';
+import recentPostsSectionTemplate from './recent-posts-section.html?raw';
 
 // Export templates as a map
 export const templates: Record<string, string> = {
@@ -22,6 +23,7 @@ export const templates: Record<string, string> = {
     '/src/templates/header.html': headerTemplate,
     '/src/templates/project-detail.html': projectDetailTemplate,
     '/src/templates/project-not-found.html': projectNotFoundTemplate,
+    '/src/templates/recent-posts-section.html': recentPostsSectionTemplate,
 };
 
 // Helper function to get template

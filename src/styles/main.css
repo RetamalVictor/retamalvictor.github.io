@@ -18,6 +18,7 @@
 /* Base Styles */
 html {
   scroll-behavior: smooth;
+  background-color: var(--dark-bg);
 }
 
 body {
