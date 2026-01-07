@@ -22,8 +22,6 @@ export class IBVSController {
      * @param cy - principal point y
      * @returns velocity command [vx, vy, vz, wx, wy, wz]
      */
-    private debugFrame = 0;
-
     public computeControl(
         desiredFeatures: Float32Array,
         currentFeatures: Float32Array,
@@ -55,21 +53,6 @@ export class IBVSController {
                 sum += Lpinv[i * numPoints * 2 + j] * error[j];
             }
             velocity[i] = this.gain * sum;  // Positive sign because error = desired - current
-        }
-
-        // Debug logging
-        this.debugFrame++;
-        if (this.debugFrame % 60 === 1) {
-            console.log('\n[Controller Debug]');
-            console.log('  Error vector:', Array.from(error).map(v => v.toFixed(2)));
-            console.log('  L matrix (first point, vz column):', L[2].toFixed(4), L[8].toFixed(4));
-            console.log('  L_pinv (vz row, first 4 cols):',
-                Lpinv[2 * numPoints * 2 + 0].toFixed(4),
-                Lpinv[2 * numPoints * 2 + 1].toFixed(4),
-                Lpinv[2 * numPoints * 2 + 2].toFixed(4),
-                Lpinv[2 * numPoints * 2 + 3].toFixed(4)
-            );
-            console.log('  Raw velocity (before clip):', Array.from(velocity).map(v => v.toFixed(4)));
         }
 
         // Clip velocity to threshold

@@ -352,10 +352,45 @@ class Portfolio {
                         this.heroDemo?.reset();
                     });
                 }
+
+                // Setup info panel toggle
+                this.setupInfoPanel();
             }
         } catch (error) {
             console.error('Failed to initialize Visual Servo demo:', error);
         }
+    }
+
+    private setupInfoPanel(): void {
+        const panel = document.getElementById('info-panel');
+        const overlay = document.getElementById('info-panel-overlay');
+        const toggleBtn = document.getElementById('info-panel-toggle');
+        const closeBtn = document.getElementById('info-panel-close');
+
+        if (!panel || !overlay || !toggleBtn) return;
+
+        const openPanel = () => {
+            panel.classList.remove('translate-x-full');
+            overlay.classList.remove('opacity-0', 'pointer-events-none');
+            overlay.classList.add('opacity-100', 'pointer-events-auto');
+        };
+
+        const closePanel = () => {
+            panel.classList.add('translate-x-full');
+            overlay.classList.add('opacity-0', 'pointer-events-none');
+            overlay.classList.remove('opacity-100', 'pointer-events-auto');
+        };
+
+        toggleBtn.addEventListener('click', openPanel);
+        closeBtn?.addEventListener('click', closePanel);
+        overlay.addEventListener('click', closePanel);
+
+        // Close on escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !panel.classList.contains('translate-x-full')) {
+                closePanel();
+            }
+        });
     }
 
     private renderProjects(): void {

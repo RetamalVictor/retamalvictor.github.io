@@ -3,6 +3,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { PinholeCamera } from './ibvs/Camera';
 import { IBVSController } from './ibvs/Controller';
 import { QuadrotorModel } from './ibvs/QuadrotorModel';
+import { QuadrotorDynamics } from './ibvs/QuadrotorDynamics';
 
 export interface VisualServoDemoConfig {
     containerId: string;
@@ -38,6 +39,7 @@ export class VisualServoDemo {
     private droneCamera!: PinholeCamera;
     private controller!: IBVSController;
     private desiredFeatures!: Float32Array;
+    private dynamics!: QuadrotorDynamics;
 
     // Camera sub-view
     private cameraCanvas!: HTMLCanvasElement;
@@ -256,10 +258,11 @@ export class VisualServoDemo {
 
     private createQuadrotor(): void {
         this.quadrotor = new QuadrotorModel();
+        this.dynamics = new QuadrotorDynamics();
 
         // Initial position: at origin, facing +Z (toward target)
-        this.quadrotor.mesh.position.set(0, 0, 0);
-        this.quadrotor.mesh.rotation.set(0, 0, 0);
+        this.dynamics.reset(0, 0, 0);
+        this.syncDroneFromDynamics();
 
         this.scene.add(this.quadrotor.mesh);
 
@@ -313,8 +316,8 @@ export class VisualServoDemo {
         // Create IBVS controller
         this.controller = new IBVSController(
             this.droneCamera.focalLengthPx,
-            3.0,   // gain
-            1.0    // clip threshold
+            0.5,   // gain (low for smooth motion with dynamics)
+            0.3    // clip threshold
         );
     }
 
@@ -414,7 +417,6 @@ export class VisualServoDemo {
         }
 
         const error = this.controller.computeError(this.desiredFeatures, currentFeatures);
-        this.lastError = error;
 
         const errorDisplay = document.getElementById('error-display');
         if (errorDisplay) {
@@ -713,8 +715,13 @@ export class VisualServoDemo {
         const depths = new Float32Array(cameraPoints.map(p => p.z));
 
         // Check if target is visible
-        const allVisible = depths.every(d => d > 0);
+        const allVisible = depths.every(d => d > 0.1);
         if (!allVisible) {
+            // Target behind camera - command zero velocity but still update dynamics
+            // This lets the drone slow down naturally via drag
+            const zeroVelocity = new Float32Array(6);
+            this.dynamics.update(zeroVelocity, dt);
+            this.syncDroneFromDynamics();
             return;
         }
 
@@ -726,24 +733,31 @@ export class VisualServoDemo {
             this.droneCamera.cy
         );
 
-        // Apply velocity to move drone
-        // velocity is in camera frame: vx=right, vy=down, vz=forward
-        // Our world frame: X=right, Y=up, Z=forward
-        this.quadrotor.mesh.position.x += velocity[0] * dt;
-        this.quadrotor.mesh.position.y -= velocity[1] * dt;  // Invert: camera Y down ≠ world Y up
-        this.quadrotor.mesh.position.z += velocity[2] * dt;
+        // Update underactuated quadrotor dynamics
+        // velocity is in camera frame: [vx, vy, vz, wx, wy, wz]
+        this.dynamics.update(velocity, dt);
+
+        // Sync mesh position and orientation from dynamics
+        this.syncDroneFromDynamics();
+    }
+
+    /**
+     * Sync quadrotor mesh from dynamics state
+     */
+    private syncDroneFromDynamics(): void {
+        const [x, y, z] = this.dynamics.getPosition();
+        const [roll, pitch, yaw] = this.dynamics.getOrientation();
+
+        this.quadrotor.mesh.position.set(x, y, z);
+        this.quadrotor.mesh.rotation.set(roll, pitch, yaw, 'XYZ');
     }
 
     public reset(): void {
-        this.quadrotor.mesh.position.set(0, 0, 0);
-        this.quadrotor.mesh.rotation.set(0, 0, 0);
+        this.dynamics.reset(0, 0, 0);
+        this.syncDroneFromDynamics();
         this.targetGroup.position.set(0, 0, 4);
         this.trajectoryPoints = [];
-        this.frameCount = 0;
         this.computeDesiredFeatures();
-        console.log('[IBVS] Reset complete');
-        console.log('[IBVS] Drone at:', this.quadrotor.mesh.position.toArray());
-        console.log('[IBVS] Target at:', this.targetGroup.position.toArray());
     }
 
     public destroy(): void {
@@ -763,10 +777,6 @@ export class VisualServoDemo {
 
         if (this.cameraPipContainer?.parentNode === this.container) {
             this.container.removeChild(this.cameraPipContainer);
-        }
-
-        if (this.debugPanel?.parentNode === this.container) {
-            this.container.removeChild(this.debugPanel);
         }
     }
 
