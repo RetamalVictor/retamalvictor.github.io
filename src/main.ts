@@ -1,7 +1,7 @@
 import './styles/main.css';
 import { Header } from './components/Header.js';
 import { ProjectCard } from './components/ProjectCard.js';
-import { WebGPUParticles } from './components/WebGPUParticles.js';
+import { VisualServoDemo } from './components/VisualServoDemo.js';
 import { Router } from './utils/router.js';
 import { Navigation, initializeNavigation } from './utils/navigation.js';
 import { ProjectDetailPage } from './pages/ProjectDetail.js';
@@ -17,7 +17,7 @@ class Portfolio {
     private header!: Header;
     private projects: Project[] = [];
     private observer: IntersectionObserver | null = null;
-    private heroParticles: WebGPUParticles | null = null;
+    private heroDemo: VisualServoDemo | null = null;
     private router!: Router;
     private projectDetailPage: ProjectDetailPage | null = null;
     private cvPage: CVPage | null = null;
@@ -337,25 +337,24 @@ class Portfolio {
 
     private setupThreeViewers(): void {
         try {
-            // Initialize WebGPU particle system
+            // Initialize Visual Servoing demo
             const heroContainer = document.getElementById('hero-three-scene');
             if (heroContainer) {
-                this.heroParticles = new WebGPUParticles({
+                this.heroDemo = new VisualServoDemo({
                     containerId: 'hero-three-scene',
-                    particleCount: 30000,
                     backgroundColor: 0x0a0a0f
                 });
 
                 // Setup reset button
-                const resetBtn = document.getElementById('reset-particles-btn');
-                if (resetBtn && this.heroParticles) {
+                const resetBtn = document.getElementById('reset-demo-btn');
+                if (resetBtn && this.heroDemo) {
                     resetBtn.addEventListener('click', () => {
-                        this.heroParticles?.reset();
+                        this.heroDemo?.reset();
                     });
                 }
             }
         } catch (error) {
-            console.error('Failed to initialize WebGPU particles:', error);
+            console.error('Failed to initialize Visual Servo demo:', error);
         }
     }
 
@@ -414,7 +413,7 @@ class Portfolio {
 
     public destroy(): void {
         this.observer?.disconnect();
-        this.heroParticles?.destroy();
+        this.heroDemo?.destroy();
     }
 }
 
