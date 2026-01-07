@@ -425,6 +425,7 @@ body {
 .blog-content-dark pre {
   background-color: #1a1a2e;
   border-color: var(--dark-border);
+  color: #d1d5db;
 }
 
 .blog-content-dark code {

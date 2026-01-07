@@ -14,6 +14,7 @@ import mlPipelineMd from '../content/markdown/ml_pipeline_fundamentals.md?raw';
 import sysEngPart0Md from '../content/markdown/systems-engineering-part-0.md?raw';
 import sysEngPart1Md from '../content/markdown/systems-engineering-part-1.md?raw';
 import sysEngPart2Md from '../content/markdown/systems-engineering-part-2.md?raw';
+import bittorchMd from '../content/markdown/bittorch-1.58-bits.md?raw';
 
 interface BlogPost {
     slug: string;
@@ -98,7 +99,8 @@ export class BlogPostPage {
             "ml-pipeline-fundamentals": mlPipelineMd,
             "systems-engineering-part-0": sysEngPart0Md,
             "systems-engineering-part-1": sysEngPart1Md,
-            "systems-engineering-part-2": sysEngPart2Md
+            "systems-engineering-part-2": sysEngPart2Md,
+            "bittorch-1.58-bits": bittorchMd
         };
 
         // Map slugs to notebook HTML files (still need to be fetched)
@@ -314,42 +316,55 @@ export class BlogPostPage {
 
     private initializeMathRendering(): void {
         try {
-            // Render block math ($$...$$)
-            const blockMathElements = document.querySelectorAll('.math-block');
-            blockMathElements.forEach(element => {
-                const mathContent = element.textContent?.trim();
-                if (mathContent) {
-                    // Remove $$ delimiters if present
-                    const cleanedMath = mathContent.replace(/^\$\$/, '').replace(/\$\$$/, '');
-                    element.innerHTML = katex.renderToString(cleanedMath, {
-                        displayMode: true,
-                        throwOnError: false,
-                        errorColor: '#cc0000'
-                    });
-                }
-            });
-
-            // Render inline math ($...$)
             const content = document.getElementById('blog-content');
             if (content) {
                 let html = content.innerHTML;
 
-                // Process inline math ($...$) but skip currency (like $20, $1, etc)
-                // Only match if not followed/preceded by a digit
-                html = html.replace(/(?<!\d)\$([^$]+?)\$(?!\d)/g, (match, math) => {
-                    // Skip if the content starts with a digit (likely a price)
-                    if (/^\d/.test(math)) {
-                        return match; // Return original for prices
-                    }
+                // Process block math ($$...$$) first - handles multiline
+                html = html.replace(/\$\$([\s\S]*?)\$\$/g, (match, math) => {
                     try {
-                        return katex.renderToString(math, {
+                        // Clean up HTML entities and whitespace
+                        const cleanedMath = math
+                            .replace(/<[^>]*>/g, '') // Remove HTML tags
+                            .replace(/<br\s*\/?>/gi, ' ') // Replace <br> with space
+                            .replace(/&lt;/g, '<')
+                            .replace(/&gt;/g, '>')
+                            .replace(/&amp;/g, '&')
+                            .replace(/\\{/g, '\\lbrace ')
+                            .replace(/\\}/g, '\\rbrace ')
+                            .replace(/\\\\/g, '\\\\ ') // Ensure line breaks work in cases environments
+                            .trim();
+                        return `<div class="katex-display">${katex.renderToString(cleanedMath, {
+                            displayMode: true,
+                            throwOnError: false,
+                            errorColor: '#cc0000'
+                        })}</div>`;
+                    } catch (error) {
+                        console.warn('KaTeX rendering error for block math:', math, error);
+                        return match;
+                    }
+                });
+
+                // Process inline math ($...$)
+                // Match $...$ but not $$...$$ (already processed) and not currency like $20
+                html = html.replace(/(?<!\$)\$(?!\$)([^$\n]+?)\$(?!\$)/g, (match, math) => {
+                    try {
+                        // Clean up HTML entities
+                        const cleanedMath = math
+                            .replace(/<[^>]*>/g, '') // Remove HTML tags
+                            .replace(/&lt;/g, '<')
+                            .replace(/&gt;/g, '>')
+                            .replace(/&amp;/g, '&')
+                            .replace(/\\{/g, '\\lbrace ')
+                            .replace(/\\}/g, '\\rbrace ');
+                        return katex.renderToString(cleanedMath, {
                             displayMode: false,
                             throwOnError: false,
                             errorColor: '#cc0000'
                         });
                     } catch (error) {
-                        console.warn('KaTeX rendering error for inline math:', error);
-                        return match; // Return original if rendering fails
+                        console.warn('KaTeX rendering error for inline math:', math, error);
+                        return match;
                     }
                 });
 
