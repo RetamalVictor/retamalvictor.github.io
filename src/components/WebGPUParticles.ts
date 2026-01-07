@@ -1,18 +1,20 @@
 import * as THREE from 'three/webgpu';
 import {
     Fn,
-    If,
     uniform,
     float,
     vec3,
     vec4,
     storage,
     instanceIndex,
-    sin,
-    cos,
     length,
     mix,
-    smoothstep
+    smoothstep,
+    max,
+    sin,
+    cos,
+    fract,
+    floor
 } from 'three/tsl';
 
 interface ParticleConfig {
@@ -35,11 +37,13 @@ export class WebGPUParticles {
     private positions: any;
     private velocities: any;
     private computeUpdate: any;
+    private computeReset: any;  // GPU-side reset shader
 
-    // Interaction
+    // Interaction uniforms
     private mousePosition = uniform(vec3(0, 0, 0));
     private mouseStrength = uniform(0);
     private timeUniform = uniform(0);
+    private resetSeed = uniform(0);  // Seed for GPU reset randomization
 
     // Config
     private backgroundColor: number;
@@ -76,14 +80,15 @@ export class WebGPUParticles {
 
     private async setupRenderer(): Promise<void> {
         this.renderer = new THREE.WebGPURenderer({
-            antialias: true,
-            alpha: true
+            antialias: false, // Disabled for performance - particles don't need AA
+            alpha: false,     // Not using transparency for background
+            powerPreference: 'high-performance'
         });
 
         await this.renderer.init();
 
         this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
-        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); // Cap lower for performance
         this.renderer.setClearColor(this.backgroundColor, 1);
 
         this.container.appendChild(this.renderer.domElement);
@@ -103,25 +108,9 @@ export class WebGPUParticles {
     private createParticleSystem(): void {
         const count = this.particleCount;
 
-        // Initialize particles in a sphere distribution
+        // Initialize with zeros - GPU will set initial values
         const initPositions = new Float32Array(count * 3);
         const initVelocities = new Float32Array(count * 3);
-
-        for (let i = 0; i < count; i++) {
-            // Spherical distribution
-            const theta = Math.random() * Math.PI * 2;
-            const phi = Math.acos(2 * Math.random() - 1);
-            const r = Math.pow(Math.random(), 0.5) * 8;
-
-            initPositions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-            initPositions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-            initPositions[i * 3 + 2] = r * Math.cos(phi);
-
-            // Small random velocities
-            initVelocities[i * 3] = (Math.random() - 0.5) * 0.02;
-            initVelocities[i * 3 + 1] = (Math.random() - 0.5) * 0.02;
-            initVelocities[i * 3 + 2] = (Math.random() - 0.5) * 0.02;
-        }
 
         // Create storage buffers
         this.positionBuffer = new THREE.StorageInstancedBufferAttribute(initPositions, 3);
@@ -131,92 +120,146 @@ export class WebGPUParticles {
         this.positions = storage(this.positionBuffer, 'vec3', count);
         this.velocities = storage(this.velocityBuffer, 'vec3', count);
 
-        // Compute shader for particle physics
+        // ============================================================
+        // GPU-SIDE RESET COMPUTE SHADER
+        // ============================================================
+        this.computeReset = Fn(() => {
+            const position = this.positions.element(instanceIndex);
+            const velocity = this.velocities.element(instanceIndex);
+
+            // Better hash for uncorrelated random values
+            // Use different prime multipliers for each random value
+            const idx = float(instanceIndex);
+            const seed = this.resetSeed;
+
+            // Generate 3 independent random values using varied hash inputs
+            const rand1 = fract(sin(idx.mul(12.9898).add(seed.mul(78.233))).mul(43758.5453));
+            const rand2 = fract(sin(idx.mul(39.3468).add(seed.mul(11.135))).mul(28461.2731));
+            const rand3 = fract(sin(idx.mul(73.1568).add(seed.mul(44.847))).mul(23164.7532));
+
+            // Spherical distribution
+            const theta = rand1.mul(6.28318);  // 2 * PI
+            const phi = (rand2.mul(2.0).sub(1.0)).acos();  // acos(2*rand - 1)
+            const r = rand3.sqrt().mul(8.0);  // sqrt for uniform volume distribution
+
+            // Convert to Cartesian
+            const sinPhi = sin(phi);
+            const cosPhi = cos(phi);
+            const sinTheta = sin(theta);
+            const cosTheta = cos(theta);
+
+            const newPos = vec3(
+                r.mul(sinPhi).mul(cosTheta),
+                r.mul(sinPhi).mul(sinTheta),
+                r.mul(cosPhi)
+            );
+
+            // Small random velocities with different hash
+            const velRand1 = fract(sin(idx.mul(91.2345).add(seed.mul(23.456))).mul(54321.9876));
+            const velRand2 = fract(sin(idx.mul(47.8912).add(seed.mul(67.891))).mul(12345.6789));
+            const velRand3 = fract(sin(idx.mul(23.4567).add(seed.mul(89.012))).mul(98765.4321));
+            const newVel = vec3(
+                velRand1.sub(0.5).mul(0.02),
+                velRand2.sub(0.5).mul(0.02),
+                velRand3.sub(0.5).mul(0.02)
+            );
+
+            position.assign(newPos);
+            velocity.assign(newVel);
+        })().compute(count);
+
+        // ============================================================
+        // MAIN UPDATE COMPUTE SHADER (with hash-based noise)
+        // ============================================================
+        const maxSpeed = float(0.3);
+
         this.computeUpdate = Fn(() => {
             const position = this.positions.element(instanceIndex);
             const velocity = this.velocities.element(instanceIndex);
 
-            // Get current position
             const pos = position.toVar();
             const vel = velocity.toVar();
 
-            // Orbital motion around center
-            const toCenter = pos.mul(-1).normalize();
-            const tangent = vec3(
-                toCenter.z.mul(-1),
-                float(0),
-                toCenter.x
-            ).normalize();
+            // === OPTIMIZED HASH-BASED NOISE ===
+            // Create time-varying seed for organic movement
+            const idx = float(instanceIndex);
+            const t = floor(this.timeUniform.mul(3.0));  // Changes every ~0.33s
 
-            // Add swirl force
-            const dist = length(pos);
-            const orbitForce = tangent.mul(0.0003).div(dist.add(0.5));
-            vel.addAssign(orbitForce);
+            // 3 independent noise values using varied hash
+            const noiseX = fract(sin(idx.mul(12.9898).add(t.mul(78.233))).mul(43758.5453));
+            const noiseY = fract(sin(idx.mul(39.346).add(t.mul(11.135))).mul(28461.273));
+            const noiseZ = fract(sin(idx.mul(73.156).add(t.mul(44.847))).mul(23164.753));
 
-            // Mouse interaction
+            const noise = vec3(noiseX, noiseY, noiseZ).sub(0.5).mul(0.04);
+            vel.addAssign(noise);
+
+            // === MOUSE ATTRACTION ===
             const toMouse = this.mousePosition.sub(pos);
             const mouseDist = length(toMouse);
-            const mouseForce = toMouse.normalize().mul(
-                this.mouseStrength.mul(0.05).div(mouseDist.add(1))
-            );
-            vel.addAssign(mouseForce);
+            const mouseDir = toMouse.div(max(mouseDist, float(0.1)));
 
-            // Gentle pull toward center (keeps particles from flying away)
-            const centerPull = pos.mul(-0.0001);
-            vel.addAssign(centerPull);
+            // Attract to mouse, strength falls off with distance
+            const attraction = mouseDir.mul(this.mouseStrength.mul(0.15).div(mouseDist.add(1.0)));
+            vel.addAssign(attraction);
 
-            // Add some noise/turbulence based on time
-            const noiseOffset = vec3(
-                sin(this.timeUniform.add(float(instanceIndex).mul(0.001))).mul(0.0005),
-                cos(this.timeUniform.mul(1.3).add(float(instanceIndex).mul(0.0013))).mul(0.0005),
-                sin(this.timeUniform.mul(0.7).add(float(instanceIndex).mul(0.0017))).mul(0.0005)
-            );
-            vel.addAssign(noiseOffset);
+            // === SOFT REPULSION FROM MOUSE CENTER ===
+            const repelDist = float(1.5);
+            const repelStrength = max(repelDist.sub(mouseDist), float(0)).mul(0.1);
+            vel.addAssign(mouseDir.negate().mul(this.mouseStrength.mul(repelStrength)));
 
-            // Damping
-            vel.mulAssign(0.995);
+            // === DAMPING ===
+            vel.mulAssign(0.95);
+
+            // Limit speed
+            const speed = length(vel);
+            const limitedVel = vel.div(max(speed, maxSpeed)).mul(maxSpeed.min(speed));
+            vel.assign(limitedVel);
 
             // Update position
             pos.addAssign(vel);
 
-            // Soft boundary (push back if too far)
-            const maxDist = float(10);
-            If(dist.greaterThan(maxDist), () => {
-                pos.assign(pos.normalize().mul(maxDist));
-                vel.mulAssign(0.5);
-            });
+            // Soft boundary
+            const boundary = float(10);
+            const boundaryDist = length(pos);
+            const boundaryForce = pos.normalize().mul(
+                max(boundaryDist.sub(boundary), float(0)).mul(-0.15)
+            );
+            pos.addAssign(boundaryForce);
 
             // Write back
             position.assign(pos);
             velocity.assign(vel);
         })().compute(count);
 
-        // Create particle material with color gradient based on distance
+        // ============================================================
+        // OPTIMIZED MATERIAL (cached attribute reads)
+        // ============================================================
         const material = new THREE.SpriteNodeMaterial({
             transparent: true,
             depthWrite: false,
             blending: THREE.AdditiveBlending
         });
 
-        // Position from compute buffer
-        material.positionNode = this.positions.toAttribute();
+        // Single attribute reference for position (avoids redundant reads)
+        const posAttr = this.positions.toAttribute();
+        const velAttr = this.velocities.toAttribute();
 
-        // Color based on distance from center and velocity
-        const pos = this.positions.element(instanceIndex);
-        const vel = this.velocities.element(instanceIndex);
-        const dist = length(pos);
-        const speed = length(vel);
+        material.positionNode = posAttr;
+
+        // Use attributes directly for color calculation
+        const dist = length(posAttr);
+        const speed = length(velAttr);
 
         // Cyan to purple gradient based on distance, brighter with speed
-        const cyan = vec3(0, 0.83, 1);      // #00d4ff
-        const purple = vec3(0.66, 0.33, 0.97); // #a855f7
+        const cyan = vec3(0, 0.83, 1);
+        const purple = vec3(0.66, 0.33, 0.97);
         const t = smoothstep(float(0), float(8), dist);
         const baseColor = mix(cyan, purple, t);
         const brightness = speed.mul(50).add(0.3).min(1);
 
         material.colorNode = vec4(baseColor.mul(brightness), brightness.mul(0.6));
 
-        // Particle size - smaller when further, larger when faster
+        // Particle size
         const baseSize = float(0.08);
         const sizeVariation = speed.mul(2).add(1);
         material.scaleNode = baseSize.mul(sizeVariation);
@@ -226,6 +269,9 @@ export class WebGPUParticles {
         const particles = new THREE.InstancedMesh(geometry, material, count);
 
         this.scene.add(particles);
+
+        // Run initial reset on GPU
+        this.renderer.compute(this.computeReset);
     }
 
     private setupInteraction(): void {
@@ -247,11 +293,11 @@ export class WebGPUParticles {
             const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
             const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
-            // Convert to 3D position
-            const vector = new THREE.Vector3(x * 10, y * 6, 0);
+            // Convert to 3D position - match camera view
+            const vector = new THREE.Vector3(x * 12, y * 8, 0);
 
             this.mousePosition.value.set(vector.x, vector.y, vector.z);
-            this.mouseStrength.value = 1;
+            this.mouseStrength.value = 2;  // Stronger initial value
         });
 
         // Touch support
@@ -262,9 +308,9 @@ export class WebGPUParticles {
             const x = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
             const y = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
 
-            const vector = new THREE.Vector3(x * 10, y * 6, 0);
+            const vector = new THREE.Vector3(x * 12, y * 8, 0);
             this.mousePosition.value.set(vector.x, vector.y, vector.z);
-            this.mouseStrength.value = 1;
+            this.mouseStrength.value = 2;
         }, { passive: false });
 
         this.container.addEventListener('touchend', () => {
@@ -294,22 +340,16 @@ export class WebGPUParticles {
         // Update time
         this.timeUniform.value += 0.016;
 
-        // Slowly rotate camera for subtle motion
-        const t = this.timeUniform.value * 0.1;
-        this.camera.position.x = Math.sin(t) * 2;
-        this.camera.position.y = Math.cos(t * 0.7) * 1;
-        this.camera.lookAt(0, 0, 0);
-
-        // Decay mouse strength
-        if (this.mouseStrength.value > 0) {
+        // Decay mouse strength slowly to maintain attraction
+        if (this.mouseStrength.value > 0.01) {
             this.mouseStrength.value *= 0.98;
+        } else {
+            this.mouseStrength.value = 0;
         }
 
-        // Run compute shader
+        // Run compute shader and render
         this.renderer.compute(this.computeUpdate);
-
-        // Render
-        this.renderer.renderAsync(this.scene, this.camera);
+        this.renderer.render(this.scene, this.camera);
     };
 
     private showFallback(): void {
@@ -331,6 +371,18 @@ export class WebGPUParticles {
                 </div>
             </div>
         `;
+    }
+
+    public reset(): void {
+        // GPU-side reset - instant even with 100k+ particles
+        // Change seed to get different random distribution each reset
+        this.resetSeed.value = Math.random() * 1000;
+
+        // Run reset compute shader on GPU
+        this.renderer.compute(this.computeReset);
+
+        // Reset time
+        this.timeUniform.value = 0;
     }
 
     public destroy(): void {

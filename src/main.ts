@@ -345,6 +345,14 @@ class Portfolio {
                     particleCount: 30000,
                     backgroundColor: 0x0a0a0f
                 });
+
+                // Setup reset button
+                const resetBtn = document.getElementById('reset-particles-btn');
+                if (resetBtn && this.heroParticles) {
+                    resetBtn.addEventListener('click', () => {
+                        this.heroParticles?.reset();
+                    });
+                }
             }
         } catch (error) {
             console.error('Failed to initialize WebGPU particles:', error);
