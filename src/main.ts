@@ -1,7 +1,7 @@
 import './styles/main.css';
 import { Header } from './components/Header.js';
 import { ProjectCard } from './components/ProjectCard.js';
-import { ThreeViewer } from './components/ThreeViewer.js';
+import { WebGPUParticles } from './components/WebGPUParticles.js';
 import { Router } from './utils/router.js';
 import { Navigation, initializeNavigation } from './utils/navigation.js';
 import { ProjectDetailPage } from './pages/ProjectDetail.js';
@@ -17,7 +17,7 @@ class Portfolio {
     private header!: Header;
     private projects: Project[] = [];
     private observer: IntersectionObserver | null = null;
-    private heroThreeViewer: ThreeViewer | null = null;
+    private heroParticles: WebGPUParticles | null = null;
     private router!: Router;
     private projectDetailPage: ProjectDetailPage | null = null;
     private cvPage: CVPage | null = null;
@@ -337,18 +337,17 @@ class Portfolio {
 
     private setupThreeViewers(): void {
         try {
-            // Initialize hero Three.js viewer
+            // Initialize WebGPU particle system
             const heroContainer = document.getElementById('hero-three-scene');
             if (heroContainer) {
-                this.heroThreeViewer = new ThreeViewer({
+                this.heroParticles = new WebGPUParticles({
                     containerId: 'hero-three-scene',
-                    cameraPosition: [0, 2, 8],
-                    backgroundColor: '#12121a',
-                    enableControls: true
+                    particleCount: 30000,
+                    backgroundColor: 0x0a0a0f
                 });
             }
         } catch (error) {
-            console.error('Failed to initialize Three.js viewers:', error);
+            console.error('Failed to initialize WebGPU particles:', error);
         }
     }
 
@@ -407,7 +406,7 @@ class Portfolio {
 
     public destroy(): void {
         this.observer?.disconnect();
-        this.heroThreeViewer?.destroy();
+        this.heroParticles?.destroy();
     }
 }
 
