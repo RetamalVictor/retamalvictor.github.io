@@ -1,6 +1,5 @@
 import './styles/main.css';
 import { Header } from './components/Header.js';
-import { ProjectCard } from './components/ProjectCard.js';
 import { VisualServoDemo } from './components/VisualServoDemo.js';
 import { Router } from './utils/router.js';
 import { Navigation, initializeNavigation } from './utils/navigation.js';
@@ -253,60 +252,6 @@ class Portfolio {
         }
     }
 
-    private populateResearchAreas(): void {
-        const container = document.getElementById('research-areas-container');
-        if (container) {
-            container.innerHTML = templateManager.createResearchAreasHTML();
-            // Setup card expansion interactivity
-            this.setupResearchAreaInteractivity();
-        }
-    }
-
-    private setupResearchAreaInteractivity(): void {
-        const cards = document.querySelectorAll('.research-area-card[role="button"]');
-
-        cards.forEach(card => {
-            const toggleCard = () => {
-                const relatedItems = card.querySelector('.related-items');
-                const chevron = card.querySelector('.chevron-icon');
-                const isExpanded = card.getAttribute('aria-expanded') === 'true';
-
-                if (relatedItems && chevron) {
-                    if (isExpanded) {
-                        // Collapse
-                        relatedItems.classList.add('hidden');
-                        chevron.classList.remove('rotate-180');
-                        card.setAttribute('aria-expanded', 'false');
-                    } else {
-                        // Expand
-                        relatedItems.classList.remove('hidden');
-                        chevron.classList.add('rotate-180');
-                        card.setAttribute('aria-expanded', 'true');
-                    }
-                }
-            };
-
-            // Click handler
-            card.addEventListener('click', (e: Event) => {
-                // Prevent expansion if clicking on a link
-                if ((e.target as HTMLElement).tagName === 'A' ||
-                    (e.target as HTMLElement).closest('a')) {
-                    return;
-                }
-                toggleCard();
-            });
-
-            // Keyboard accessibility
-            card.addEventListener('keydown', (e: Event) => {
-                const keyEvent = e as KeyboardEvent;
-                if (keyEvent.key === 'Enter' || keyEvent.key === ' ') {
-                    keyEvent.preventDefault();
-                    toggleCard();
-                }
-            });
-        });
-    }
-
     private populateFooterContent(): void {
         // Footer content is now static in the template
         // Social links are hardcoded with template variables
@@ -390,17 +335,6 @@ class Portfolio {
             if (e.key === 'Escape' && !panel.classList.contains('translate-x-full')) {
                 closePanel();
             }
-        });
-    }
-
-    private renderProjects(): void {
-        const projectsGrid = document.getElementById('projects-grid')!;
-        projectsGrid.innerHTML = '';
-
-        const featuredProjects = this.projects.filter(p => p.featured);
-
-        featuredProjects.forEach(project => {
-            new ProjectCard(project, projectsGrid);
         });
     }
 

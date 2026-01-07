@@ -154,19 +154,6 @@ export class BlogListPage {
         return card;
     }
 
-    private getTagColor(tag: string): string {
-        const colors: { [key: string]: string } = {
-            'machine-learning': 'bg-blue-100 text-blue-800',
-            'mathematics': 'bg-green-100 text-green-800',
-            'transformers': 'bg-purple-100 text-purple-800',
-            'attention': 'bg-yellow-100 text-yellow-800',
-            'cnn': 'bg-red-100 text-red-800',
-            'computer-vision': 'bg-indigo-100 text-indigo-800',
-            'research': 'bg-pink-100 text-pink-800'
-        };
-        return colors[tag] || 'bg-gray-100 text-gray-800';
-    }
-
     private formatDate(date: string): string {
         const options: Intl.DateTimeFormatOptions = {
             year: 'numeric',
