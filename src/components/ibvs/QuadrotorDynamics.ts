@@ -19,11 +19,8 @@ export class QuadrotorDynamics {
     // Physical parameters
     private mass: number = 1.0;           // kg
     private gravity: number = 9.81;       // m/s²
-    private Ixx: number = 0.01;           // moment of inertia (roll)
-    private Iyy: number = 0.01;           // moment of inertia (pitch)
-    private Izz: number = 0.02;           // moment of inertia (yaw)
 
-    // State vector [x, y, z, vx, vy, vz, roll, pitch, yaw, p, q, r]
+    // State vector [x, y, z, vx, vy, vz, rotX, rotY, rotZ, wx, wy, wz]
     private state: Float32Array;
 
     // Controller gains
@@ -106,15 +103,11 @@ export class QuadrotorDynamics {
      * @param dt - time step in seconds
      */
     public update(desiredVelocity: Float32Array, dt: number): void {
-        // Current state extraction
-        const x = this.state[0];
-        const y = this.state[1];
-        const z = this.state[2];
+        // Current state extraction (only extract what we need)
         const vx = this.state[3];
         const vy = this.state[4];
         const vz = this.state[5];
         const rotX = this.state[6];   // rotation.x = forward/back tilt
-        const rotY = this.state[7];   // rotation.y = yaw
         const rotZ = this.state[8];   // rotation.z = roll (left/right tilt)
         const wx = this.state[9];     // rotation.x rate
         const wy = this.state[10];    // rotation.y rate
