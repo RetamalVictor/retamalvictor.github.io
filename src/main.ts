@@ -70,7 +70,6 @@ class Portfolio {
         // Check if we need to restore the layout
         if (!document.getElementById('main-content')) {
             await this.initializeLayout();
-            this.renderProjects();
             this.setupThreeViewers();
             this.setupIntersectionObserver();
             this.setupScrollAnimations();
@@ -187,24 +186,70 @@ class Portfolio {
 
     private async loadSectionTemplates(): Promise<void> {
         try {
-            // Load each section template
-            const aboutTemplate = await templateManager.loadConfigurableTemplate('/src/templates/about-section.html');
-            const researchTemplate = await templateManager.loadConfigurableTemplate('/src/templates/research-section.html');
-            const projectsTemplate = await templateManager.loadConfigurableTemplate('/src/templates/projects-section.html');
+            // Load section templates
+            const recentPostsTemplate = await templateManager.loadConfigurableTemplate('/src/templates/recent-posts-section.html');
             const footerTemplate = await templateManager.loadConfigurableTemplate('/src/templates/footer.html');
 
             // Populate containers
-            document.getElementById('about-section-container')!.innerHTML = aboutTemplate;
-            document.getElementById('research-section-container')!.innerHTML = researchTemplate;
-            document.getElementById('projects-section-container')!.innerHTML = projectsTemplate;
+            document.getElementById('recent-posts-container')!.innerHTML = recentPostsTemplate;
             document.getElementById('footer-container')!.innerHTML = footerTemplate;
 
             // Populate dynamic content
-            this.populateResearchAreas();
+            this.populateRecentPosts();
             this.populateFooterContent();
 
         } catch (error) {
             console.error('Failed to load section templates:', error);
+        }
+    }
+
+    private populateRecentPosts(): void {
+        const container = document.getElementById('recent-posts-grid');
+        if (!container) return;
+
+        try {
+            const blogData = config.getBlogPostsData();
+            const posts = blogData.posts || [];
+
+            // Get the 3 most recent posts (already sorted by date in YAML)
+            const recentPosts = posts.slice(0, 3);
+
+            container.innerHTML = recentPosts.map((post: any) => `
+                <a href="/blog/${post.slug}" class="card p-6 group cursor-pointer block">
+                    <div class="flex items-center gap-2 text-sm text-gray-500 mb-3">
+                        <span>${post.date}</span>
+                        <span>·</span>
+                        <span>${post.readTime}</span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-white mb-2 group-hover:text-accent-cyan transition-colors">
+                        ${post.title}
+                    </h3>
+                    <p class="text-gray-400 text-sm line-clamp-2">
+                        ${post.summary}
+                    </p>
+                    <div class="flex flex-wrap gap-2 mt-4">
+                        ${post.tags.slice(0, 3).map((tag: string) => `
+                            <span class="text-xs px-2 py-1 rounded bg-dark-border text-gray-400">
+                                ${tag}
+                            </span>
+                        `).join('')}
+                    </div>
+                </a>
+            `).join('');
+
+            // Add click handlers for navigation
+            container.querySelectorAll('a').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const href = link.getAttribute('href');
+                    if (href) {
+                        Navigation.to(href);
+                    }
+                });
+            });
+        } catch (error) {
+            console.error('Failed to load recent posts:', error);
+            container.innerHTML = '<p class="text-gray-500">Unable to load recent posts.</p>';
         }
     }
 
@@ -263,17 +308,8 @@ class Portfolio {
     }
 
     private populateFooterContent(): void {
-        // Populate footer research areas
-        const footerResearchContainer = document.getElementById('footer-research-areas');
-        if (footerResearchContainer) {
-            footerResearchContainer.innerHTML = templateManager.createFooterResearchAreasHTML();
-        }
-
-        // Populate footer social links
-        const footerSocialContainer = document.getElementById('footer-social-links');
-        if (footerSocialContainer) {
-            footerSocialContainer.innerHTML = templateManager.createFooterSocialLinksHTML();
-        }
+        // Footer content is now static in the template
+        // Social links are hardcoded with template variables
     }
 
     private async loadHeroSection(): Promise<void> {
@@ -307,7 +343,7 @@ class Portfolio {
                 this.heroThreeViewer = new ThreeViewer({
                     containerId: 'hero-three-scene',
                     cameraPosition: [0, 2, 8],
-                    backgroundColor: '#1e40af',
+                    backgroundColor: '#12121a',
                     enableControls: true
                 });
             }
@@ -383,10 +419,10 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('Failed to initialize portfolio:', error);
         // Fallback: show basic content
         document.getElementById('app')!.innerHTML = `
-            <div class="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div class="min-h-screen bg-dark-bg flex items-center justify-center">
                 <div class="text-center">
-                    <h1 class="text-2xl font-bold mb-4">Portfolio Loading</h1>
-                    <p class="text-gray-600">Please wait...</p>
+                    <h1 class="text-2xl font-bold mb-4 text-white">Loading...</h1>
+                    <p class="text-gray-500">Please wait</p>
                 </div>
             </div>
         `;

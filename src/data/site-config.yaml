@@ -2,20 +2,20 @@
 # Central configuration for all personal information and site settings
 
 site:
-  title: "Victor Retamal - ML Research Engineer"
-  description: "Machine Learning Research Engineer specializing in computer vision, reinforcement learning, and multi-agent systems for robotics applications"
+  title: "Victor Retamal"
+  description: "ML & Robotics Engineer - Building autonomous systems and writing about the journey"
   url: "https://victor-retamal.com"
   language: "en"
-  copyright: "© 2024 Victor Retamal. All rights reserved."
+  copyright: "© 2025 Victor Retamal"
 
 personal:
   name: "Victor Retamal"
-  title: "Machine Learning Engineer"
-  subtitle: "Advancing autonomous systems through deep learning, computer vision, and multi-agent reinforcement learning"
+  title: "ML & Robotics Engineer"
+  subtitle: "I build autonomous systems and write about my work."
   label: "ML Engineer"
-  location: "Your Location"
+  location: ""
   email: "retamal1.victor@gmail.com"
-  phone: "+1-234-567-8900"
+  phone: ""
   website: "https://victor-retamal.com"
 
 bio:
@@ -52,11 +52,11 @@ social_urls:
 
 # Page titles
 pages:
-  home: "Victor Retamal - ML Engineer"
-  projects: "Project Details"
-  cv: "Resume"
+  home: "Victor Retamal"
+  projects: "Projects"
+  cv: "CV"
   blog: "Blog"
-  blog_post: "Blog Post"
+  blog_post: "Blog"
 
 # File paths and URLs
 assets:

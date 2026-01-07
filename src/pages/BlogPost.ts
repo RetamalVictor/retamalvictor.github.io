@@ -163,34 +163,36 @@ export class BlogPostPage {
         document.title = `${this.blogPost.title} - Victor Retamal`;
 
         this.container.innerHTML = `
-            <div class="min-h-screen bg-white">
+            <div class="min-h-screen bg-dark-bg">
                 <!-- Header -->
-                <header class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
+                <header class="bg-dark-surface border-b border-dark-border">
                     <div class="max-w-4xl mx-auto px-6 py-8">
-                        <div class="flex items-center justify-between mb-4">
-                            <button id="back-to-blog-btn" class="text-blue-100 hover:text-white transition-colors flex items-center">
+                        <div class="flex items-center justify-between mb-6">
+                            <button id="back-to-blog-btn" class="text-gray-400 hover:text-accent-cyan transition-colors flex items-center">
                                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                                 </svg>
-                                Back to Blog
+                                Blog
                             </button>
 
-                            <button id="back-home-btn" class="bg-transparent border border-white text-white px-4 py-2 rounded hover:bg-white hover:text-blue-600 transition-colors text-sm">
-                                Portfolio
+                            <button id="back-home-btn" class="text-gray-400 hover:text-accent-cyan transition-colors text-sm">
+                                Home
                             </button>
                         </div>
 
-                        <h1 class="text-3xl md:text-4xl font-bold mb-4">${this.blogPost.title}</h1>
+                        <h1 class="text-3xl md:text-4xl font-bold text-white mb-4">${this.blogPost.title}</h1>
 
-                        <div class="flex flex-wrap items-center gap-4 text-blue-100">
+                        <div class="flex flex-wrap items-center gap-4 text-gray-400">
                             <span>${this.formatDate(this.blogPost.date)}</span>
+                            <span>·</span>
                             <span>${this.blogPost.readTime} read</span>
-                            <span>${this.blogPost.notebook ? '📓 Jupyter Notebook' : '📝 Article'}</span>
+                            <span>·</span>
+                            <span>${this.blogPost.notebook ? '📓 Notebook' : '📝 Article'}</span>
                         </div>
 
                         <div class="flex flex-wrap gap-2 mt-4">
                             ${this.blogPost.tags.map(tag => `
-                                <span class="px-3 py-1 text-xs font-medium rounded-full bg-blue-500 bg-opacity-30 text-blue-100">
+                                <span class="px-2 py-1 text-xs rounded bg-dark-border text-gray-400">
                                     ${tag}
                                 </span>
                             `).join('')}
@@ -200,27 +202,23 @@ export class BlogPostPage {
 
                 <!-- Content -->
                 <article class="max-w-4xl mx-auto px-6 py-12">
-                    <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-8">
-                        <p class="text-blue-700 italic">${this.blogPost.summary}</p>
+                    <div class="bg-dark-surface border-l-4 border-accent-cyan p-4 mb-8 rounded-r">
+                        <p class="text-gray-300 italic">${this.blogPost.summary}</p>
                     </div>
 
-                    <div id="blog-content" class="blog-content">
-                        ${this.blogPost.content || '<p>Content loading...</p>'}
+                    <div id="blog-content" class="blog-content blog-content-dark">
+                        ${this.blogPost.content || '<p class="text-gray-400">Content loading...</p>'}
                     </div>
 
                     <!-- Navigation -->
-                    <div class="mt-12 pt-8 border-t border-gray-200">
+                    <div class="mt-12 pt-8 border-t border-dark-border">
                         <div class="flex justify-between items-center">
-                            <button id="back-to-blog-btn-bottom" class="text-blue-600 hover:text-blue-800 font-medium flex items-center">
+                            <button id="back-to-blog-btn-bottom" class="text-accent-cyan hover:text-white font-medium flex items-center">
                                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                                 </svg>
                                 Back to All Posts
                             </button>
-
-                            <div class="text-sm text-gray-500">
-                                Source: ${this.blogPost.notebook}
-                            </div>
                         </div>
                     </div>
                 </article>
@@ -236,15 +234,15 @@ export class BlogPostPage {
         document.title = 'Post Not Found - Victor Retamal';
 
         this.container.innerHTML = `
-            <div class="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div class="min-h-screen bg-dark-bg flex items-center justify-center">
                 <div class="text-center">
-                    <h1 class="text-4xl font-bold text-gray-900 mb-4">Post Not Found</h1>
-                    <p class="text-gray-600 mb-6">The blog post you're looking for doesn't exist.</p>
+                    <h1 class="text-4xl font-bold text-white mb-4">Post Not Found</h1>
+                    <p class="text-gray-400 mb-6">The blog post you're looking for doesn't exist.</p>
                     <div class="space-x-4">
-                        <button id="back-to-blog-btn" class="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+                        <button id="back-to-blog-btn" class="btn-primary">
                             Back to Blog
                         </button>
-                        <button id="back-home-btn" class="bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-700 transition-colors">
+                        <button id="back-home-btn" class="btn-secondary">
                             Home
                         </button>
                     </div>

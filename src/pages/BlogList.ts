@@ -59,22 +59,21 @@ export class BlogListPage {
         }
 
         this.container.innerHTML = `
-            <div class="min-h-screen bg-white">
+            <div class="min-h-screen bg-dark-bg">
                 <!-- Header -->
-                <header class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
-                    <div class="max-w-4xl mx-auto px-6 py-12">
+                <header class="bg-dark-surface border-b border-dark-border">
+                    <div class="max-w-4xl mx-auto px-6 py-8">
                         <div class="flex justify-between items-center">
                             <div>
-                                <h1 class="text-4xl font-bold mb-2">Research Blog</h1>
-                                <p class="text-xl text-blue-100 mb-4">Machine Learning & Mathematics</p>
-                                <p class="text-blue-100">Jupyter notebooks, research insights, and technical deep-dives</p>
+                                <h1 class="text-3xl font-bold text-white mb-2">Blog</h1>
+                                <p class="text-gray-400">Thoughts on ML, robotics, and engineering</p>
                             </div>
                             <div>
-                                <button id="back-btn" class="bg-transparent border-2 border-white text-white px-6 py-3 rounded-lg font-semibold hover:bg-white hover:text-blue-600 transition-colors flex items-center">
+                                <button id="back-btn" class="text-gray-400 hover:text-accent-cyan transition-colors flex items-center">
                                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                                     </svg>
-                                    Back to Portfolio
+                                    Home
                                 </button>
                             </div>
                         </div>
@@ -83,7 +82,7 @@ export class BlogListPage {
 
                 <!-- Blog Posts -->
                 <main class="max-w-4xl mx-auto px-6 py-12">
-                    <div id="blog-posts-container" class="space-y-8">
+                    <div id="blog-posts-container" class="space-y-6">
                         <!-- Blog posts will be loaded here -->
                     </div>
                 </main>
@@ -115,36 +114,35 @@ export class BlogListPage {
     }
 
     private createBlogPostCard(post: BlogPost): HTMLElement {
-        const card = createElement('article', 'bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer');
+        const card = createElement('article', 'bg-dark-surface border border-dark-border rounded-lg p-6 hover:border-accent-cyan transition-all cursor-pointer');
 
         card.innerHTML = `
-            <div class="flex justify-between items-start mb-3">
-                <div class="flex items-center space-x-4">
-                    <span class="text-sm text-gray-500">${this.formatDate(post.date)}</span>
-                    <span class="text-sm text-gray-500">${post.readTime} read</span>
-                </div>
+            <div class="flex items-center gap-3 mb-3">
+                <span class="text-sm text-gray-500">${this.formatDate(post.date)}</span>
+                <span class="text-gray-600">·</span>
+                <span class="text-sm text-gray-500">${post.readTime} read</span>
             </div>
 
-            <h2 class="text-2xl font-bold text-gray-900 mb-3 hover:text-blue-600 transition-colors">${post.title}</h2>
+            <h2 class="text-xl font-bold text-white mb-3 group-hover:text-accent-cyan transition-colors">${post.title}</h2>
 
-            <p class="text-gray-700 mb-4 leading-relaxed">${post.summary}</p>
+            <p class="text-gray-400 mb-4 leading-relaxed">${post.summary}</p>
 
             <div class="flex flex-wrap gap-2 mb-4">
                 ${post.tags.map(tag => `
-                    <span class="px-3 py-1 text-xs font-medium rounded-full ${this.getTagColor(tag)}">
+                    <span class="px-2 py-1 text-xs rounded bg-dark-border text-gray-400">
                         ${tag}
                     </span>
                 `).join('')}
             </div>
 
             <div class="flex items-center justify-between">
-                <button class="read-more-btn text-blue-600 font-medium hover:text-blue-800 transition-colors flex items-center" data-slug="${post.slug}">
-                    Read Full Post
+                <button class="read-more-btn text-accent-cyan font-medium hover:text-white transition-colors flex items-center" data-slug="${post.slug}">
+                    Read Post
                     <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                     </svg>
                 </button>
-                ${post.notebook ? '<span class="text-sm text-gray-500">📓 Jupyter Notebook</span>' : '<span class="text-sm text-gray-500">📝 Article</span>'}
+                ${post.notebook ? '<span class="text-sm text-gray-500">📓 Notebook</span>' : '<span class="text-sm text-gray-500">📝 Article</span>'}
             </div>
         `;
 
@@ -180,12 +178,12 @@ export class BlogListPage {
 
     private renderError(): void {
         this.container.innerHTML = `
-            <div class="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div class="min-h-screen bg-dark-bg flex items-center justify-center">
                 <div class="text-center">
-                    <h1 class="text-4xl font-bold text-gray-900 mb-4">Blog Unavailable</h1>
-                    <p class="text-gray-600 mb-6">Failed to load blog posts. Please try again later.</p>
-                    <button id="back-btn" class="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors">
-                        Back to Portfolio
+                    <h1 class="text-4xl font-bold text-white mb-4">Blog Unavailable</h1>
+                    <p class="text-gray-400 mb-6">Failed to load blog posts. Please try again later.</p>
+                    <button id="back-btn" class="btn-primary">
+                        Back to Home
                     </button>
                 </div>
             </div>
