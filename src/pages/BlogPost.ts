@@ -3,7 +3,7 @@ import { Navigation } from '../utils/navigation.js';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import hljs from 'highlight.js';
-import 'highlight.js/styles/github.css';
+import 'highlight.js/styles/github-dark.css';
 import * as yaml from 'js-yaml';
 import blogDataYaml from '../data/blog-posts.yaml?raw';
 import { marked } from 'marked';
@@ -30,6 +30,9 @@ interface BlogPost {
 export class BlogPostPage {
     private container: HTMLElement;
     private blogPost: BlogPost | null = null;
+    private allPosts: BlogPost[] = [];
+    private prevPost: BlogPost | null = null;
+    private nextPost: BlogPost | null = null;
 
     constructor(container: HTMLElement) {
         this.container = container;
@@ -56,8 +59,14 @@ export class BlogPostPage {
             const parsedData = yaml.load(blogDataYaml) as any;
             const posts = parsedData.posts || [];
 
-            // Find the post with matching slug
-            const foundPost = posts.find((post: any) => post.slug === slug);
+            // Sort posts by date (newest first)
+            this.allPosts = [...posts].sort((a: BlogPost, b: BlogPost) => {
+                return new Date(b.date).getTime() - new Date(a.date).getTime();
+            });
+
+            // Find the post with matching slug and its index
+            const currentIndex = this.allPosts.findIndex((post: BlogPost) => post.slug === slug);
+            const foundPost = currentIndex >= 0 ? this.allPosts[currentIndex] : null;
 
             if (foundPost) {
                 const content = await this.getPostContent(slug);
@@ -65,8 +74,14 @@ export class BlogPostPage {
                     ...foundPost,
                     content: content
                 };
+
+                // Get prev/next posts (prev = newer, next = older)
+                this.prevPost = currentIndex > 0 ? this.allPosts[currentIndex - 1] : null;
+                this.nextPost = currentIndex < this.allPosts.length - 1 ? this.allPosts[currentIndex + 1] : null;
             } else {
                 this.blogPost = null;
+                this.prevPost = null;
+                this.nextPost = null;
             }
 
             console.log('Blog post loaded successfully:', this.blogPost);
@@ -138,8 +153,20 @@ export class BlogPostPage {
             pedantic: false
         } as any);  // Cast to any to avoid TypeScript issues with newer marked versions
 
+        // Remove social badges section (shields.io links at the end)
+        let cleanedMarkdown = markdown.replace(
+            /\*\*Connect with me:\*\*.*$/s,
+            ''
+        );
+
+        // Also remove standalone shields.io badge lines
+        cleanedMarkdown = cleanedMarkdown.replace(
+            /\[!\[.*?\]\(https:\/\/img\.shields\.io\/.*?\)\]\(.*?\)/g,
+            ''
+        );
+
         // Use marked to convert markdown to HTML
-        let html = marked.parse(markdown) as string;
+        let html = marked.parse(cleanedMarkdown) as string;
 
         // Fix image paths for production (add base URL)
         const baseUrl = import.meta.env.BASE_URL || '/';
@@ -147,6 +174,9 @@ export class BlogPostPage {
             /(<img[^>]+src=["'])\/images\//g,
             `$1${baseUrl}images/`
         );
+
+        // Remove inline styles from figure elements (use CSS instead)
+        html = html.replace(/style="[^"]*"/g, '');
 
         // Wrap in blog-content div
         html = `<div class="blog-content">${html}</div>`;
@@ -210,17 +240,38 @@ export class BlogPostPage {
                         ${this.blogPost.content || '<p class="text-gray-400">Content loading...</p>'}
                     </div>
 
-                    <!-- Navigation -->
-                    <div class="mt-12 pt-8 border-t border-dark-border">
-                        <div class="flex justify-between items-center">
-                            <button id="back-to-blog-btn-bottom" class="text-accent-cyan hover:text-white font-medium flex items-center">
-                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                                </svg>
-                                Back to All Posts
+                    <!-- Post Navigation -->
+                    <nav class="mt-12 pt-8 border-t border-dark-border">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            ${this.prevPost ? `
+                                <a href="/blog/${this.prevPost.slug}" class="prev-post-link group p-4 rounded-lg bg-dark-surface border border-dark-border hover:border-accent-cyan transition-all">
+                                    <div class="text-sm text-gray-500 mb-1 flex items-center">
+                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                                        </svg>
+                                        Previous Post
+                                    </div>
+                                    <div class="text-white group-hover:text-accent-cyan transition-colors font-medium">${this.prevPost.title}</div>
+                                </a>
+                            ` : '<div></div>'}
+                            ${this.nextPost ? `
+                                <a href="/blog/${this.nextPost.slug}" class="next-post-link group p-4 rounded-lg bg-dark-surface border border-dark-border hover:border-accent-cyan transition-all text-right">
+                                    <div class="text-sm text-gray-500 mb-1 flex items-center justify-end">
+                                        Next Post
+                                        <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                        </svg>
+                                    </div>
+                                    <div class="text-white group-hover:text-accent-cyan transition-colors font-medium">${this.nextPost.title}</div>
+                                </a>
+                            ` : '<div></div>'}
+                        </div>
+                        <div class="mt-6 text-center">
+                            <button id="back-to-blog-btn-bottom" class="text-gray-400 hover:text-accent-cyan transition-colors">
+                                ← View All Posts
                             </button>
                         </div>
-                    </div>
+                    </nav>
                 </article>
             </div>
         `;
@@ -394,6 +445,26 @@ export class BlogPostPage {
                 Navigation.toHome();
             });
         });
+
+        // Previous/Next post links
+        const prevLink = document.querySelector('.prev-post-link');
+        const nextLink = document.querySelector('.next-post-link');
+
+        if (prevLink) {
+            prevLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                const href = prevLink.getAttribute('href');
+                if (href) Navigation.to(href);
+            });
+        }
+
+        if (nextLink) {
+            nextLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                const href = nextLink.getAttribute('href');
+                if (href) Navigation.to(href);
+            });
+        }
     }
 
     public destroy(): void {
