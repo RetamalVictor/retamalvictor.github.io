@@ -79,26 +79,37 @@ In practical terms: RMSNorm gives you a stabilizer with one reduction instead of
 
 The CUDA kernel makes the dataflow concrete:
 
-<div style="background: #1e1e2e; border-radius: 8px; padding: 1.25rem; font-family: monospace; margin: 1rem 0; overflow-x: auto;"><pre style="margin: 0; color: #cdd6f4; line-height: 1.5; font-size: 0.85rem;"><span style="color: #6c7086">// One CUDA block per row (row = one token's hidden state)</span>
-__global__ void rmsnorm_fwd_kernel(...) {
+<div style="background: #1e1e2e; border-radius: 8px; padding: 1.25rem; font-family: monospace; margin: 1rem 0; overflow-x: auto;"><pre style="margin: 0; color: #cdd6f4; line-height: 1.5; font-size: 0.85rem;"><span style="color: #6c7086">// One block per row, templatized for fp16/fp32</span>
+template&lt;typename scalar_t&gt;
+__global__ void rmsnorm_fwd_kernel(
+    const scalar_t* __restrict__ x, const scalar_t* __restrict__ w,
+    scalar_t* y, float* <span style="color: #f9e2af">inv_rms_out</span>, int hidden, float eps) {
+
+  int row = blockIdx.x;
+  const scalar_t* x_row = x + row * hidden;
+
   float sumsq = 0.f;
-  for (int i = tid; i < hidden; i += stride)
-      sumsq += x[i] * x[i];
-  float reduced = <span style="color: #89b4fa">blockReduceSum</span>(sumsq);  <span style="color: #6c7086">// warp shuffle, no atomics</span>
+  for (int i = threadIdx.x; i < hidden; i += blockDim.x)
+      sumsq += <span style="color: #a6e3a1">to_float</span>(x_row[i]) * <span style="color: #a6e3a1">to_float</span>(x_row[i]);
+  float reduced = <span style="color: #89b4fa">blockReduceSum</span>&lt;float&gt;(sumsq);  <span style="color: #6c7086">// warp shuffles</span>
 
   <span style="color: #f9e2af">__shared__</span> float <span style="color: #f9e2af">s_inv_rms</span>;
-  if (tid == 0)
-      <span style="color: #f9e2af">s_inv_rms</span> = <span style="color: #a6e3a1">rsqrtf</span>(reduced / hidden + eps);  <span style="color: #6c7086">// fast SFU op</span>
+  if (threadIdx.x == 0) {
+      <span style="color: #f9e2af">s_inv_rms</span> = <span style="color: #a6e3a1">rsqrtf</span>(reduced / hidden + eps);
+      <span style="color: #f9e2af">inv_rms_out</span>[row] = <span style="color: #f9e2af">s_inv_rms</span>;  <span style="color: #6c7086">// cache for backward</span>
+  }
   <span style="color: #f9e2af">__syncthreads</span>();
 
-  for (int i = tid; i < hidden; i += stride)
-      y[i] = x[i] * <span style="color: #f9e2af">s_inv_rms</span> * <span style="color: #a78bfa">weight</span>[i];
+  scalar_t* y_row = y + row * hidden;
+  for (int i = threadIdx.x; i < hidden; i += blockDim.x)
+      y_row[i] = <span style="color: #a6e3a1">from_float</span>&lt;scalar_t&gt;(
+          <span style="color: #a6e3a1">to_float</span>(x_row[i]) * <span style="color: #f9e2af">s_inv_rms</span> * <span style="color: #a6e3a1">to_float</span>(<span style="color: #a78bfa">w</span>[i]));
 }</pre></div>
 
 <div style="display: flex; gap: 1.5rem; margin: 0.5rem 0 1rem; font-size: 0.8rem; flex-wrap: wrap;">
   <span><span style="color: #89b4fa">■</span> parallel reduce</span>
-  <span><span style="color: #f9e2af">■</span> shared memory</span>
-  <span><span style="color: #a6e3a1">■</span> rsqrtf (fast intrinsic)</span>
+  <span><span style="color: #f9e2af">■</span> shared mem / cached for bwd</span>
+  <span><span style="color: #a6e3a1">■</span> type conversion (fp16/fp32)</span>
   <span><span style="color: #a78bfa">■</span> learned scale γ</span>
 </div>
 
