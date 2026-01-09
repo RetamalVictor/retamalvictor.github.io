@@ -3,10 +3,13 @@
  *
  * Supports ternary quantization (1.58 bits/weight) with per-channel scales.
  * Implements: RMSNorm, RoPE, Multi-head Attention, SwiGLU MLP.
+ *
+ * Optionally uses WebGPU for accelerated matrix multiplication when available.
  */
 
 import { SafeTensorsLoader } from './SafeTensorsLoader';
 import { BPETokenizer } from './BPETokenizer';
+import { GPUMatmul, TernaryLayer } from './gpu/GPUMatmul';
 
 /** Statistics during text generation */
 interface GenerationStats {
@@ -30,12 +33,7 @@ interface LayerKVCache {
     v: Float32Array;  // [nKvHeads, seqLen, headDim]
 }
 
-interface TernaryLayer {
-    weightsPacked: Uint8Array;   // Packed 2-bit weights [outFeatures, inFeatures/4]
-    scales: Float32Array;         // Per-output-channel scales [outFeatures]
-    outFeatures: number;
-    inFeatures: number;
-}
+// TernaryLayer interface is imported from './gpu/GPUMatmul'
 
 interface TransformerBlock {
     norm1Weight: Float32Array;    // Pre-attention RMSNorm [dim]
@@ -71,6 +69,10 @@ export class TransformerCPUEngine {
 
     // Generation control
     private stopRequested: boolean = false;
+
+    // GPU acceleration
+    private gpuMatmul: GPUMatmul | null = null;
+    private usingGPU: boolean = false;
 
     // Memory tracking
     private ternaryWeights = 0;
@@ -162,6 +164,60 @@ export class TransformerCPUEngine {
         console.log(`[Transformer] Loaded ${this.config.nLayers} blocks`);
         console.log(`[Transformer] Ternary weights: ${(this.ternaryWeights / 1e6).toFixed(1)}M`);
         console.log(`[Transformer] FP16 weights: ${(this.fp16Weights / 1e6).toFixed(1)}M`);
+
+        // Try to initialize GPU acceleration
+        await this.initGPU();
+    }
+
+    /**
+     * Initialize GPU acceleration if available.
+     */
+    private async initGPU(): Promise<void> {
+        alert('Engine Debug: initGPU() called');
+        try {
+            this.gpuMatmul = await GPUMatmul.create();
+            if (!this.gpuMatmul) {
+                alert('Engine Debug: GPUMatmul.create() returned null');
+                console.log('[Transformer] WebGPU not available, using CPU');
+                return;
+            }
+
+            alert('Engine Debug: GPUMatmul created, uploading weights...');
+            // Upload all layer weights to GPU
+            console.log('[Transformer] Uploading weights to GPU...');
+            for (let i = 0; i < this.config.nLayers; i++) {
+                const block = this.blocks[i];
+                const prefix = `block${i}`;
+
+                // Attention projections
+                this.gpuMatmul.uploadLayer(`${prefix}_qProj`, block.qProj);
+                this.gpuMatmul.uploadLayer(`${prefix}_kvProj`, block.kvProj);
+                this.gpuMatmul.uploadLayer(`${prefix}_proj`, block.proj);
+
+                // MLP projections
+                this.gpuMatmul.uploadLayer(`${prefix}_wGate`, block.wGate);
+                this.gpuMatmul.uploadLayer(`${prefix}_wUp`, block.wUp);
+                this.gpuMatmul.uploadLayer(`${prefix}_wDown`, block.wDown);
+            }
+
+            this.usingGPU = true;
+            const stats = this.gpuMatmul.getMemoryStats();
+            alert(`Engine Debug: GPU ready! ${stats.layerBuffersKB}KB on GPU`);
+            console.log(`[Transformer] GPU initialized - ${stats.layerBuffersKB}KB weights on GPU`);
+        } catch (error) {
+            const errMsg = error instanceof Error ? error.message : String(error);
+            alert(`Engine Debug ERROR: ${errMsg}`);
+            console.warn('[Transformer] GPU initialization failed:', error);
+            this.gpuMatmul = null;
+            this.usingGPU = false;
+        }
+    }
+
+    /**
+     * Check if GPU acceleration is being used.
+     */
+    isGPUEnabled(): boolean {
+        return this.usingGPU;
     }
 
     /**
@@ -314,7 +370,7 @@ export class TransformerCPUEngine {
         this.initKVCache();
 
         // Prefill: process all prompt tokens at once
-        let logits = this.forwardPrefill(tokens);
+        let logits = await this.forwardPrefill(tokens);
         let generated = '';
 
         for (let step = 0; step < maxTokens; step++) {
@@ -351,7 +407,7 @@ export class TransformerCPUEngine {
             }
 
             // Decode step: process only the new token using cached KV
-            logits = this.forwardDecode(nextToken);
+            logits = await this.forwardDecode(nextToken);
         }
 
         return generated;
@@ -361,7 +417,7 @@ export class TransformerCPUEngine {
      * Prefill: process all prompt tokens and populate KV cache.
      * Returns logits for the last token.
      */
-    private forwardPrefill(tokens: number[]): Float32Array {
+    private async forwardPrefill(tokens: number[]): Promise<Float32Array> {
         const { dim, nHeads, nLayers } = this.config;
         const seqLen = tokens.length;
         const headDim = dim / nHeads;
@@ -386,7 +442,7 @@ export class TransformerCPUEngine {
             const normed1 = this.rmsNorm(hidden, block.norm1Weight, seqLen, dim);
 
             // Attention with KV cache population
-            const attnOut = this.attentionPrefill(normed1, block, cache, seqLen, headDim);
+            const attnOut = await this.attentionPrefill(normed1, block, cache, seqLen, headDim, blockIdx);
 
             // Residual
             for (let i = 0; i < hidden.length; i++) {
@@ -397,7 +453,7 @@ export class TransformerCPUEngine {
             const normed2 = this.rmsNorm(hidden, block.norm2Weight, seqLen, dim);
 
             // MLP (SwiGLU)
-            const mlpOut = this.swiglu(normed2, block, seqLen);
+            const mlpOut = await this.swiglu(normed2, block, seqLen, blockIdx);
 
             // Residual
             for (let i = 0; i < hidden.length; i++) {
@@ -426,7 +482,7 @@ export class TransformerCPUEngine {
      * Decode: process single token using cached KV.
      * Returns logits for the new token.
      */
-    private forwardDecode(token: number): Float32Array {
+    private async forwardDecode(token: number): Promise<Float32Array> {
         const { dim, nHeads, nLayers } = this.config;
         const headDim = dim / nHeads;
         const pos = this.cacheSeqLen;  // Position of new token
@@ -447,7 +503,7 @@ export class TransformerCPUEngine {
             const normed1 = this.rmsNormSingle(hidden, block.norm1Weight);
 
             // Attention with KV cache lookup
-            const attnOut = this.attentionDecode(normed1, block, cache, pos, headDim);
+            const attnOut = await this.attentionDecode(normed1, block, cache, pos, headDim, blockIdx);
 
             // Residual
             for (let d = 0; d < dim; d++) {
@@ -458,7 +514,7 @@ export class TransformerCPUEngine {
             const normed2 = this.rmsNormSingle(hidden, block.norm2Weight);
 
             // MLP (SwiGLU) - single token
-            const mlpOut = this.swigluSingle(normed2, block);
+            const mlpOut = await this.swigluSingle(normed2, block, blockIdx);
 
             // Residual
             for (let d = 0; d < dim; d++) {
@@ -563,14 +619,17 @@ export class TransformerCPUEngine {
     /**
      * SwiGLU MLP: down(silu(gate(x)) * up(x))
      */
-    private swiglu(
+    private async swiglu(
         x: Float32Array,
         block: TransformerBlock,
-        seqLen: number
-    ): Float32Array {
+        seqLen: number,
+        blockIdx: number
+    ): Promise<Float32Array> {
+        const prefix = `block${blockIdx}`;
+
         // Gate and up projections
-        const gate = this.ternaryMatmul(x, block.wGate, seqLen);
-        const up = this.ternaryMatmul(x, block.wUp, seqLen);
+        const gate = await this.ternaryMatmul(x, block.wGate, seqLen, `${prefix}_wGate`);
+        const up = await this.ternaryMatmul(x, block.wUp, seqLen, `${prefix}_wUp`);
 
         // SiLU (swish) activation on gate, multiply with up
         for (let i = 0; i < gate.length; i++) {
@@ -580,16 +639,22 @@ export class TransformerCPUEngine {
         }
 
         // Down projection
-        return this.ternaryMatmul(gate, block.wDown, seqLen);
+        return this.ternaryMatmul(gate, block.wDown, seqLen, `${prefix}_wDown`);
     }
 
     /**
      * SwiGLU MLP for single token (decode phase).
      */
-    private swigluSingle(x: Float32Array, block: TransformerBlock): Float32Array {
+    private async swigluSingle(
+        x: Float32Array,
+        block: TransformerBlock,
+        blockIdx: number
+    ): Promise<Float32Array> {
+        const prefix = `block${blockIdx}`;
+
         // Gate and up projections (single token)
-        const gate = this.ternaryMatmulSingle(x, block.wGate);
-        const up = this.ternaryMatmulSingle(x, block.wUp);
+        const gate = await this.ternaryMatmulSingle(x, block.wGate, `${prefix}_wGate`);
+        const up = await this.ternaryMatmulSingle(x, block.wUp, `${prefix}_wUp`);
 
         // SiLU activation on gate, multiply with up
         for (let i = 0; i < gate.length; i++) {
@@ -599,28 +664,30 @@ export class TransformerCPUEngine {
         }
 
         // Down projection
-        return this.ternaryMatmulSingle(gate, block.wDown);
+        return this.ternaryMatmulSingle(gate, block.wDown, `${prefix}_wDown`);
     }
 
     /**
      * Attention with KV cache population (prefill phase).
      * Processes all tokens and stores K, V in cache.
      */
-    private attentionPrefill(
+    private async attentionPrefill(
         x: Float32Array,
         block: TransformerBlock,
         cache: LayerKVCache,
         seqLen: number,
-        headDim: number
-    ): Float32Array {
+        headDim: number,
+        blockIdx: number
+    ): Promise<Float32Array> {
         const { dim, nHeads, nKvHeads, maxSeqLen } = this.config;
         const kvDim = nKvHeads * headDim;
+        const prefix = `block${blockIdx}`;
 
         // Q projection: [seqLen, dim]
-        const q = this.ternaryMatmul(x, block.qProj, seqLen);
+        const q = await this.ternaryMatmul(x, block.qProj, seqLen, `${prefix}_qProj`);
 
         // KV projection: [seqLen, 2 * kvDim] (K and V concatenated)
-        const kv = this.ternaryMatmul(x, block.kvProj, seqLen);
+        const kv = await this.ternaryMatmul(x, block.kvProj, seqLen, `${prefix}_kvProj`);
 
         // Extract K and V, and store in cache
         // K and V have shape [seqLen, nKvHeads, headDim]
@@ -695,28 +762,30 @@ export class TransformerCPUEngine {
         }
 
         // Output projection
-        return this.ternaryMatmul(attnOut, block.proj, seqLen);
+        return this.ternaryMatmul(attnOut, block.proj, seqLen, `${prefix}_proj`);
     }
 
     /**
      * Attention with KV cache lookup (decode phase).
      * Processes single token using cached K, V.
      */
-    private attentionDecode(
+    private async attentionDecode(
         x: Float32Array,
         block: TransformerBlock,
         cache: LayerKVCache,
         pos: number,
-        headDim: number
-    ): Float32Array {
+        headDim: number,
+        blockIdx: number
+    ): Promise<Float32Array> {
         const { dim, nHeads, nKvHeads, maxSeqLen } = this.config;
         const kvDim = nKvHeads * headDim;
+        const prefix = `block${blockIdx}`;
 
         // Q projection: [dim]
-        const q = this.ternaryMatmulSingle(x, block.qProj);
+        const q = await this.ternaryMatmulSingle(x, block.qProj, `${prefix}_qProj`);
 
         // KV projection: [2 * kvDim]
-        const kv = this.ternaryMatmulSingle(x, block.kvProj);
+        const kv = await this.ternaryMatmulSingle(x, block.kvProj, `${prefix}_kvProj`);
 
         // Extract K and V for this position and store in cache
         for (let kh = 0; kh < nKvHeads; kh++) {
@@ -786,7 +855,7 @@ export class TransformerCPUEngine {
         }
 
         // Output projection
-        return this.ternaryMatmulSingle(attnOut, block.proj);
+        return this.ternaryMatmulSingle(attnOut, block.proj, `${prefix}_proj`);
     }
 
     /**
@@ -880,12 +949,49 @@ export class TransformerCPUEngine {
     }
 
     /**
-     * Ternary matrix multiplication with scales.
+     * Ternary matrix multiplication with GPU acceleration.
      * Input: [seqLen, inFeatures]
      * Weights: packed [outFeatures, inFeatures/4]
      * Output: [seqLen, outFeatures]
      */
-    private ternaryMatmul(
+    private async ternaryMatmul(
+        input: Float32Array,
+        layer: TernaryLayer,
+        seqLen: number,
+        layerName: string
+    ): Promise<Float32Array> {
+        // Use GPU if available
+        if (this.gpuMatmul && this.usingGPU) {
+            return this.gpuMatmul.matmul(input, layerName, seqLen);
+        }
+
+        // CPU fallback
+        return this.ternaryMatmulCPU(input, layer, seqLen);
+    }
+
+    /**
+     * Ternary matrix multiplication for single token (decode phase) with GPU acceleration.
+     * Input: [inFeatures]
+     * Output: [outFeatures]
+     */
+    private async ternaryMatmulSingle(
+        input: Float32Array,
+        layer: TernaryLayer,
+        layerName: string
+    ): Promise<Float32Array> {
+        // Use GPU if available (seqLen=1)
+        if (this.gpuMatmul && this.usingGPU) {
+            return this.gpuMatmul.matmul(input, layerName, 1);
+        }
+
+        // CPU fallback
+        return this.ternaryMatmulSingleCPU(input, layer);
+    }
+
+    /**
+     * CPU implementation of ternary matrix multiplication.
+     */
+    private ternaryMatmulCPU(
         input: Float32Array,
         layer: TernaryLayer,
         seqLen: number
@@ -925,11 +1031,9 @@ export class TransformerCPUEngine {
     }
 
     /**
-     * Ternary matrix multiplication for single token (decode phase).
-     * Input: [inFeatures]
-     * Output: [outFeatures]
+     * CPU implementation of ternary matrix multiplication for single token.
      */
-    private ternaryMatmulSingle(input: Float32Array, layer: TernaryLayer): Float32Array {
+    private ternaryMatmulSingleCPU(input: Float32Array, layer: TernaryLayer): Float32Array {
         const { inFeatures, outFeatures, weightsPacked, scales } = layer;
         const output = new Float32Array(outFeatures);
         const inBytes = Math.ceil(inFeatures / 4);
@@ -1074,6 +1178,10 @@ export class TransformerCPUEngine {
      * Clean up resources.
      */
     destroy(): void {
-        // Nothing to clean up for CPU
+        if (this.gpuMatmul) {
+            this.gpuMatmul.destroy();
+            this.gpuMatmul = null;
+            this.usingGPU = false;
+        }
     }
 }

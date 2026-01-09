@@ -9,3 +9,4 @@ export { TernaryLMDemo } from './TernaryLMDemo';
 export { TransformerCPUEngine } from './TransformerCPUEngine';
 export { SafeTensorsLoader } from './SafeTensorsLoader';
 export { BPETokenizer } from './BPETokenizer';
+export { GPUMatmul } from './gpu/GPUMatmul';

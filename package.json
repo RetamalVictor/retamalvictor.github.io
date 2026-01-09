@@ -19,6 +19,7 @@
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^24.5.2",
+    "@webgpu/types": "^0.1.68",
     "husky": "^9.1.7",
     "lint-staged": "^16.1.6",
     "typescript": "^5.9.2",

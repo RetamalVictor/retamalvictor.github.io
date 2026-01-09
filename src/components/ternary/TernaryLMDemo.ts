@@ -79,18 +79,29 @@ export class TernaryLMDemo {
      * Initialize the demo.
      */
     private async init(): Promise<void> {
+        // DEBUG: Very early alert to verify JS is running
+        alert('Demo Debug 1: init() started');
+
         this.render();
 
         try {
+            alert('Demo Debug 2: About to load model');
             console.log('Loading transformer model...');
             this.engine = await TransformerCPUEngine.create(this.config.modelPath);
-            this.usingCPU = true;
+
+            // Check actual GPU status from engine
+            const engineCPU = this.engine as TransformerCPUEngine;
+            this.usingCPU = !engineCPU.isGPUEnabled();
             this.isTransformer = true;
-            console.log('Transformer CPU engine initialized');
+
+            alert(`Demo Debug 3: Engine created, GPU=${engineCPU.isGPUEnabled()}`);
+            console.log('Transformer engine initialized, GPU:', engineCPU.isGPUEnabled());
         } catch (error) {
+            const errMsg = error instanceof Error ? error.message : String(error);
+            alert(`Demo Debug ERROR: ${errMsg}`);
             console.error('Transformer engine failed:', error);
             this.state.status = 'error';
-            this.state.errorMessage = error instanceof Error ? error.message : 'Failed to load model';
+            this.state.errorMessage = errMsg;
             this.showFallback();
             return;
         }
