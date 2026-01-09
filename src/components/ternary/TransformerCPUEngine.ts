@@ -173,16 +173,12 @@ export class TransformerCPUEngine {
      * Initialize GPU acceleration if available.
      */
     private async initGPU(): Promise<void> {
-        alert('Engine Debug: initGPU() called');
         try {
             this.gpuMatmul = await GPUMatmul.create();
             if (!this.gpuMatmul) {
-                alert('Engine Debug: GPUMatmul.create() returned null');
                 console.log('[Transformer] WebGPU not available, using CPU');
                 return;
             }
-
-            alert('Engine Debug: GPUMatmul created, uploading weights...');
             // Upload all layer weights to GPU
             console.log('[Transformer] Uploading weights to GPU...');
             for (let i = 0; i < this.config.nLayers; i++) {
@@ -202,11 +198,8 @@ export class TransformerCPUEngine {
 
             this.usingGPU = true;
             const stats = this.gpuMatmul.getMemoryStats();
-            alert(`Engine Debug: GPU ready! ${stats.layerBuffersKB}KB on GPU`);
             console.log(`[Transformer] GPU initialized - ${stats.layerBuffersKB}KB weights on GPU`);
         } catch (error) {
-            const errMsg = error instanceof Error ? error.message : String(error);
-            alert(`Engine Debug ERROR: ${errMsg}`);
             console.warn('[Transformer] GPU initialization failed:', error);
             this.gpuMatmul = null;
             this.usingGPU = false;

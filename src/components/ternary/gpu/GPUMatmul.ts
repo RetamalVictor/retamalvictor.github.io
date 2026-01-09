@@ -67,16 +67,9 @@ export class GPUMatmul {
      * Create a GPUMatmul instance. Returns null if WebGPU is unavailable.
      */
     static async create(): Promise<GPUMatmul | null> {
-        // DEBUG: Using alerts for iOS debugging without Mac
-        alert('GPU Debug 1: Starting WebGPU init');
-
-        // Check WebGPU availability
         if (typeof navigator === 'undefined' || !navigator.gpu) {
-            alert('GPU Debug FAIL: navigator.gpu is undefined. WebGPU not supported.');
             return null;
         }
-
-        alert('GPU Debug 2: navigator.gpu exists');
 
         try {
             const adapter = await navigator.gpu.requestAdapter({
@@ -84,11 +77,8 @@ export class GPUMatmul {
             });
 
             if (!adapter) {
-                alert('GPU Debug FAIL: requestAdapter returned null');
                 return null;
             }
-
-            alert(`GPU Debug 3: Adapter found - ${adapter.info?.device || 'unknown'}`);
 
             // Request device with limits capped to what adapter supports (for mobile compatibility)
             const limits = adapter.limits;
