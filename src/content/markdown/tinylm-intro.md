@@ -109,11 +109,11 @@ There's a gap between tutorial code and real implementations. Tutorials show you
 
 1. **Implement papers quickly** - New attention variant? Add one file, register it, done.
 2. **See what's happening** - No magic. Every tensor transformation is explicit.
-3. **Test ideas at small scale** - If an idea can't show a signal at small scale, it's usually not worth paying 7B-scale rent.
+3. **Test ideas at small scale** - If an idea can't show a signal at small scale, it's usually not worth paying 7B-scale rent (unless the idea is explicitly about scaling behavior).
 
 ### The Solution
 
-Build the minimum viable transformer. Small enough to understand fully. Complete enough to train real models. Modular enough to swap any component.
+Build the minimum viable transformer. Compact enough to read in a sitting. Complete enough to train real models. Modular enough to swap any component.
 
 ---
 
@@ -341,9 +341,9 @@ One file, one decorator, one config change.
 
 ### 1. Readable
 
-The entire model is ~240 lines. Attention is ~210 lines including GQA/MQA support. No hidden complexity.
+The core model fits in ~240 lines; attention in ~210 (including GQA/MQA). You can set breakpoints without spelunking through framework glue.
 
-When something breaks, you can find it. When you want to understand a component, you can read it.
+When something breaks, you can find it. When you want to understand a component, you can trace it end-to-end.
 
 ### 2. Modular
 
@@ -357,7 +357,7 @@ Despite being small, TinyLM Lab includes:
 - KV-cache for efficient generation
 - Hydra configs for experiment management
 - Custom CUDA kernel (RMSNorm)
-- Attention via PyTorch SDPA (auto-selects FlashAttention when available)
+- Attention via PyTorch SDPA (FlashAttention when available)
 - Gradient checkpointing for memory efficiency
 
 ### 4. Extensible
@@ -411,7 +411,6 @@ State space models like Falcon H1. The registry pattern makes adding new archite
 ```bash
 git clone https://github.com/RetamalVictor/TinyLM-Lab.git
 cd TinyLM-Lab
-git checkout feature/browser-lm  # For latest features
 uv sync
 
 # Optional: build CUDA RMSNorm

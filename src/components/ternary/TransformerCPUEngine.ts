@@ -7,7 +7,13 @@
 
 import { SafeTensorsLoader } from './SafeTensorsLoader';
 import { BPETokenizer } from './BPETokenizer';
-import { GenerationStats } from './types';
+
+/** Statistics during text generation */
+interface GenerationStats {
+    tokensPerSecond: number;
+    totalTokens: number;
+    elapsedMs: number;
+}
 
 interface TransformerConfig {
     vocabSize: number;

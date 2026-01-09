@@ -5,14 +5,33 @@
  * panel showing memory savings and performance metrics.
  */
 
-import { TernaryEngine } from './TernaryEngine';
-import { TernaryCPUEngine } from './TernaryCPUEngine';
 import { TransformerCPUEngine } from './TransformerCPUEngine';
-import {
-    TernaryLMDemoConfig,
-    DemoState,
-    GenerationStats,
-} from './types';
+
+/** Demo component configuration */
+interface TernaryLMDemoConfig {
+    containerId: string;
+    modelPath: string;
+    backgroundColor?: number;
+    maxTokens?: number;
+    defaultPrompt?: string;
+}
+
+/** Statistics during text generation */
+interface GenerationStats {
+    tokensPerSecond: number;
+    totalTokens: number;
+    elapsedMs: number;
+}
+
+/** Demo state for UI rendering */
+interface DemoState {
+    status: 'loading' | 'ready' | 'generating' | 'error';
+    prompt: string;
+    output: string;
+    stats: GenerationStats | null;
+    showUnderTheHood: boolean;
+    errorMessage?: string;
+}
 
 // Common interface for both engines
 interface InferenceEngine {
@@ -62,50 +81,18 @@ export class TernaryLMDemo {
     private async init(): Promise<void> {
         this.render();
 
-        // Detect model type from path
-        const isTransformerModel = this.config.modelPath.includes('transformer') ||
-            !this.config.modelPath.endsWith('.tbin');
-
-        if (isTransformerModel) {
-            // Use TransformerCPUEngine for SafeTensors models
-            try {
-                console.log('Loading transformer model...');
-                this.engine = await TransformerCPUEngine.create(this.config.modelPath);
-                this.usingCPU = true;
-                this.isTransformer = true;
-                console.log('Transformer CPU engine initialized');
-            } catch (error) {
-                console.error('Transformer engine failed:', error);
-                this.state.status = 'error';
-                this.state.errorMessage = error instanceof Error ? error.message : 'Failed to load model';
-                this.showFallback();
-                return;
-            }
-        } else {
-            // Use MLP engine for .tbin files
-            try {
-                if (navigator.gpu) {
-                    console.log('Attempting WebGPU initialization...');
-                    this.engine = await TernaryEngine.create(this.config.modelPath);
-                    this.usingCPU = false;
-                    console.log('WebGPU engine initialized');
-                } else {
-                    throw new Error('WebGPU not available');
-                }
-            } catch (webgpuError) {
-                console.warn('WebGPU failed, falling back to CPU:', webgpuError);
-                try {
-                    this.engine = await TernaryCPUEngine.create(this.config.modelPath);
-                    this.usingCPU = true;
-                    console.log('CPU engine initialized');
-                } catch (cpuError) {
-                    console.error('CPU engine also failed:', cpuError);
-                    this.state.status = 'error';
-                    this.state.errorMessage = cpuError instanceof Error ? cpuError.message : 'Failed to load model';
-                    this.showFallback();
-                    return;
-                }
-            }
+        try {
+            console.log('Loading transformer model...');
+            this.engine = await TransformerCPUEngine.create(this.config.modelPath);
+            this.usingCPU = true;
+            this.isTransformer = true;
+            console.log('Transformer CPU engine initialized');
+        } catch (error) {
+            console.error('Transformer engine failed:', error);
+            this.state.status = 'error';
+            this.state.errorMessage = error instanceof Error ? error.message : 'Failed to load model';
+            this.showFallback();
+            return;
         }
 
         this.state.status = 'ready';
