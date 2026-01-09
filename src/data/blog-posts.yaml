@@ -1,4 +1,13 @@
 posts:
+  - slug: "tinylm-intro"
+    title: "Inside TinyLM: How I Built a Transformer I Could Actually Read"
+    date: "2026-01-09"
+    tags: ["machine-learning", "transformers", "pytorch", "cuda"]
+    summary: "A walkthrough of building a transformer from scratch - RMSNorm vs LayerNorm, RoPE's rotation trick, the KV cache that makes generation not suck, and what training curves actually tell you."
+    readTime: "15 min"
+    notebook: ""
+    featured: true
+
   - slug: "bittorch-1.58-bits"
     title: "1.58 Bits Per Weight: Implementing BitNet from Paper to CUDA"
     date: "2025-01-07"

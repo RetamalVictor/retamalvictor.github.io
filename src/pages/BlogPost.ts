@@ -15,6 +15,7 @@ import sysEngPart0Md from '../content/markdown/systems-engineering-part-0.md?raw
 import sysEngPart1Md from '../content/markdown/systems-engineering-part-1.md?raw';
 import sysEngPart2Md from '../content/markdown/systems-engineering-part-2.md?raw';
 import bittorchMd from '../content/markdown/bittorch-1.58-bits.md?raw';
+import tinylmIntroMd from '../content/markdown/tinylm-intro.md?raw';
 
 interface BlogPost {
     slug: string;
@@ -101,7 +102,8 @@ export class BlogPostPage {
             "systems-engineering-part-0": sysEngPart0Md,
             "systems-engineering-part-1": sysEngPart1Md,
             "systems-engineering-part-2": sysEngPart2Md,
-            "bittorch-1.58-bits": bittorchMd
+            "bittorch-1.58-bits": bittorchMd,
+            "tinylm-intro": tinylmIntroMd
         };
 
         // Map slugs to notebook HTML files (still need to be fetched)
@@ -178,8 +180,8 @@ export class BlogPostPage {
             `$1${baseUrl}images/`
         );
 
-        // Remove inline styles from figure elements (use CSS instead)
-        html = html.replace(/style="[^"]*"/g, '');
+        // Remove inline styles from figure elements only (preserve other inline styles for colored code blocks)
+        html = html.replace(/<figure([^>]*)\s+style="[^"]*"([^>]*)>/g, '<figure$1$2>');
 
         // Wrap in blog-content div
         html = `<div class="blog-content">${html}</div>`;
@@ -427,6 +429,23 @@ export class BlogPostPage {
                 }
             }).catch(error => {
                 console.error('Failed to load ternary demo module:', error);
+            });
+        }
+
+        // Check for training comparison demo container
+        const trainingComparisonContainer = document.getElementById('training-comparison-demo');
+        if (trainingComparisonContainer) {
+            import('../components/tinylm').then(({ TrainingComparisonDemo }) => {
+                try {
+                    new TrainingComparisonDemo({
+                        containerId: 'training-comparison-demo',
+                    });
+                    console.log('Training comparison demo initialized');
+                } catch (error) {
+                    console.error('Failed to initialize training comparison demo:', error);
+                }
+            }).catch(error => {
+                console.error('Failed to load training comparison demo module:', error);
             });
         }
     }

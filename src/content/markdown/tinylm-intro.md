@@ -1,467 +1,382 @@
-# TinyLM Lab: A Hackable Transformer for Research Prototyping
+# Inside TinyLM: How I Built a Transformer I Could Actually Read
 
-~6,800 lines of Python under `tinylm/`. Two architecture presets. A transformer stack you can read end-to-end.
+I wanted to understand how transformers work. Not the attention diagram everyone draws—the actual code that runs when you call `model.forward()`.
 
----
+So I opened the LLaMA source. Then Hugging Face's implementation. Then GPT-NeoX. Each time I hit the same wall: thousands of files, layers of abstraction, configuration systems that needed their own documentation. I could trace the math on paper, but I couldn't point to the line where Q meets K.
 
-After five years as an ML engineer, I finally had to work with LLMs. My new position demanded it, and I was behind.
+So I built my own. ~6,800 lines of Python. Two architecture presets. A transformer small enough to read in an afternoon.
 
-The papers made sense. The math clicked. But when I opened a production codebase to understand how transformers actually work, I hit a wall. Thousands of files. Layers of abstraction. Configuration systems that required their own documentation.
-
-I didn't need to deploy a model. I needed to *understand* one.
-
-So I built TinyLM Lab: a transformer framework small enough to read in an afternoon, complete enough to train real models, and modular enough to test research ideas without fighting infrastructure.
-
-The first time I swapped RoPE for learned positions and watched training behavior change, it finally *clicked* why architecture "details" aren't details.
-
-What started as a learning exercise is now my go-to testbed for prototyping. When a paper catches my attention, I implement it in TinyLM first. If it works at tiny scale, it's worth pursuing further—though there are exceptions.
+This isn't a tutorial. It's a walkthrough of what I learned building it—the parts that clicked, the parts that surprised me, and enough detail that you could build your own if you wanted to.
 
 ---
 
-## Who It's For (and Not For)
+## The Core Loop
 
-TinyLM Lab is for researchers, students, and engineers who want to *edit the model itself*—not just fine-tune one.
-
-**Good fit:**
-- Implementing paper ideas at small scale
-- Learning transformer internals by modifying them
-- Quick architecture experiments before committing to large runs
-
-**Not a good fit:**
-- Production deployment at scale
-- Maximum inference throughput
-- Using pretrained weights (use HuggingFace)
-
-If you're optimizing serving or training at billions of parameters, you'll be happier in a production framework. They're built for scale and safety; TinyLM Lab is built for comprehension and iteration.
-
----
-
-## What TinyLM Lab Is
-
-A transformer framework optimized for clarity first; scale is explicitly out of scope.
-
-**The numbers:**
-- ~6,800 lines of Python under `tinylm/` (measured: `find tinylm -name "*.py" -not -path "*__pycache__*" | xargs wc -l`)
-- 2 architecture presets (LLaMA-style, GPT-style post-norm)
-- Full training pipeline with gradient accumulation and checkpointing
-- KV-cache generation
-- Custom CUDA kernel for RMSNorm
-
-**What's included:**
-
-| Component | Current | Code Location |
-|-----------|---------|---------------|
-| Architectures | LLaMA, GPT (post-norm) | [`tinylm/architectures/__init__.py`][arch] |
-| Attention | MHA, GQA, MQA | [`tinylm/components/attention/mha.py:17-18`][mha] |
-| Attention Backends | standard, flash, memory_efficient | [`tinylm/components/attention/ops/`][ops] |
-| Positional | RoPE, Learned | [`tinylm/components/positional/`][pos] |
-| Normalization | RMSNorm (with CUDA), LayerNorm | [`tinylm/components/normalization/`][norm] |
-| MLP | Standard, Gated (SwiGLU) | [`tinylm/components/mlp/`][mlp] |
-| Quantization | Ternary (via BitTorch) | [`tinylm/quant/`][quant] |
-
-[arch]: https://github.com/RetamalVictor/TinyLM-Lab/blob/e55b30cb7482017852846116ea72fa4fbd12dda6/tinylm/architectures/__init__.py
-[mha]: https://github.com/RetamalVictor/TinyLM-Lab/blob/e55b30cb7482017852846116ea72fa4fbd12dda6/tinylm/components/attention/mha.py#L17-L18
-[ops]: https://github.com/RetamalVictor/TinyLM-Lab/tree/e55b30cb7482017852846116ea72fa4fbd12dda6/tinylm/components/attention/ops
-[pos]: https://github.com/RetamalVictor/TinyLM-Lab/tree/e55b30cb7482017852846116ea72fa4fbd12dda6/tinylm/components/positional
-[norm]: https://github.com/RetamalVictor/TinyLM-Lab/tree/e55b30cb7482017852846116ea72fa4fbd12dda6/tinylm/components/normalization
-[mlp]: https://github.com/RetamalVictor/TinyLM-Lab/tree/e55b30cb7482017852846116ea72fa4fbd12dda6/tinylm/components/mlp
-[quant]: https://github.com/RetamalVictor/TinyLM-Lab/tree/e55b30cb7482017852846116ea72fa4fbd12dda6/tinylm/quant
-
-**Note:** The attention backends use PyTorch's `scaled_dot_product_attention` (SDPA), which selects among available kernels (Flash, memory-efficient, math) depending on your PyTorch build, GPU, dtype, and tensor shapes. The "flash" and "memory_efficient" ops configure SDPA's kernel preferences—they *encourage* a specific backend, but don't guarantee it. See [PyTorch SDPA docs](https://pytorch.org/docs/stable/generated/torch.nn.functional.scaled_dot_product_attention.html) for details.
-
-No hidden config loading. No framework magic. The constructor tells you what you're building:
+Every transformer forward pass is the same loop. Here's the actual code path:
 
 ```python
-from tinylm import TinyLM
+def forward(self, x: torch.Tensor) -> torch.Tensor:
+    # x: [batch, seq_len] token indices
 
-model = TinyLM(
-    vocab_size=32000,
-    dim=512,
-    n_layers=8,
-    n_heads=8,
-    architecture="llama",  # or "gpt" (classic post-norm decoder)
-)
+    h = self.embedding(x)  # [batch, seq_len, dim]
+
+    for i, block in enumerate(self.blocks):
+        h = block(h, pos_ctx, cache, layer_idx=i, start_pos=start_pos)
+
+    h = self.norm(h)           # Final normalization
+    logits = self.head(h)      # [batch, seq_len, vocab_size]
+    return logits
 ```
 
-### Code Map (Start Here)
-
-| Path | What's There |
-|------|--------------|
-| `tinylm/model/transformer.py` | Top-level model assembly |
-| `tinylm/architectures/` | LLaMA vs GPT preset configs |
-| `tinylm/components/attention/mha.py` | MHA/GQA/MQA implementation |
-| `tinylm/components/attention/ops/` | SDPA backend preferences |
-| `tinylm/components/normalization/` | RMSNorm (with CUDA), LayerNorm |
-| `tinylm/training/trainer.py` | Training loop + checkpointing |
-| `tinylm/cli/` | Train, infer, evaluate commands |
-
----
-
-## Why It Exists
-
-### The Problem
-
-Production frameworks are powerful but opaque. When I wanted to understand how RoPE actually works, I had to trace through five files and three abstraction layers. When I wanted to add a custom attention variant, I spent more time understanding the framework than implementing the idea.
-
-There's a gap between tutorial code and real implementations. Tutorials show you the math. Production code shows you the engineering. Neither shows you both in a way you can modify.
-
-### What I Needed
-
-1. **Implement papers quickly** - New attention variant? Add one file, register it, done.
-2. **See what's happening** - No magic. Every tensor transformation is explicit.
-3. **Test ideas at small scale** - If an idea can't show a signal at small scale, it's usually not worth paying 7B-scale rent (unless the idea is explicitly about scaling behavior).
-
-### The Solution
-
-Build the minimum viable transformer. Compact enough to read in a sitting. Complete enough to train real models. Modular enough to swap any component.
-
----
-
-## The Architecture System
-
-The difference between LLaMA-style and GPT-style (post-norm) is one config:
+That's it. Everything else is implementation detail inside `block()`:
 
 ```python
-# tinylm/architectures/__init__.py
-
-ARCHITECTURES = {
-    "llama": ArchitectureConfig(
-        norm_type="rmsnorm",
-        norm_position="pre",
-        pos_emb_type="rope",
-        activation="silu",
-        mlp_type="gated",      # SwiGLU
-        use_bias=False,
-    ),
-    "gpt": ArchitectureConfig(
-        norm_type="layernorm",
-        norm_position="post",
-        pos_emb_type="learned",
-        activation="gelu",
-        mlp_type="standard",
-        use_bias=True,
-    ),
-}
+def forward(self, x, pos_ctx, cache, layer_idx, start_pos):
+    # Pre-norm: normalize before each sublayer
+    x = x + self.attn(self.norm1(x), pos_ctx, cache, layer_idx, start_pos)
+    x = x + self.mlp(self.norm2(x))
+    return x
 ```
 
-### What This Means
+Two residual connections. Two normalizations. One attention, one MLP. Repeat N times.
 
-| Aspect | LLaMA-style | GPT-style (post-norm) |
-|--------|-------------|----------------------|
-| Normalization | RMSNorm (computationally simpler, no mean-centering) | LayerNorm |
-| Norm Position | Pre-norm (before attn/MLP) | Post-norm (after) |
-| Position Encoding | RoPE (rotary, adds relative-position behavior inside attention) | Learned (absolute, added to embeddings) |
-| Activation | SiLU | GELU |
-| MLP | Gated FFN variant with extra projection (SwiGLU) | Standard (2 matrices) |
-| Bias | No | Yes |
-
-Note: The "GPT" preset uses post-norm, which is closer to the original Transformer than GPT-2/3 (which use pre-norm). I kept the name for simplicity, but it's really "classic post-norm decoder."
+The complexity isn't in the structure—it's in making each piece fast and stable. That's where it gets interesting.
 
 ---
 
-## Experiment: LLaMA vs GPT on TinyStories
+## The Parts That Surprised Me
+
+### RMSNorm: Simpler Than I Expected
+
+LayerNorm does two things: <span style="color: #f97316">centers the data</span> (subtract mean) and <span style="color: #22d3ee">scales it</span> (divide by std). RMSNorm drops the centering:
+
+<div style="background: #1e1e2e; border-radius: 8px; padding: 1rem 1.25rem; font-family: monospace; margin: 1rem 0; line-height: 1.5; overflow-x: auto; font-size: 0.9rem;">
+<pre style="margin: 0; color: #cdd6f4;"><span style="color: #6c7086"># LayerNorm: 4 ops per element</span>
+y = (<span style="color: #f97316">x - mean(x)</span>) / std(x) * <span style="color: #22d3ee">γ</span> + <span style="color: #9ca3af">β</span>
+
+<span style="color: #6c7086"># RMSNorm: 2 ops per element</span>
+y = x / sqrt(mean(x²) + ε) * <span style="color: #22d3ee">γ</span></pre>
+</div>
+
+<div style="display: flex; gap: 1.5rem; margin: 0.5rem 0 1rem; font-size: 0.85rem; flex-wrap: wrap;">
+  <span><span style="color: #f97316">■</span> centering</span>
+  <span><span style="color: #22d3ee">■</span> learned scale</span>
+  <span><span style="color: #9ca3af">■</span> learned bias</span>
+</div>
+
+Why does dropping mean subtraction work? The [RMSNorm paper](https://arxiv.org/abs/1910.07467) argues that re-centering is redundant when you already have bias terms in subsequent layers. The network learns to compensate. What *does* matter is controlling activation magnitudes—without normalization, residual connections cause exponential growth through deep networks.
+
+RMSNorm gives you the stability benefit with fewer operations: one reduction (sum of squares) instead of two (sum for mean, then sum of squared deviations).
+
+The CUDA kernel makes this concrete—three phases, each with a different parallelism pattern:
+
+<div style="background: #1e1e2e; border-radius: 8px; padding: 1.25rem; font-family: monospace; margin: 1rem 0; overflow-x: auto;"><pre style="margin: 0; color: #cdd6f4; line-height: 1.5; font-size: 0.85rem;"><span style="color: #6c7086">// One CUDA block per row (row = one token's hidden state)</span>
+__global__ void rmsnorm_fwd_kernel(...) {
+  float sumsq = 0.f;
+  for (int i = tid; i < hidden; i += stride)
+      sumsq += x[i] * x[i];
+  float reduced = <span style="color: #89b4fa">blockReduceSum</span>(sumsq);  <span style="color: #6c7086">// warp shuffle, no atomics</span>
+
+  <span style="color: #f9e2af">__shared__</span> float <span style="color: #f9e2af">s_inv_rms</span>;
+  if (tid == 0)
+      <span style="color: #f9e2af">s_inv_rms</span> = <span style="color: #a6e3a1">rsqrtf</span>(reduced / hidden + eps);  <span style="color: #6c7086">// 1 HW instruction</span>
+  <span style="color: #f9e2af">__syncthreads</span>();  <span style="color: #6c7086">// all threads now see s_inv_rms</span>
+
+  for (int i = tid; i < hidden; i += stride)
+      y[i] = x[i] * <span style="color: #f9e2af">s_inv_rms</span> * <span style="color: #a78bfa">weight</span>[i];
+}</pre></div>
+
+<div style="display: flex; gap: 1.5rem; margin: 0.5rem 0 1rem; font-size: 0.8rem; flex-wrap: wrap;">
+  <span><span style="color: #89b4fa">■</span> parallel reduce</span>
+  <span><span style="color: #f9e2af">■</span> shared memory</span>
+  <span><span style="color: #a6e3a1">■</span> rsqrtf (1 instruction)</span>
+  <span><span style="color: #a78bfa">■</span> learned scale γ</span>
+</div>
+
+`rsqrtf` (reciprocal square root) is a single hardware instruction on NVIDIA GPUs. We compute it once, broadcast via shared memory, and every thread reads it. The reduction uses warp shuffles—no atomics, no global memory traffic.
+
+I cache `inv_rms` for the backward pass. Computing gradients through the normalization requires the same value, and recomputing it would double the memory bandwidth.
+
+### RoPE: Position as Rotation
+
+Most position encodings *add* a position vector to the embedding. RoPE does something geometrically cleaner: it *rotates* query and key vectors based on their position.
+
+Your 512-dim query vector? RoPE treats it as 256 separate 2D vectors and rotates each one:
+
+<div style="background: #1e1e2e; border-radius: 8px; padding: 1.25rem; font-family: monospace; margin: 1rem 0; overflow-x: auto;">
+<pre style="margin: 0; color: #cdd6f4; line-height: 1.6; font-size: 0.85rem;"><span style="color: #6c7086">q = [</span><span style="color: #89b4fa">q₀, q₁</span><span style="color: #6c7086">,</span> <span style="color: #a78bfa">q₂, q₃</span><span style="color: #6c7086">,</span> <span style="color: #f9e2af">q₄, q₅</span><span style="color: #6c7086">, ...]</span>      <span style="color: #6c7086"># 512 dimensions</span>
+       <span style="color: #89b4fa">└──┘</span>   <span style="color: #a78bfa">└──┘</span>   <span style="color: #f9e2af">└──┘</span>
+       <span style="color: #89b4fa">2D</span>     <span style="color: #a78bfa">2D</span>     <span style="color: #f9e2af">2D</span>          <span style="color: #6c7086"># 256 pairs</span>
+
+<span style="color: #cdd6f4">At position </span><span style="color: #4ade80">t</span><span style="color: #cdd6f4">, rotate each pair by </span><span style="color: #4ade80">t</span><span style="color: #cdd6f4"> × </span><span style="color: #f38ba8">θᵢ</span><span style="color: #cdd6f4">:</span>
+
+  <span style="color: #89b4fa">pair 0</span>: rotate by <span style="color: #4ade80">t</span> × <span style="color: #f38ba8">θ₀</span>     <span style="color: #6c7086"># θ₀ = 1.0        (fast rotation)</span>
+  <span style="color: #a78bfa">pair 1</span>: rotate by <span style="color: #4ade80">t</span> × <span style="color: #f38ba8">θ₁</span>     <span style="color: #6c7086"># θ₁ = 0.68       (medium)</span>
+  <span style="color: #f9e2af">pair 2</span>: rotate by <span style="color: #4ade80">t</span> × <span style="color: #f38ba8">θ₂</span>     <span style="color: #6c7086"># θ₂ = 0.46       (slower)</span>
+  <span style="color: #6c7086">...                           # θᵢ = 10000^(-2i/d)</span>
+  <span style="color: #6c7086">pair 255</span>: rotate by <span style="color: #4ade80">t</span> × <span style="color: #f38ba8">θ₂₅₅</span>  <span style="color: #6c7086"># θ₂₅₅ ≈ 0.0001  (very slow)</span></pre>
+</div>
+
+**Why rotation encodes *relative* position**: When you compute `q · k`, the rotations combine. If `q` at position 5 rotated by `5θ` and `k` at position 3 rotated by `3θ`, the dot product only sees the *difference*: `(5-3)θ = 2θ`. The attention score depends on "2 tokens apart"—not "positions 5 and 3."
+
+**Why multiple frequencies**: Low-index pairs rotate fast—position 1 vs 2 looks very different. High-index pairs rotate slowly—position 1 vs 2 looks almost identical, but position 1 vs 100 is distinct. The model gets both local precision and global structure, like Fourier features.
+
+The implementation precomputes sin/cos tables:
+
+```python
+def precompute(self, max_seq_len, device):
+    # Inverse frequencies: θ_i = base^(-2i/d)
+    inv_freq = 1.0 / (self.base ** (torch.arange(0, self.dim, 2) / self.dim))
+
+    # Position indices
+    t = torch.arange(max_seq_len)
+
+    # Frequency matrix: freqs[t, i] = t * θ_i
+    freqs = torch.einsum('t,f->tf', t, inv_freq)
+
+    # Cache sin and cos
+    self.sin = torch.sin(torch.cat([freqs, freqs], dim=-1))
+    self.cos = torch.cos(torch.cat([freqs, freqs], dim=-1))
+```
+
+During forward, applying the rotation is just:
+
+```python
+def apply(self, x, start_pos):
+    sin = self.sin[start_pos:start_pos + seq_len]
+    cos = self.cos[start_pos:start_pos + seq_len]
+
+    # x1 = even indices (first element of each pair)
+    # x2 = odd indices (second element of each pair)
+    x1, x2 = x[..., ::2], x[..., 1::2]
+
+    # Standard 2D rotation: (x,y) → (x·cos - y·sin, x·sin + y·cos)
+    return torch.cat([x1*cos - x2*sin, x1*sin + x2*cos], dim=-1)
+```
+
+No learned parameters, no additive interference with the content embedding, and it extrapolates to longer sequences than seen during training (with some degradation).
+
+### SwiGLU: The Third Projection
+
+Standard transformer MLPs: project up to 4× width, apply activation, project back down. Simple, but the activation (ReLU, GELU) is a blunt instrument—it decides "on or off" based purely on magnitude.
+
+SwiGLU separates *what* to compute from *whether* to use it:
+
+<div style="background: #1e1e2e; border-radius: 8px; padding: 1rem 1.25rem; font-family: monospace; margin: 1rem 0; line-height: 1.5; overflow-x: auto; font-size: 0.9rem;">
+<pre style="margin: 0; color: #cdd6f4;"><span style="color: #a78bfa">gate</span> = silu(W_gate @ x)     <span style="color: #6c7086"># learned "should we use this?"</span>
+<span style="color: #22d3ee">up</span>   = W_up @ x             <span style="color: #6c7086"># learned "what's the value?"</span>
+out  = <span style="color: #f97316">W_down</span> @ (<span style="color: #a78bfa">gate</span> * <span style="color: #22d3ee">up</span>)  <span style="color: #6c7086"># element-wise gating</span></pre>
+</div>
+
+<div style="display: flex; gap: 1.5rem; margin: 0.5rem 0 1rem; font-size: 0.8rem;">
+  <span><span style="color: #a78bfa">■</span> gate (controls flow)</span>
+  <span><span style="color: #22d3ee">■</span> up (computes values)</span>
+  <span><span style="color: #f97316">■</span> down (projects back)</span>
+</div>
+
+The <span style="color: #a78bfa">gate</span> and <span style="color: #22d3ee">up</span> projections see the same input but learn different functions. The gate learns *which* hidden dimensions are relevant for this input; up learns *what* values to produce. The element-wise product `gate * up` means a dimension only contributes if both agree it should.
+
+SiLU (Swish) is `x * sigmoid(x)`—smooth, allows gradients everywhere, and lets the gate output negative values (unlike ReLU).
+
+Three projections means 50% more parameters, right? Here's the trick—use a smaller hidden dimension:
+
+<div style="background: #1e1e2e; border-radius: 8px; padding: 0.75rem 1.25rem; font-family: monospace; margin: 1rem 0; font-size: 0.85rem;">
+<pre style="margin: 0; color: #cdd6f4;">Standard: 2 × dim × <span style="color: #fab387">4d</span>   = <span style="color: #a6e3a1">8d²</span>
+SwiGLU:   3 × dim × <span style="color: #fab387">8d/3</span> = <span style="color: #a6e3a1">8d²</span>  <span style="color: #6c7086">← same!</span></pre>
+</div>
+
+Same parameter count, more expressiveness. The implementation rounds to multiples of 256 for GPU efficiency:
+
+```python
+hidden_dim = int(dim * 4 * 2 / 3)                 # 8/3 ≈ 2.67x instead of 4x
+hidden_dim = 256 * ((hidden_dim + 255) // 256)    # align for tensor cores
+```
+
+---
+
+## Making Generation Not Suck
+
+### The KV Cache Problem
+
+Training sees whole sequences; generation produces one token at a time. Naively, you'd recompute everything for each new token—but attention has a useful property: past tokens' keys and values don't change.
+
+Think about what attention computes: `softmax(Q @ K.T) @ V`. The new token needs Q (its query), but K and V come from *all* positions. Past tokens' K and V projections are deterministic functions of their embeddings—they're the same every time. Only Q changes.
+
+<span style="color: #f38ba8">**Without caching**</span>—reproject K, V for all n tokens on every step:
+
+<div style="background: #1e1e2e; border-radius: 8px; padding: 1rem 1.25rem; font-family: monospace; margin: 1rem 0; line-height: 1.5; font-size: 0.9rem;">
+<pre style="margin: 0; color: #cdd6f4;"><span style="color: #6c7086"># </span><span style="color: #f38ba8">O(n²) total</span><span style="color: #6c7086"> — projecting K,V grows linearly, n steps = quadratic</span>
+for i in range(n):
+    logits = model(<span style="color: #f38ba8">all_tokens[:i+1]</span>)  <span style="color: #6c7086"># reproject ALL K,V</span></pre>
+</div>
+
+<span style="color: #a6e3a1">**With caching**</span>—project K, V once, store forever:
+
+<div style="background: #1e1e2e; border-radius: 8px; padding: 1rem 1.25rem; font-family: monospace; margin: 1rem 0; line-height: 1.5; font-size: 0.9rem;">
+<pre style="margin: 0; color: #cdd6f4;"><span style="color: #6c7086"># Pre-allocate</span>
+<span style="color: #89b4fa">K</span>[max_seq, dim], <span style="color: #f9e2af">V</span>[max_seq, dim] = zeros(...)
+
+<span style="color: #6c7086"># On each token:</span>
+<span style="color: #89b4fa">K</span>[<span style="color: #a6e3a1">pos</span>], <span style="color: #f9e2af">V</span>[<span style="color: #a6e3a1">pos</span>] = project(new_token)  <span style="color: #6c7086"># store</span>
+attn = Q @ <span style="color: #89b4fa">K</span>[:pos].T                    <span style="color: #6c7086"># attend to all cached</span></pre>
+</div>
+
+<div style="display: flex; gap: 1.5rem; margin: 0.5rem 0 1rem; font-size: 0.8rem;">
+  <span><span style="color: #89b4fa">■</span> K cache</span>
+  <span><span style="color: #f9e2af">■</span> V cache</span>
+  <span><span style="color: #a6e3a1">■</span> position</span>
+</div>
+
+The new token's Q attends to all cached <span style="color: #89b4fa">K</span>,<span style="color: #f9e2af">V</span>—now <span style="color: #a6e3a1">O(n) per token</span> instead of O(n²).
+
+### Pre-allocation Matters
+
+Why pre-allocate the full cache upfront? Two reasons: fragmentation and speed.
+
+If you grow tensors dynamically (`torch.cat` on each step), you fragment GPU memory. The allocator finds gaps, copies data, frees old blocks. After enough tokens, you can't allocate contiguous blocks even with plenty of total free memory.
+
+Pre-allocating `[batch, n_kv_heads, max_seq_len, head_dim]` means zero allocations during generation—just pointer arithmetic to write at the next position. The cost is reserving memory you might not use, but for generation you usually know your max length upfront.
+
+### GQA: Trading KV Capacity for Speed
+
+The KV cache is often the memory bottleneck during inference. For a 7B model generating 2048 tokens, you're storing 537 MB of key-value pairs—per layer.
+
+Grouped-Query Attention (GQA) observes that K and V don't need as much capacity as Q. Multiple Q heads can share the same K,V head:
+
+```python
+# MHA: n_heads = n_kv_heads = 32    (every Q head has its own KV)
+# GQA: n_heads = 32, n_kv_heads = 8  (4 Q heads share each KV head)
+# MQA: n_heads = 32, n_kv_heads = 1  (all Q heads share one KV head)
+```
+
+The KV cache scales with `n_kv_heads`, not `n_heads`:
+
+| Variant | KV Cache Size (2048 ctx) | Quality |
+|---------|-------------------------|---------|
+| MHA (32 KV heads) | 537 MB | Baseline |
+| GQA (8 KV heads) | 134 MB | ~Same |
+| MQA (1 KV head) | 17 MB | Slight loss |
+
+LLaMA 2 70B uses GQA with 8 KV heads for 64 Q heads—an 8× reduction in KV cache with no measurable quality loss. The intuition: Q needs capacity to ask diverse questions, but K and V just need to store the context. The implementation handles all three variants:
+
+```python
+def _repeat_kv(self, kv):
+    """Expand KV heads to match Q heads."""
+    if self.n_rep == 1:  # MHA: no expansion needed
+        return kv
+    # GQA/MQA: repeat each KV head n_rep times
+    return kv.repeat_interleave(self.n_rep, dim=1)
+```
+
+One function, three attention variants.
+
+---
+
+## What the Training Curves Tell You
 
 <div id="training-comparison-demo" class="my-8 not-prose"></div>
 
-In my runs (single seed, config below), the LLaMA-style preset converged faster on TinyStories.
+I trained two identical models on TinyStories—same size, same data, same hyperparameters. Only difference: LLaMA-style (pre-norm, RMSNorm, RoPE, SwiGLU) vs GPT-style (post-norm, LayerNorm, learned positions, standard MLP).
 
-**Results after 25,000 steps:**
+Results after 25,000 steps:
 
 | Architecture | Val Loss | Val PPL |
 |--------------|----------|---------|
-| **LLaMA-style** | **1.25** | **3.49** |
-| GPT-style (post-norm) | 1.33 | 3.79 |
+| LLaMA-style | 1.25 | 3.49 |
+| GPT-style | 1.33 | 3.79 |
+
+The curves tell a more interesting story than the final numbers. LLaMA-style pulls ahead early and stays ahead. The gap opens in the first few thousand steps, then the curves run roughly parallel.
+
+This suggests the architectural differences affect optimization dynamics more than model capacity. Pre-norm gives cleaner gradient flow. RMSNorm is simpler to optimize. RoPE's relative position encoding might generalize better to the sequence lengths in TinyStories.
+
+None of these are surprising if you've read the papers. What surprised me was how clearly they showed up at tiny scale. A 6-layer, 384-dim model is enough to see architectural effects that matter at 7B.
 
 <details>
-<summary><strong>Reproducibility: Full Config</strong></summary>
+<summary><strong>Full training config</strong></summary>
 
 ```yaml
-# Both runs used identical settings except architecture
 model:
-  name: small
   dim: 384
   n_layers: 6
   n_heads: 6
-  dropout: 0.1
   max_seq_len: 4096
 
 training:
-  steps: 50000  # stopped at 25000
   batch_size: 32
   seq_len: 512
   lr: 0.0003
   weight_decay: 0.1
-  betas: [0.9, 0.95]
-  lr_schedule: cosine
   warmup_steps: 500
   grad_clip: 1.0
-  grad_accum_steps: 2
-  mixed_precision: true
 
-data:
-  name: tinystories
-
-tokenizer:
-  type: bytelevel  # ByteLevel BPE via HuggingFace tokenizers
-  vocab_size: 4096
-
-seed: 42
-hardware: Single GPU (RTX 3090)
+hardware: Single RTX 3090
 ```
-
-**Commit:** [`e55b30c`](https://github.com/RetamalVictor/TinyLM-Lab/commit/e55b30cb7482017852846116ea72fa4fbd12dda6) on `feature/browser-lm` branch
-
-**Commands:**
-```bash
-# LLaMA run
-uv run python -m tinylm.cli.train model=small model.architecture=llama data=tinystories training=long
-
-# GPT run
-uv run python -m tinylm.cli.train model=small model.architecture=gpt data=tinystories training=long
-```
-
-**Training curves:** Embedded in the interactive chart above. Raw data available in the blog repo under `src/data/training_curves.json`.
 
 </details>
 
-This is the kind of experiment TinyLM Lab makes trivial. Change one line in the config, retrain, compare.
-
 ---
 
-## The Registry Pattern
+## If You Want to Build Your Own
 
-Every component type has a registry:
+I'm not going to tell you to use my code. But here's what I learned that might save you time:
+
+### Start with the forward pass
+
+Write the dumbest possible implementation first. No KV cache, no mixed precision, no kernel fusion. Just:
 
 ```python
-from tinylm.components.registry import NORM_REGISTRY
+def forward(x):
+    h = embed(x)
+    for block in blocks:
+        h = h + attention(norm(h))
+        h = h + mlp(norm(h))
+    return head(norm(h))
+```
 
+Make it produce plausible gradients. Then optimize.
+
+### The registry pattern is worth it
+
+Every component type (norm, attention, MLP, position encoding) has a registry:
+
+```python
 @NORM_REGISTRY.register("rmsnorm")
 class RMSNorm(nn.Module):
-    def __init__(self, dim: int, eps: float = 1e-6):
-        super().__init__()
-        self.weight = nn.Parameter(torch.ones(dim))
-        self.eps = eps
+    ...
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return x * torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + self.eps) * self.weight
-
-# Usage anywhere
-from tinylm.components import build_norm
-norm = build_norm("rmsnorm", dim=512)
+# Later:
+norm = NORM_REGISTRY.build("rmsnorm", dim=512)
 ```
 
-### Why This Matters
+This looks like over-engineering until you want to test a new attention variant. Then it's "add a file, add a decorator, change a config string."
 
-1. **Swap components without touching model code** - Change `norm_type` in config, done
-2. **Add new variants in one file** - Register it, use it
-3. **Config-driven experimentation** - No code changes for architecture sweeps
+### What I'd do differently
 
-### Available Registries
+**More tests earlier.** I caught a RoPE bug that only showed up at sequence lengths > 512. A simple "outputs match reference implementation" test would have caught it immediately.
 
-| Registry | Components |
-|----------|------------|
-| `NORM_REGISTRY` | rmsnorm, layernorm |
-| `ATTENTION_REGISTRY` | mha, gqa, mqa |
-| `ATTENTION_OP_REGISTRY` | standard, flash, memory_efficient |
-| `MLP_REGISTRY` | standard, gated |
-| `POS_EMB_REGISTRY` | rope, learned |
+**Profile before optimizing.** I spent a week on a CUDA kernel that improved end-to-end speed by 3%. The real bottleneck was attention—and PyTorch's `scaled_dot_product_attention` already handles that.
+
+**Simpler configs.** I used Hydra for configuration, which is powerful but adds complexity. For a research codebase, dataclasses + argparse might be enough.
 
 ---
 
-## Adding a New Component
+## The Code
 
-Say you read a paper with a new attention variant. Here's how to add it:
+If you want to look at the implementation: [github.com/RetamalVictor/TinyLM-Lab](https://github.com/RetamalVictor/TinyLM-Lab)
 
-**Step 1: Create the op**
-
-```python
-# tinylm/components/attention/ops/sliding_window.py
-
-from tinylm.components.registry import ATTENTION_OP_REGISTRY
-from tinylm.components.attention.ops.base import AttentionOp
-
-@ATTENTION_OP_REGISTRY.register("sliding_window")
-class SlidingWindowAttention(AttentionOp):
-    """Sliding window attention (toy implementation for clarity).
-
-    Note: This is O(seq²) and allocates a new mask on every call.
-    For production, you'd implement this as a fused kernel or block-sparse op.
-    """
-
-    def __init__(self, window_size: int = 4096, **kwargs):
-        super().__init__(**kwargs)
-        self.window_size = window_size
-
-    def __call__(self, q, k, v, attn_mask=None, is_causal=True, training=False):
-        B, H, T, D = q.shape
-
-        # Create sliding window mask (O(seq²) - not efficient!)
-        device = q.device
-        positions = torch.arange(T, device=device)
-        distance = positions.unsqueeze(0) - positions.unsqueeze(1)
-        window_mask = distance.abs() <= self.window_size
-
-        if is_causal:
-            causal_mask = torch.tril(torch.ones(T, T, device=device, dtype=torch.bool))
-            window_mask = window_mask & causal_mask
-
-        # Standard scaled dot-product
-        scale = D ** -0.5
-        attn = torch.matmul(q * scale, k.transpose(-2, -1))
-        attn = attn.masked_fill(~window_mask, -1e9)  # Use -1e9 for fp16 safety
-        attn = torch.softmax(attn, dim=-1)
-
-        return torch.matmul(attn, v)
-```
-
-**Step 2: Use it**
-
-```python
-# Via architecture config
-from tinylm.architectures import ArchitectureConfig
-
-config = ArchitectureConfig(
-    attention_op="sliding_window",
-    # ... rest of config
-)
-
-# Or swap at runtime
-from tinylm.components.attention import build_attention_op
-model.blocks[0].attn.attention_op = build_attention_op(
-    "sliding_window",
-    window_size=2048
-)
-```
-
-One file, one decorator, one config change.
-
----
-
-## What's Good About TinyLM Lab
-
-### 1. Readable
-
-The core model fits in ~240 lines; attention in ~210 (including GQA/MQA). You can set breakpoints without spelunking through framework glue.
-
-When something breaks, you can find it. When you want to understand a component, you can trace it end-to-end.
-
-### 2. Modular
-
-Every component is swappable. Architecture is config, not code.
-
-### 3. Complete
-
-Despite being small, TinyLM Lab includes:
-- Training loop with gradient accumulation
-- Checkpointing (save/load/resume)
-- KV-cache for efficient generation
-- Hydra configs for experiment management
-- Custom CUDA kernel (RMSNorm)
-- Attention via PyTorch SDPA (FlashAttention when available)
-- Gradient checkpointing for memory efficiency
-
-### 4. Extensible
-
-The quantization system (BitTorch integration) shows how to extend TinyLM Lab for research. Ternary weights, straight-through estimators, packed inference—all plugged in via the registry pattern.
-
----
-
-## Limitations
-
-### Not Tested at Scale
-
-I don't have the budget to validate at 7B+ parameters. TinyLM Lab is designed for tiny-to-small models (1M - 500M params).
-
-If you need production scale, use something else.
-
-### Missing Features
-
-- No tensor parallelism (yet)
-- No FSDP integration (yet)
-- Limited tokenizer support (uses HuggingFace tokenizers)
-
-### Planned / In Progress
-
-| Feature | Status |
-|---------|--------|
-| Distributed training (DDP) | Planned |
-| Cloud training (RunPod) | Planned |
-| More architectures | Planned |
-
----
-
-## Future Plans
-
-### Coming First: Distributed Training
-
-Cloud training support (likely RunPod or similar) with proper distributed architecture. DDP first, then FSDP.
-
-### Then: Multi-Modality
-
-Vision and audio encoders for robotics applications. The goal is using language models as world models for robotic control.
-
-### Later: New Architectures
-
-State space models like Falcon H1. The registry pattern makes adding new architecture types straightforward.
-
----
-
-## Getting Started
-
-```bash
-git clone https://github.com/RetamalVictor/TinyLM-Lab.git
-cd TinyLM-Lab
-uv sync
-
-# Optional: build CUDA RMSNorm
-uv run python setup.py build_ext --inplace
-
-# Prepare data
-uv run python scripts/prepare_tinyshakespeare.py
-uv run python scripts/prepare_tinystories.py
-
-# Train LLaMA-style (default)
-uv run python -m tinylm.cli.train model=small
-
-# Train GPT-style
-uv run python -m tinylm.cli.train model=small model.architecture=gpt
-
-# Inference
-uv run python -m tinylm.cli.infer \
-    --ckpt outputs/.../best.pt \
-    --prompt "Once upon a time"
-```
-
----
-
-## What's Next
-
-This is the first post in a series:
-
-1. **This post**: What TinyLM Lab is and why
-2. **Next**: Building the browser inference engine (WebGPU + ternary weights)
-3. **Then**: Training quantized models with TinyLM Lab + BitTorch
-
-If you're implementing papers, prototyping ideas, or just want to understand transformers better, give TinyLM Lab a try. The code is the documentation.
-
----
-
-## Receipts
-
-| Item | Value |
-|------|-------|
-| Repo | [github.com/RetamalVictor/TinyLM-Lab](https://github.com/RetamalVictor/TinyLM-Lab) |
-| Commit | [`e55b30c`](https://github.com/RetamalVictor/TinyLM-Lab/commit/e55b30cb7482017852846116ea72fa4fbd12dda6) |
-| LOC | 6,796 (`find tinylm -name "*.py" -not -path "*__pycache__*" \| xargs wc -l`) |
-| Training data | Embedded chart above; raw JSON in blog repo |
+The interesting files:
+- `tinylm/model/transformer.py` — the forward pass
+- `tinylm/components/normalization/rmsnorm.py` — RMSNorm with kernel dispatch
+- `tinylm/components/positional/rope.py` — RoPE implementation
+- `tinylm/components/attention/mha.py` — unified MHA/GQA/MQA
+- `csrc/rmsnorm_cuda.cu` — the CUDA kernel
 
 ---
 
 ## References
 
-- [Attention Is All You Need](https://arxiv.org/abs/1706.03762) - The original transformer
-- [LLaMA: Open and Efficient Foundation Language Models](https://arxiv.org/abs/2302.13971) - LLaMA architecture
-- [Root Mean Square Layer Normalization](https://arxiv.org/abs/1910.07467) - RMSNorm
-- [RoFormer: Enhanced Transformer with Rotary Position Embedding](https://arxiv.org/abs/2104.09864) - RoPE
-- [GLU Variants Improve Transformer](https://arxiv.org/abs/2002.05202) - SwiGLU
-
+- [Attention Is All You Need](https://arxiv.org/abs/1706.03762) — The original transformer
+- [LLaMA: Open and Efficient Foundation Language Models](https://arxiv.org/abs/2302.13971) — LLaMA architecture
+- [Root Mean Square Layer Normalization](https://arxiv.org/abs/1910.07467) — RMSNorm
+- [RoFormer: Enhanced Transformer with Rotary Position Embedding](https://arxiv.org/abs/2104.09864) — RoPE
+- [GLU Variants Improve Transformer](https://arxiv.org/abs/2002.05202) — SwiGLU and gated MLPs
