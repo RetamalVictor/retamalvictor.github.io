@@ -1,3 +1,12 @@
+---
+title: "Practice Project for Systems Engineering - Part 2"
+date: "2025-05-24"
+tags: ["systems-engineering", "architecture", "software-design", "embedded", "esp32"]
+summary: "System architecture development for the RC safety system. Covering functional architecture, physical architecture, and software implementation with ESP32 and Arduino, including state machines and failsafe mechanisms."
+readTime: "20 min"
+featured: true
+---
+
 # Practice Project for Systems Engineering - Part 2
 
 Part 1 was all whiteboards and sticky notes: we argued over requirements, carved a latency budget, and froze a mission that could be proven on a kitchen table. That was the **left-hand descent** of the V-model.

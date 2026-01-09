@@ -1,3 +1,12 @@
+---
+title: "Practice Project for Systems Engineering - Part 0"
+date: "2025-05-22"
+tags: ["systems-engineering", "v-model", "rc-racing", "embedded"]
+summary: "A prelude to a mini-series applying systems engineering principles to a 1/14-scale RC buggy project. Fresh from an AIAA course on space-grade SE practice, exploring the V-model methodology."
+readTime: "5 min"
+featured: true
+---
+
 # Practice Project for Systems Engineering - Part 0
 
 *A Prelude to the Mini-Series*

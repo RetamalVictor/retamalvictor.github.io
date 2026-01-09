@@ -1,3 +1,12 @@
+---
+title: "Intro: Diving Into Open-Source Courses"
+date: "2025-03-27"
+tags: ["learning", "courses", "personal-development"]
+summary: "Starting a new series to share my learning journey through open-source courses like Geometric Deep Learning, Stanford CS149 Parallel Computing, CMU Optimal Control, and Applied Space System Engineering."
+readTime: "3 min"
+featured: false
+---
+
 # Intro: Diving Into Open-Source Courses
 
 Hey everyone! I'm starting a new series here on the blog called **My Learning Journey**. It's my way of sharing some cool stuff I'm learning, working on, and exploring through open-source courses available online.

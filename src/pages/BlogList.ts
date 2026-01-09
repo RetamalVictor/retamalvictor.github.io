@@ -1,26 +1,19 @@
 import { createElement } from '../utils/dom.js';
 import { Navigation } from '../utils/navigation.js';
-import * as yaml from 'js-yaml';
-import blogDataYaml from '../data/blog-posts.yaml?raw';
+import { parseFrontmatter, extractSlugFromPath, type BlogPostMeta } from '../utils/frontmatter.js';
 
-interface BlogPost {
-    slug: string;
-    title: string;
-    date: string;
-    tags: string[];
-    summary: string;
-    readTime: string;
-    notebook: string;
-    featured: boolean;
-}
+// Auto-import all markdown files from content/markdown/
+const markdownModules = import.meta.glob('../content/markdown/*.md', {
+    query: '?raw',
+    import: 'default',
+    eager: true,
+}) as Record<string, string>;
 
-interface BlogData {
-    posts: BlogPost[];
-}
+type BlogPost = BlogPostMeta;
 
 export class BlogListPage {
     private container: HTMLElement;
-    private blogData: BlogData | null = null;
+    private posts: BlogPost[] = [];
 
     constructor(container: HTMLElement) {
         this.container = container;
@@ -39,21 +32,29 @@ export class BlogListPage {
 
     private async loadBlogData(): Promise<void> {
         try {
-            // Load blog data from YAML file
-            const parsedData = yaml.load(blogDataYaml) as any;
-            this.blogData = {
-                posts: parsedData.posts || []
-            };
+            // Parse all markdown files and extract metadata from frontmatter
+            this.posts = [];
+
+            for (const [path, rawContent] of Object.entries(markdownModules)) {
+                const slug = extractSlugFromPath(path);
+                const { meta } = parseFrontmatter(rawContent, slug);
+                this.posts.push(meta);
+            }
+
+            // Sort by date (newest first)
+            this.posts.sort((a, b) => {
+                return new Date(b.date).getTime() - new Date(a.date).getTime();
+            });
         } catch (error) {
             console.error('Failed to load blog data:', error);
-            this.blogData = null;
+            this.posts = [];
         }
     }
 
     private async renderBlogList(): Promise<void> {
         document.title = 'Blog - Victor Retamal';
 
-        if (!this.blogData) {
+        if (this.posts.length === 0) {
             this.renderError();
             return;
         }
@@ -93,21 +94,13 @@ export class BlogListPage {
     }
 
     private populateBlogPosts(): void {
-        if (!this.blogData) return;
-
         const container = document.getElementById('blog-posts-container');
         if (!container) return;
 
         container.innerHTML = '';
 
-        // Sort posts by date in descending order (newest first)
-        const sortedPosts = [...this.blogData.posts].sort((a, b) => {
-            const dateA = new Date(a.date);
-            const dateB = new Date(b.date);
-            return dateB.getTime() - dateA.getTime(); // Descending order
-        });
-
-        sortedPosts.forEach(post => {
+        // Posts are already sorted by date in loadBlogData
+        this.posts.forEach(post => {
             const postElement = this.createBlogPostCard(post);
             container.appendChild(postElement);
         });
@@ -142,7 +135,7 @@ export class BlogListPage {
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                     </svg>
                 </button>
-                ${post.notebook ? '<span class="text-sm text-gray-500">📓 Notebook</span>' : '<span class="text-sm text-gray-500">📝 Article</span>'}
+                <span class="text-sm text-gray-500">📝 Article</span>
             </div>
         `;
 

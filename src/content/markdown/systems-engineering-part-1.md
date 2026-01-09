@@ -1,3 +1,12 @@
+---
+title: "Practice Project for Systems Engineering - Part 1"
+date: "2025-05-23"
+tags: ["systems-engineering", "requirements", "stakeholder-analysis", "rc-racing"]
+summary: "Diving into requirements engineering for an RC safety system. From stakeholder identification through mission definition to system requirements, following the V-model methodology with practical examples."
+readTime: "15 min"
+featured: true
+---
+
 # Practice Project for Systems Engineering - Part 1
 
 Imagine you're at your local RC club race. Your RC buggy rockets down the straight and **snap**, the radio link dies.

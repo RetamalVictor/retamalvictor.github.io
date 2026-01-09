@@ -1,7 +1,7 @@
 posts:
   - slug: "tinylm-intro"
     title: "Inside TinyLM: How I Built a Transformer I Could Actually Read"
-    date: "2026-01-09"
+    date: "2026-01-08"
     tags: ["machine-learning", "transformers", "pytorch", "cuda"]
     summary: "A walkthrough of building a transformer from scratch - RMSNorm vs LayerNorm, RoPE's rotation trick, the KV cache that makes generation not suck, and what training curves actually tell you."
     readTime: "15 min"
@@ -10,7 +10,7 @@ posts:
 
   - slug: "bittorch-1.58-bits"
     title: "1.58 Bits Per Weight: Implementing BitNet from Paper to CUDA"
-    date: "2025-01-07"
+    date: "2025-12-15"
     tags: ["machine-learning", "cuda", "quantization", "pytorch"]
     summary: "The story of building BitTorch: ternary neural networks from paper to CUDA. Why my first kernel was 20× slower than PyTorch, the gradient bug that cost a week, and what I learned about low-precision ML."
     readTime: "15 min"

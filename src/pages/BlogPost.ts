@@ -4,28 +4,18 @@ import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/github-dark.css';
-import * as yaml from 'js-yaml';
-import blogDataYaml from '../data/blog-posts.yaml?raw';
 import { marked } from 'marked';
+import { parseFrontmatter, extractSlugFromPath, type BlogPostMeta } from '../utils/frontmatter.js';
 
-// Import markdown files as raw strings
-import learningJourneyMd from '../content/markdown/learning-journey-intro.md?raw';
-import mlPipelineMd from '../content/markdown/ml_pipeline_fundamentals.md?raw';
-import sysEngPart0Md from '../content/markdown/systems-engineering-part-0.md?raw';
-import sysEngPart1Md from '../content/markdown/systems-engineering-part-1.md?raw';
-import sysEngPart2Md from '../content/markdown/systems-engineering-part-2.md?raw';
-import bittorchMd from '../content/markdown/bittorch-1.58-bits.md?raw';
-import tinylmIntroMd from '../content/markdown/tinylm-intro.md?raw';
+// Auto-import all markdown files from content/markdown/
+// This eliminates the need for manual imports when adding new posts
+const markdownModules = import.meta.glob('../content/markdown/*.md', {
+    query: '?raw',
+    import: 'default',
+    eager: true,
+}) as Record<string, string>;
 
-interface BlogPost {
-    slug: string;
-    title: string;
-    date: string;
-    tags: string[];
-    summary: string;
-    readTime: string;
-    notebook: string;
-    featured: boolean;
+interface BlogPost extends BlogPostMeta {
     content?: string;
 }
 
@@ -58,25 +48,29 @@ export class BlogPostPage {
 
     private async loadBlogPost(slug: string): Promise<void> {
         try {
-            // Load blog data from YAML file
-            const parsedData = yaml.load(blogDataYaml) as any;
-            const posts = parsedData.posts || [];
+            // Parse all markdown files and extract metadata from frontmatter
+            const posts: BlogPost[] = [];
+
+            for (const [path, rawContent] of Object.entries(markdownModules)) {
+                const fileSlug = extractSlugFromPath(path);
+                const { meta, content } = parseFrontmatter(rawContent, fileSlug);
+                posts.push({
+                    ...meta,
+                    content: this.convertMarkdownToHTML(content),
+                });
+            }
 
             // Sort posts by date (newest first)
-            this.allPosts = [...posts].sort((a: BlogPost, b: BlogPost) => {
+            this.allPosts = posts.sort((a, b) => {
                 return new Date(b.date).getTime() - new Date(a.date).getTime();
             });
 
             // Find the post with matching slug and its index
-            const currentIndex = this.allPosts.findIndex((post: BlogPost) => post.slug === slug);
+            const currentIndex = this.allPosts.findIndex(post => post.slug === slug);
             const foundPost = currentIndex >= 0 ? this.allPosts[currentIndex] : null;
 
             if (foundPost) {
-                const content = await this.getPostContent(slug);
-                this.blogPost = {
-                    ...foundPost,
-                    content: content
-                };
+                this.blogPost = foundPost;
 
                 // Get prev/next posts (prev = newer, next = older)
                 this.prevPost = currentIndex > 0 ? this.allPosts[currentIndex - 1] : null;
@@ -91,62 +85,6 @@ export class BlogPostPage {
         } catch (error) {
             console.error('Failed to load blog post:', error);
             this.blogPost = null;
-        }
-    }
-
-    private async getPostContent(slug: string): Promise<string> {
-        // Map slugs to imported markdown content
-        const markdownContent: Record<string, string> = {
-            "learning-journey-intro": learningJourneyMd,
-            "ml-pipeline-fundamentals": mlPipelineMd,
-            "systems-engineering-part-0": sysEngPart0Md,
-            "systems-engineering-part-1": sysEngPart1Md,
-            "systems-engineering-part-2": sysEngPart2Md,
-            "bittorch-1.58-bits": bittorchMd,
-            "tinylm-intro": tinylmIntroMd
-        };
-
-        // Map slugs to notebook HTML files (still need to be fetched)
-        const notebookPaths: Record<string, string> = {
-            "linear-regression-basics": "/src/content/notebooks/linear_regression_basics.html",
-            "numpy-fundamentals": "/src/content/notebooks/numpy_fundamentals.html"
-        };
-
-        // Check if it's a markdown post
-        if (markdownContent[slug]) {
-            return this.convertMarkdownToHTML(markdownContent[slug]);
-        }
-
-        // Check if it's a notebook
-        const notebookPath = notebookPaths[slug];
-        if (!notebookPath) {
-            // Return default content for unmapped slugs
-            return `
-                <div class="blog-content">
-                    <p class="lead">This blog post is coming soon! We're working on converting the Jupyter notebook content to a web-friendly format.</p>
-                    <p>Check back soon for the full content, or explore our other available posts in the meantime.</p>
-                </div>
-            `;
-        }
-
-        try {
-            // Load notebook HTML from file
-            const response = await fetch(notebookPath);
-            if (!response.ok) {
-                throw new Error(`Failed to load content: ${response.statusText}`);
-            }
-
-            // Notebook files are already HTML, just return them
-            const content = await response.text();
-            return content;
-        } catch (error) {
-            console.error(`Error loading content for ${slug}:`, error);
-            return `
-                <div class="blog-content">
-                    <p class="lead">Sorry, we couldn't load this blog post content.</p>
-                    <p>Please try again later or contact us if the problem persists.</p>
-                </div>
-            `;
         }
     }
 
@@ -222,7 +160,7 @@ export class BlogPostPage {
                             <span>·</span>
                             <span>${this.blogPost.readTime} read</span>
                             <span>·</span>
-                            <span>${this.blogPost.notebook ? '📓 Notebook' : '📝 Article'}</span>
+                            <span>📝 Article</span>
                         </div>
 
                         <div class="flex flex-wrap gap-2 mt-4">

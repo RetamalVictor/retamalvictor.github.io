@@ -1,4 +1,5 @@
 import * as yaml from 'js-yaml';
+import { parseFrontmatter, extractSlugFromPath } from './frontmatter.js';
 
 // Import all configuration files as raw strings
 import siteConfigYaml from '../data/site-config.yaml?raw';
@@ -6,8 +7,15 @@ import uiTextYaml from '../data/ui-text.yaml?raw';
 import themeConfigYaml from '../data/theme-config.yaml?raw';
 import researchAreasYaml from '../data/research-areas.yaml?raw';
 import projectsYaml from '../data/projects.yaml?raw';
-import blogPostsYaml from '../data/blog-posts.yaml?raw';
+import blogConfigYaml from '../data/blog-posts.yaml?raw'; // Only for blog_config section
 import cvDataYaml from '../data/cv-data.yaml?raw';
+
+// Auto-import all markdown files for blog posts
+const markdownModules = import.meta.glob('../content/markdown/*.md', {
+    query: '?raw',
+    import: 'default',
+    eager: true,
+}) as Record<string, string>;
 
 // Configuration interfaces
 export interface SiteConfig {
@@ -218,8 +226,34 @@ export class ConfigManager {
             this.themeConfig = yaml.load(themeConfigYaml) as ThemeConfig;
             this.researchAreas = yaml.load(researchAreasYaml) as ResearchAreas;
             this.projectsData = yaml.load(projectsYaml) as ProjectsData;
-            this.blogPostsData = yaml.load(blogPostsYaml) as BlogPostsData;
             this.cvData = yaml.load(cvDataYaml) as CVData;
+
+            // Load blog posts from frontmatter (single source of truth)
+            const blogConfig = yaml.load(blogConfigYaml) as any;
+            const posts: BlogPost[] = [];
+
+            for (const [path, rawContent] of Object.entries(markdownModules)) {
+                const slug = extractSlugFromPath(path);
+                const { meta } = parseFrontmatter(rawContent, slug);
+                posts.push({
+                    slug: meta.slug,
+                    title: meta.title,
+                    date: meta.date,
+                    tags: meta.tags,
+                    summary: meta.summary,
+                    readTime: meta.readTime,
+                    notebook: '',
+                    featured: meta.featured,
+                });
+            }
+
+            // Sort by date (newest first)
+            posts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+            this.blogPostsData = {
+                posts,
+                blog_config: blogConfig.blog_config,
+            };
 
             console.log('Configuration loaded successfully');
         } catch (error) {
