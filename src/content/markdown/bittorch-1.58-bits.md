@@ -1,9 +1,9 @@
 ---
 title: "1.58 Bits Per Weight: Implementing BitNet from Paper to CUDA"
-date: "2025-12-15"
+date: "2025-01-07"
 tags: ["machine-learning", "cuda", "quantization", "pytorch"]
 summary: "The story of building BitTorch: ternary neural networks from paper to CUDA. Why my first kernel was 20× slower than PyTorch, the gradient bug that cost a week, and what I learned about low-precision ML."
-readTime: "15 min"
+readTime: "18 min"
 featured: true
 ---
 
@@ -24,15 +24,13 @@ I seriously considered stopping there. But a 7B-parameter model needs 28 GB in F
 
 So I kept going.
 
-Six versions, 185 tests, and one spectacular "oh no, gradients are flowing through the scale computation" bug later, I had something that worked. It's still not faster than cuBLAS—I'll be upfront about that. But it compresses weights by ~20× *in theory*, trains end-to-end with correct gradients, and taught me more about GPU programming than any course ever did.
-
-This is the story of building **BitTorch**: ternary neural networks from paper to CUDA.
+Six kernel versions, 185 tests, one spectacular gradient bug, and a deep dive into memory bandwidth later, I got **single-batch inference within ~10% of cuBLAS** on favorable shapes. Not faster, but close enough that the 16× memory reduction actually matters. This is the story of building **BitTorch**: ternary neural networks from paper to CUDA.
 
 ---
 
 ## Live Demo
 
-Want to see ternary inference in action? The demo below runs a character-level language model entirely in your browser. The model uses 1.58-bit ternary weights—the same technique described in this post.
+Want to see ternary inference in action? The demo below runs a character-level language model entirely in your browser (requires a modern browser with WebGPU enabled). The model uses 1.58-bit ternary weights, the same technique described in this post.
 
 <div id="ternary-lm-demo" class="my-8 not-prose"></div>
 
@@ -44,7 +42,9 @@ Type a prompt and click "Generate" to watch character-by-character text generati
 
 * Why $\log_2(3) \approx 1.58$ bits is the *theoretical* lower bound per weight
 * The Straight-Through Estimator trick that makes training possible
+* Packing ternary weights: 4 values per byte
 * Writing CUDA kernels (and why your first one will be embarrassingly slow)
+* The optimization journey: from 20× slower to 0.9× cuBLAS
 * Honest benchmarks: what worked, what didn't, and why
 
 Let's start at the beginning.
@@ -55,7 +55,7 @@ Let's start at the beginning.
 
 Before touching code, it's worth understanding what we're actually compressing.
 
-Standard neural network weights are 32-bit floats—about four billion possible values per weight. The BitNet paper makes a provocative claim: for many tasks, you can get away with **three** values:
+Standard neural network weights are 32-bit floats, about four billion possible values per weight. The BitNet paper makes a provocative claim: for many tasks, you can get away with **three** values:
 
 $$
 \lbrace -1, 0, +1 \rbrace
@@ -71,7 +71,35 @@ $$
 
 Compared to 32 bits, that's a **20× theoretical compression**. A 7B-parameter model drops from 28 GB to roughly 1.4 GB. That's the difference between "needs a datacenter" and "runs on a laptop."
 
-Important caveat up front: **this is a theoretical limit**. We don't physically store 1.58 bits per weight yet. But it's the target.
+### From Theory to Bytes: Packed Ternary Format
+
+The 1.58 bits is a theoretical limit. In practice, we pack 4 ternary values into each byte using 2-bit encoding:
+
+| Value | Binary |
+|-------|--------|
+| 0     | `00`   |
+| +1    | `01`   |
+| -1    | `10`   |
+| (reserved) | `11` |
+
+Four weights per byte means **0.25 bytes per weight**, or **2 bits per weight in storage**. Not quite the 1.58-bit entropy bound, but close enough for real compression:
+
+| Format | Bytes/Weight | 4096×4096 Matrix |
+|--------|--------------|------------------|
+| FP32   | 4.0          | 64 MB            |
+| FP16   | 2.0          | 32 MB            |
+| INT8   | 1.0          | 16 MB            |
+| **Ternary (packed)** | **0.25** | **4 MB** |
+
+That's **16× actual compression** vs FP32 (plus a few KB for per-channel scales).
+
+The packing layout is straightforward: weights are stored **LSB-first**, four per byte:
+
+```
+Byte: [w3 w3 | w2 w2 | w1 w1 | w0 w0]
+       bits    bits    bits    bits
+       6-7     4-5     2-3     0-1
+```
 
 ### Quantization in Practice
 
@@ -132,7 +160,7 @@ w_q \cdot x = \begin{cases}
 \end{cases}
 $$
 
-In theory, we've replaced floating-point multiplies with conditional adds. In practice… we'll get there.
+In theory, we've replaced floating-point multiplies with conditional adds. In practice... we'll get there.
 
 ---
 
@@ -185,7 +213,16 @@ My first version computed scale like this:
 scale = w.abs().max(dim=1, keepdim=True)[0]
 ```
 
-That scale depends on `w`. Gradients flowed through it. The result was subtle, silent corruption—my CUDA and Python gradients had a cosine similarity of 0.29.
+That scale depends on `w`. Gradients flowed through it. The result was subtle, silent corruption: my CUDA and Python gradients had a cosine similarity of 0.29.
+
+The full gradient was something like:
+
+```
+dL/d(weight) = dL/d(w_effective) * scale                    # STE path
+             + dL/d(w_effective) * w_tern * d(scale)/d(weight)  # scale path
+```
+
+The second term involves the gradient through `max()`, which is sparse (only fires at the argmax position). It added noise more than signal.
 
 The fix:
 
@@ -193,9 +230,9 @@ The fix:
 scale = w.abs().max(dim=1, keepdim=True)[0].detach()
 ```
 
-Scale is a statistic, not a learnable parameter. One missing `.detach()` was enough to break everything.
+Scale is a calibration statistic, not a learnable parameter. One missing `.detach()` was enough to break everything.
 
-Lesson learned: **quantization code demands explicit gradient boundaries**.
+Lesson learned: **quantization code demands explicit gradient boundaries**. If something is a calibration quantity (scale, mean, std), think hard about whether gradients should flow through it.
 
 ### The Full `TernaryLinear` Module
 
@@ -245,7 +282,7 @@ This is the minimal version that:
 * produces correct gradients,
 * and matches the math described above.
 
-Everything else—CUDA kernels, packing, performance work—builds on this.
+Everything else, CUDA kernels, packing, performance work, builds on this.
 
 ### Results
 
@@ -253,10 +290,10 @@ On MNIST (784 → 256 → 128 → 10):
 
 | Model   | Accuracy | Weight Memory |
 | ------- | -------- | ------------- |
-| FP32    | 97.3%    | 100%          |
-| Ternary | 94.3%    | ~5%           |
+| FP32    | ~97%     | 100%          |
+| Ternary | ~95%     | ~5%           |
 
-Three points of accuracy for ~20× theoretical compression. Not free, but often worth it.
+Two points of accuracy for ~20× theoretical compression. Not free, but often worth it.
 
 Language models told a similar story: roughly 33% worse perplexity. Acceptable for some deployments, unacceptable for others.
 
@@ -274,26 +311,163 @@ At this point the model trains correctly. The CUDA work is about **inference**, 
 
 The theoretical upside of ternary kernels:
 
-* Less memory traffic
-* No multiplies
+* Less memory traffic (packed weights are 16× smaller)
+* No multiplies (add/negate/skip)
 * Potential bandwidth savings
 
 So I wrote my own.
 
-### What Happened
+### Version 1: The Naive Baseline (21× Slower)
 
-A naive kernel was **20× slower than cuBLAS**. Tiling, shared memory, and cooperative loads helped—about **1.4–1.9× faster** than baseline—but still nowhere near competitive.
+One thread per output element. Each thread reads K elements from global memory.
 
-Profiling made the situation clear: this kernel is **memory-bandwidth bound**. When the GPU is waiting on memory, skipping multiplies doesn't matter.
+```
+Shape (64, 1024, 4096):
+- 262K threads, each reading 1024 floats
+- ~1GB of redundant global memory reads
+```
 
-### Lessons Learned
+Result: **21× slower than cuBLAS**. I assumed the problem was arithmetic overhead. I was wrong.
 
-* cuBLAS represents decades of optimization (CUTLASS exists for a reason).
-* Ternary arithmetic doesn't help if you're bandwidth-bound.
-* Storing ternary weights as `int8` wastes 6 bits per weight.
-* Packing is mandatory to see real gains.
+### The Profiler Doesn't Lie
 
-The kernel works. It's correct. It's just not competitive yet.
+Running Nsight Compute revealed the real problem:
+
+| Metric | My Kernel | cuBLAS | Ratio |
+|--------|-----------|--------|-------|
+| **DRAM throughput** | **1.77%** | 48.22% | 27× worse |
+| SM throughput | 27.56% | 62.17% | 2.3× worse |
+| Occupancy | 66.66% | 31.22% | 2× better (!) |
+
+I had **1.77% memory throughput**. The A2000 has ~288 GB/s bandwidth. I was using ~5 GB/s.
+
+The GPU wasn't slow at compute. It was *starving* for data.
+
+### The First Bug: Uncoalesced Memory Access
+
+GPU memory coalescing requires threads in a warp to access consecutive addresses (within 128 bytes). My kernel did this:
+
+```cpp
+// Each thread loads weights for its output channel
+uint8_t packed = W_packed[n * K_bytes + byte_idx];
+```
+
+Adjacent threads had different `n` values, so they accessed addresses `K_bytes` apart (1024 bytes for K=4096).
+
+**Every single load was uncoalesced.** Instead of one 128-byte transaction serving 32 threads, I was doing 32 separate transactions. This alone explained the 27× memory throughput gap.
+
+### Version 2: Shared Memory Tiling (Still 6-12× Slower)
+
+The classic GEMM fix: tile the matrices, cooperatively load into shared memory, compute from there.
+
+```cpp
+constexpr int TILE_M = 32;  // Batch tile
+constexpr int TILE_N = 32;  // Output tile
+constexpr int TILE_K = 32;  // Reduction tile
+
+__shared__ float X_tile[TILE_M][TILE_K];
+__shared__ int8_t W_tile[TILE_N][TILE_K];
+```
+
+Result: **1.4-1.9× faster than baseline**. Progress, but still nowhere near cuBLAS.
+
+### The Second Bug: 73-Way Bank Conflicts
+
+The profiler showed something alarming:
+
+```
+derived__memory_l1_conflicts_shared_nway: 73
+derived__memory_l1_wavefronts_shared_excessive: 117,440,512
+```
+
+**73-way bank conflicts.** Normal is 1-4.
+
+Shared memory has 32 banks. Address `A` maps to bank `A % 32`. My inner loop did:
+
+```cpp
+for (int k = 0; k < TILE_K; k++) {
+    float x_val = X_tile[ty][k];   // row access - OK
+    int8_t w_val = W_tile[tx][k];  // column access - BAD
+}
+```
+
+For `W_tile[tx][k]`:
+- Thread 0 reads address `(0 * 32 + k)` → bank `k`
+- Thread 1 reads address `(1 * 32 + k)` → bank `k`
+- Thread 31 reads address `(31 * 32 + k)` → bank `k`
+
+**All 32 threads hit the same bank.** Every access serialized.
+
+The fix was embarrassingly simple:
+
+```cpp
+// Before: 32-way bank conflict
+__shared__ int8_t W_tile[TILE_N][TILE_K];     // [32][32]
+
+// After: no conflicts
+__shared__ int8_t W_tile[TILE_N][TILE_K + 1]; // [32][33]
+```
+
+The padding changes the stride, spreading threads across different banks.
+
+### Version 3-5: The Kernel Museum
+
+I tried everything:
+- Different memory layouts (`[N, K]` vs `[K, N]`)
+- Branchless ternary decode (LUT vs arithmetic)
+- Larger tile sizes (`TILE_K=128` for more data reuse)
+- Transposed weight formats
+
+Each experiment taught something. Most made things worse. Some insights from one version would help another. I had 5 experimental kernels at one point. That's not a library, it's a museum.
+
+### Version 6: Consolidation
+
+The winning insight: **different batch sizes need different kernels.**
+
+```
+ternary_linear_packed_forward()
+    │
+    ├── B <= 32 ──► small_batch kernel
+    │               TILE_K=128 (more K-reuse)
+    │               Optimized for inference
+    │
+    └── B > 32  ──► large_batch kernel
+                    TILE_K=32 (more parallelism)
+                    Optimized for training
+```
+
+I deleted V2, V2.1, V2.2. They donated their insights and got removed. Ship two kernels, not five.
+
+### Final Performance
+
+GPU: NVIDIA RTX A2000 8GB
+
+| Shape | Time (ms) | vs cuBLAS | Kernel |
+|-------|-----------|-----------|--------|
+| Single-batch (1×768→768) | 0.03 | **0.9×** | small |
+| MLP (32×1024→4096) | 0.97 | 6.4× | small |
+| Training (128×768→768) | 0.54 | 5.1× | large |
+
+**The key win**: single-batch inference nearly matches cuBLAS. This is the deployment case that matters most.
+
+For training batches, we're still 5-8× slower. That's acceptable because training happens once; inference happens millions of times.
+
+### What's Still On The Table
+
+1. **Vectorized loads**: cuBLAS uses `float4` (128-bit) loads. We load one value at a time.
+2. **Warp-level primitives**: `__shfl_sync` for register reductions instead of shared memory.
+3. **Tensor Core exploration**: INT8 tensor cores could theoretically help, but the mapping from ternary is non-trivial.
+4. **True ternary arithmetic**: We still multiply by {-1, 0, +1}. A branchless add/negate/skip path might help on some architectures.
+
+The honest summary: matching cuBLAS is *hard*. CUTLASS exists for a reason. But for single-batch inference with packed weights, we're close enough that the 16× memory reduction dominates.
+
+### Lessons From the Kernel Grind
+
+* **Profile first, hypothesize second**: I assumed warp divergence was the problem. The profiler said memory throughput.
+* **1.77% throughput is a bug, not a feature**: If you're below 10% of peak bandwidth, something is fundamentally wrong with your access pattern.
+* **Bank conflicts are silent killers**: 73-way conflicts don't crash. They just make everything 30× slower.
+* **Padding fixes bank conflicts**: `[32][32]` → `[32][33]` is the cheapest optimization I've ever made.
+* **Delete dead code**: A library isn't a museum. Ship the kernels that work, delete the experiments.
 
 ---
 
@@ -309,7 +483,7 @@ It's about **fitting models where they otherwise wouldn't fit**.
 | FP16        | 16            | 14 GB       |
 | INT8        | 8             | 7 GB        |
 | INT4        | 4             | 3.5 GB      |
-| **Ternary** | **1.58**      | **~1.4 GB** |
+| **Ternary** | **2** (packed) | **~1.75 GB** (+ scales) |
 
 That last row enables deployment on Jetsons, embedded devices, and very ordinary laptops.
 
@@ -317,12 +491,14 @@ That last row enables deployment on Jetsons, embedded devices, and very ordinary
 
 * Memory-constrained inference
 * Edge deployment
+* Single-batch / low-latency scenarios (where we match cuBLAS)
 * Willing to trade some accuracy
 
 ### When It Isn't
 
 * Accuracy is paramount
 * Memory isn't tight
+* Large training batches (we're still slower there)
 * Model is already small
 
 Know your constraints.
@@ -331,11 +507,13 @@ Know your constraints.
 
 ## Closing
 
-I started this project convinced I could beat cuBLAS. I didn't. That expectation didn't survive first contact with reality.
+I started this project convinced I could beat cuBLAS. I didn't, not on large batches. That expectation didn't survive first contact with reality.
 
-What I did build is a correct ternary linear layer, a working CUDA forward pass, and a much clearer mental model of why high-performance kernels look the way they do. The biggest takeaway wasn't "ternary is slow" or "cuBLAS is unbeatable," but **where the real bottlenecks actually are**: memory layout, bandwidth, and data movement—not arithmetic.
+But I got closer than I expected. Single-batch inference at 0.9× cuBLAS means the 16× memory reduction actually matters for deployment. The model fits where it couldn't before, and inference isn't painfully slow.
 
-Ternary networks aren't a drop-in replacement for FP16 on datacenter GPUs. They shine when memory is the constraint, not throughput—edge devices, embedded systems, and hardware that simply can't fit large models otherwise. In that regime, a 3–5% accuracy drop can be a very reasonable trade.
+What I built along the way: a correct ternary linear layer, working CUDA kernels with auto-dispatch, proper gradient handling, and a much clearer mental model of why high-performance kernels look the way they do.
+
+The biggest takeaway wasn't "ternary is slow" or "cuBLAS is unbeatable," but **where the real bottlenecks actually are**: memory layout, bandwidth, and data movement, not arithmetic. Skipping multiplies doesn't help when you're waiting on DRAM. Packing and data movement matter more than arithmetic once you leave the whiteboard.
 
 This project also reinforced a quieter lesson: correctness comes first. Quantization code is deceptively easy to get *almost* right, and "almost right" is worse than broken. Detaching the wrong tensor, letting a statistic receive gradients, or trusting intuition over profiling can quietly invalidate weeks of work.
 
@@ -345,7 +523,7 @@ If any of this sounds familiar, you're probably the intended audience.
 
 ### Try it yourself
 
-The code lives here:
+The code lives at [github.com/RetamalVictor/bittorch](https://github.com/RetamalVictor/bittorch):
 
 ```bash
 git clone https://github.com/RetamalVictor/bittorch.git
@@ -354,7 +532,17 @@ uv sync && uv build
 uv run python examples/mnist_mlp_ternary.py --compare
 ```
 
-If you're exploring low-precision ML, I hope this saves you time—or at least makes the failure modes clearer. This stuff really is more fun when it's shared.
+The `--compare` flag runs both ternary and FP32 models, producing a summary like:
+
+```
+COMPARISON SUMMARY
+============================================================
+Metric               |      Ternary |         FP32 |       Diff
+------------------------------------------------------------
+Test Accuracy        |        ~95%  |        ~97%  |      ~2%
+```
+
+If you're exploring low-precision ML, I hope this saves you time, or at least makes the failure modes clearer. This stuff really is more fun when it's shared.
 
 ---
 
@@ -362,5 +550,7 @@ If you're exploring low-precision ML, I hope this saves you time—or at least m
 
 * **BitNet b1.58: Scaling 1-bit Transformers**
   [https://arxiv.org/abs/2402.17764](https://arxiv.org/abs/2402.17764)
-* **Bengio et al., 2013 — Straight-Through Estimator**
+* **CUTLASS GEMM Tutorial**
+  [https://github.com/NVIDIA/cutlass](https://github.com/NVIDIA/cutlass)
+* **Bengio et al., 2013: Straight-Through Estimator**
   [https://arxiv.org/abs/1308.3432](https://arxiv.org/abs/1308.3432)
