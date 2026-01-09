@@ -51,10 +51,10 @@ The complexity isn't in the structure—it's in making each piece fast and stabl
 LayerNorm does two things: <span style="color: #f97316">centers the data</span> (subtract mean) and <span style="color: #22d3ee">scales it</span> (divide by std). RMSNorm drops the centering:
 
 <div style="background: #1e1e2e; border-radius: 8px; padding: 1rem 1.25rem; font-family: monospace; margin: 1rem 0; line-height: 1.5; overflow-x: auto; font-size: 0.9rem;">
-<pre style="margin: 0; color: #cdd6f4;"><span style="color: #6c7086"># LayerNorm: 4 ops per element</span>
+<pre style="margin: 0; color: #cdd6f4;"><span style="color: #6c7086"># LayerNorm: two reductions (mean, then variance)</span>
 y = (<span style="color: #f97316">x - mean(x)</span>) / std(x) * <span style="color: #22d3ee">γ</span> + <span style="color: #9ca3af">β</span>
 
-<span style="color: #6c7086"># RMSNorm: 2 ops per element</span>
+<span style="color: #6c7086"># RMSNorm: one reduction (mean of squares)</span>
 y = x / sqrt(mean(x²) + ε) * <span style="color: #22d3ee">γ</span></pre>
 </div>
 
@@ -93,7 +93,7 @@ __global__ void rmsnorm_fwd_kernel(...) {
   <span><span style="color: #a78bfa">■</span> learned scale γ</span>
 </div>
 
-On NVIDIA GPUs, `rsqrtf` is a fast device intrinsic—it maps to the Special Function Unit (SFU), which is why [CUDA best practices](https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/) recommend it for normalization. We compute it once, broadcast via shared memory, and every thread reads the result. The reduction uses warp shuffles—in this kernel, no atomics or global memory traffic.
+On NVIDIA GPUs, `rsqrtf` is a fast device intrinsic—it maps to the Special Function Unit (SFU), which is why [CUDA best practices](https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/) recommend it for normalization. We compute it once, broadcast via shared memory, and every thread reads the result. The reduction uses warp shuffles (no atomics). Global memory traffic is the unavoidable part: read `x`, read `weight`, write `y`—but we avoid extra global traffic for the reduction itself.
 
 I cache `inv_rms` for the backward pass. Computing gradients through the normalization requires the same value, and recomputing it would double the memory bandwidth.
 
@@ -110,11 +110,11 @@ Your 512-dim query vector? RoPE treats it as 256 separate 2D vectors and rotates
 
 <span style="color: #cdd6f4">At position </span><span style="color: #4ade80">t</span><span style="color: #cdd6f4">, rotate each pair by </span><span style="color: #4ade80">t</span><span style="color: #cdd6f4"> × </span><span style="color: #f38ba8">θᵢ</span><span style="color: #cdd6f4">:</span>
 
-  <span style="color: #89b4fa">pair 0</span>: rotate by <span style="color: #4ade80">t</span> × <span style="color: #f38ba8">θ₀</span>     <span style="color: #6c7086"># θ₀ = 1.0        (fast rotation)</span>
-  <span style="color: #a78bfa">pair 1</span>: rotate by <span style="color: #4ade80">t</span> × <span style="color: #f38ba8">θ₁</span>     <span style="color: #6c7086"># θ₁ = 0.68       (medium)</span>
-  <span style="color: #f9e2af">pair 2</span>: rotate by <span style="color: #4ade80">t</span> × <span style="color: #f38ba8">θ₂</span>     <span style="color: #6c7086"># θ₂ = 0.46       (slower)</span>
-  <span style="color: #6c7086">...                           # θᵢ = 10000^(-2i/d)</span>
-  <span style="color: #6c7086">pair 255</span>: rotate by <span style="color: #4ade80">t</span> × <span style="color: #f38ba8">θ₂₅₅</span>  <span style="color: #6c7086"># θ₂₅₅ ≈ 0.0001  (very slow)</span></pre>
+  <span style="color: #89b4fa">pair 0</span>: rotate by <span style="color: #4ade80">t</span> × <span style="color: #f38ba8">θ₀</span>     <span style="color: #6c7086"># fast rotation</span>
+  <span style="color: #a78bfa">pair 1</span>: rotate by <span style="color: #4ade80">t</span> × <span style="color: #f38ba8">θ₁</span>     <span style="color: #6c7086"># medium</span>
+  <span style="color: #f9e2af">pair 2</span>: rotate by <span style="color: #4ade80">t</span> × <span style="color: #f38ba8">θ₂</span>     <span style="color: #6c7086"># slower</span>
+  <span style="color: #6c7086">...                           # θᵢ decreases exponentially: 10000^(-2i/d)</span>
+  <span style="color: #6c7086">pair 255</span>: rotate by <span style="color: #4ade80">t</span> × <span style="color: #f38ba8">θ₂₅₅</span>  <span style="color: #6c7086"># very slow</span></pre>
 </div>
 
 **Why rotation encodes *relative* position**: When you compute `q · k`, the rotations combine. If `q` at position 5 rotated by `5θ` and `k` at position 3 rotated by `3θ`, the dot product only sees the *difference*: `(5-3)θ = 2θ`. The attention score depends on "2 tokens apart"—not "positions 5 and 3."
@@ -265,7 +265,9 @@ For a 7B model (32 layers, fp16, 2048 ctx):
 | GQA (8 KV heads) | ~8 MB | ~256 MB |
 | MQA (1 KV head) | ~1 MB | ~32 MB |
 
-[LLaMA 2 70B](https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/config.json) uses GQA with 8 KV heads for 64 Q heads—an 8× reduction in KV cache, commonly reported to preserve quality in practice. The intuition: Q needs capacity to ask diverse questions, but K and V just need to store the context. The implementation handles all three variants:
+These scale linearly with batch size, context length, and dtype bytes (fp32 doubles them).
+
+[LLaMA 2 70B](https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/config.json) uses GQA with 8 KV heads for 64 Q heads—an 8× reduction in KV cache, which is why GQA shows up in most large production-grade models. The intuition: Q needs capacity to ask diverse questions, but K and V just need to store the context. The implementation handles all three variants:
 
 ```python
 def _repeat_kv(self, kv):
