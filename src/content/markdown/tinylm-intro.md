@@ -55,7 +55,7 @@ What makes this hard in practice isn't the shape of the loop. It's the constant 
 
 ## The Parts That Surprised Me
 
-### RMSNorm: Fewer Moving Parts
+### [RMSNorm](https://arxiv.org/abs/1910.07467): Fewer Moving Parts
 
 LayerNorm does two things: <span style="color: #f97316">centers</span> (subtract mean) and <span style="color: #22d3ee">scales</span> (divide by std). RMSNorm drops the centering:
 
@@ -108,7 +108,7 @@ I cache `inv_rms` for backward. The backward needs the same value, and recomputi
 
 ---
 
-### RoPE: Position as Rotation
+### [RoPE](https://arxiv.org/abs/2104.09864) (Rotary Position Embedding): Position as Rotation
 
 Most positional encodings add a position vector to the embedding. RoPE does something cleaner: it rotates query and key vectors as a function of position.
 
@@ -157,7 +157,7 @@ No learned parameters, no additive interference with content embeddings, and it 
 
 ---
 
-### SwiGLU: The Third Projection
+### [SwiGLU](https://arxiv.org/abs/2002.05202): The Third Projection
 
 A standard transformer MLP is "up → activation → down." It works, but the nonlinearity is doing too much: it decides what to compute *and* what to keep.
 
@@ -232,7 +232,7 @@ Pre-allocation costs you reserved memory, but decoding typically has a known max
 
 ---
 
-### GQA: Trading KV Capacity for Memory
+### [GQA](https://arxiv.org/abs/2305.13245) (Grouped-Query Attention): Trading KV Capacity for Memory
 
 KV cache is often the inference memory bottleneck. The size is easy to compute:
 
@@ -247,9 +247,9 @@ For LLaMA-2 7B (fp16, batch=1, seq=2048, n_kv=32, d_head=128):
 GQA reduces `n_kv_heads`. Multiple query heads share each KV head:
 
 ```python
-# MHA: n_heads = n_kv_heads = 32
-# GQA: n_heads = 32, n_kv_heads = 8
-# MQA: n_heads = 32, n_kv_heads = 1
+# MHA (Multi-Head Attention): n_heads = n_kv_heads = 32
+# GQA (Grouped-Query Attention): n_heads = 32, n_kv_heads = 8
+# MQA (Multi-Query Attention): n_heads = 32, n_kv_heads = 1
 ```
 
 For a 7B model (32 layers, fp16, 2048 ctx):
@@ -353,7 +353,7 @@ norm = NORM_REGISTRY.build("rmsnorm", dim=512)
 
 **Write tests earlier.** I had a RoPE bug that only showed up at sequence lengths > 512. A tiny reference-implementation test would've caught it.
 
-**Profile before optimizing.** I spent a week on a CUDA kernel for a few percent end-to-end speedup. The real bottleneck was attention, and SDPA already handles that well. (Note: SDPA picks Flash/memory-efficient/math kernels depending on your PyTorch build, GPU, dtype, and tensor shapes.)
+**Profile before optimizing.** I spent a week on a CUDA kernel for a few percent end-to-end speedup. The real bottleneck was attention, and PyTorch's `scaled_dot_product_attention` (SDPA) already handles that well. (Note: SDPA picks Flash/memory-efficient/math kernels depending on your PyTorch build, GPU, dtype, and tensor shapes.)
 
 **Keep configs boring.** Hydra is powerful, but it adds conceptual overhead. For many research codebases, dataclasses + argparse is enough.
 
@@ -379,3 +379,4 @@ The main files:
 - [Root Mean Square Layer Normalization](https://arxiv.org/abs/1910.07467): RMSNorm
 - [RoFormer: Enhanced Transformer with Rotary Position Embedding](https://arxiv.org/abs/2104.09864): RoPE
 - [GLU Variants Improve Transformer](https://arxiv.org/abs/2002.05202): SwiGLU / gated MLPs
+- [GQA: Training Generalized Multi-Query Transformer Models](https://arxiv.org/abs/2305.13245): Grouped-Query Attention
