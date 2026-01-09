@@ -1,12 +1,21 @@
+---
+title: "Inside TinyLM: How I Built a Transformer I Could Actually Read"
+date: "2026-01-08"
+tags: ["machine-learning", "transformers", "pytorch", "cuda"]
+summary: "A walkthrough of building a transformer from scratch - RMSNorm vs LayerNorm, RoPE's rotation trick, the KV cache that makes generation not suck, and what training curves actually tell you."
+readTime: "15 min"
+featured: true
+---
+
 # Inside TinyLM: How I Built a Transformer I Could Actually Read
 
-I wanted to understand how transformers work—not the attention diagram everyone draws, but the code that runs when you call `model.forward()`.
+I wanted to understand how transformers work, not the attention diagram everyone draws, but the code that runs when you call `model.forward()`.
 
 So I opened the LLaMA source. Then Hugging Face's implementation. Then GPT-NeoX. Each time I hit the same wall: thousands of files, abstraction layers, configuration systems that needed their own documentation. I could follow the math on paper, but I couldn't point to the line where Q meets K.
 
 So I built my own: ~6,800 lines of Python, two architecture presets, and a transformer small enough to read in an afternoon.
 
-This isn't a tutorial. It's what I learned building it—what clicked, what surprised me, and enough implementation detail that you could build your own.
+This isn't a tutorial. It's what I learned building it: what clicked, what surprised me, and enough implementation detail that you could build your own.
 
 ---
 
@@ -40,7 +49,7 @@ def forward(self, x, pos_ctx, cache, layer_idx, start_pos):
 
 Two residual branches. Two normalizations. One attention and one MLP. Repeat N times.
 
-What makes this hard in practice isn't the shape of the loop—it's the constant fight against instability, bandwidth, and latency.
+What makes this hard in practice isn't the shape of the loop. It's the constant fight against instability, bandwidth, and latency.
 
 ---
 
@@ -64,7 +73,7 @@ y = x / sqrt(mean(x²) + ε) * <span style="color: #22d3ee">γ</span></pre>
   <span><span style="color: #9ca3af">■</span> learned bias</span>
 </div>
 
-Why does dropping mean subtraction work? The [RMSNorm paper](https://arxiv.org/abs/1910.07467)'s core claim is empirical: you can drop mean-centering and still train well. What matters is controlling activation scale—without normalization, residual streams tend to drift and variance accumulates with depth.
+Why does dropping mean subtraction work? The [RMSNorm paper](https://arxiv.org/abs/1910.07467)'s core claim is empirical: you can drop mean-centering and still train well. What matters is controlling activation scale. Without normalization, residual streams tend to drift and variance accumulates with depth.
 
 In practical terms: RMSNorm gives you a stabilizer with one reduction instead of two.
 
@@ -93,7 +102,7 @@ __global__ void rmsnorm_fwd_kernel(...) {
   <span><span style="color: #a78bfa">■</span> learned scale γ</span>
 </div>
 
-On NVIDIA GPUs, `rsqrtf` is a fast device intrinsic (SFU-backed), which is why [CUDA best practices](https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/) recommend it for normalization. We compute it once, broadcast via shared memory, and reuse it across threads. The reduction uses warp shuffles (no atomics). Global memory traffic is the unavoidable part—read `x`, read `weight`, write `y`—but we avoid extra global traffic just to compute the reduction.
+On NVIDIA GPUs, `rsqrtf` is a fast device intrinsic (SFU-backed), which is why [CUDA best practices](https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/) recommend it for normalization. We compute it once, broadcast via shared memory, and reuse it across threads. The reduction uses warp shuffles (no atomics). Global memory traffic is the unavoidable part (read `x`, read `weight`, write `y`), but we avoid extra global traffic just to compute the reduction.
 
 I cache `inv_rms` for backward. The backward needs the same value, and recomputing it would burn bandwidth for no gain.
 
@@ -115,7 +124,7 @@ A 512-dim query becomes 256 independent 2D rotations:
   <span style="color: #89b4fa">pair 0</span>: rotate by <span style="color: #4ade80">t</span> × <span style="color: #f38ba8">θ₀</span>     <span style="color: #6c7086"># fast rotation</span>
   <span style="color: #a78bfa">pair 1</span>: rotate by <span style="color: #4ade80">t</span> × <span style="color: #f38ba8">θ₁</span>     <span style="color: #6c7086"># medium</span>
   <span style="color: #f9e2af">pair 2</span>: rotate by <span style="color: #4ade80">t</span> × <span style="color: #f38ba8">θ₂</span>     <span style="color: #6c7086"># slower</span>
-  <span style="color: #6c7086">...                           # θᵢ decreases exponentially: 10000^(-2i/d)</span>
+  <span style="color: #6c7086">...                           # inv_freq[i] = 1 / base^(2i/d) (angles are t * inv_freq[i])</span>
   <span style="color: #6c7086">pair 255</span>: rotate by <span style="color: #4ade80">t</span> × <span style="color: #f38ba8">θ₂₅₅</span>  <span style="color: #6c7086"># very slow</span></pre>
 </div>
 
@@ -144,7 +153,7 @@ def apply(self, x, start_pos):
     return torch.cat([x1*cos - x2*sin, x1*sin + x2*cos], dim=-1)
 ```
 
-No learned parameters, no additive interference with content embeddings, and it often extrapolates better than learned absolute embeddings—though performance can still degrade at lengths far beyond training.
+No learned parameters, no additive interference with content embeddings, and it often extrapolates better than learned absolute embeddings, though performance can still degrade at lengths far beyond training.
 
 ---
 
@@ -195,7 +204,7 @@ But keys and values for past tokens don't change. Cache them once, reuse them fo
 <span style="color: #f38ba8">**Without caching**</span>
 
 <div style="background: #1e1e2e; border-radius: 8px; padding: 1rem 1.25rem; font-family: monospace; margin: 1rem 0; line-height: 1.5; font-size: 0.9rem;">
-<pre style="margin: 0; color: #cdd6f4;"><span style="color: #6c7086"># </span><span style="color: #f38ba8">O(n²) total</span><span style="color: #6c7086"> — recompute K,V for the whole prefix each step</span>
+<pre style="margin: 0; color: #cdd6f4;"><span style="color: #6c7086"># </span><span style="color: #f38ba8">O(n²) total</span><span style="color: #6c7086">: recompute K,V for the whole prefix each step</span>
 for i in range(n):
     logits = model(<span style="color: #f38ba8">all_tokens[:i+1]</span>)</pre>
 </div>
@@ -217,7 +226,7 @@ Now you're roughly **O(n)** per token instead of O(n²) total recompute.
 
 ### Pre-allocation Matters
 
-Pre-allocating `[batch, n_kv_heads, max_seq_len, head_dim]` means zero allocations during decoding—just indexed writes. If you grow tensors with `torch.cat`, you'll pay allocator overhead and eventually fragment memory.
+Pre-allocating `[batch, n_kv_heads, max_seq_len, head_dim]` means zero allocations during decoding: just indexed writes. If you grow tensors with `torch.cat`, you'll pay allocator overhead and eventually fragment memory.
 
 Pre-allocation costs you reserved memory, but decoding typically has a known max length anyway.
 
@@ -253,7 +262,7 @@ For a 7B model (32 layers, fp16, 2048 ctx):
 
 These scale linearly with batch size, context length, KV heads, and dtype bytes (fp32 doubles them).
 
-[LLaMA 2 70B](https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/config.json) uses GQA with 8 KV heads for 64 Q heads—an 8× reduction in KV cache, and a big reason GQA shows up in large models.
+[LLaMA 2 70B](https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/config.json) uses GQA with 8 KV heads for 64 Q heads, an 8× reduction in KV cache, and a big reason GQA shows up in large models.
 
 The implementation is just "repeat KV heads to match Q heads":
 
@@ -271,7 +280,7 @@ def _repeat_kv(self, kv):
 
 <div id="training-comparison-demo" class="my-8 not-prose"></div>
 
-I trained two identical models on TinyStories—same size, data, and hyperparameters. Only difference: LLaMA-style (pre-norm, RMSNorm, RoPE, SwiGLU) vs GPT-style (post-norm, LayerNorm, learned positions, standard MLP).
+I trained two identical models on TinyStories, same size, data, and hyperparameters. Only difference: LLaMA-style (pre-norm, RMSNorm, RoPE, SwiGLU) vs GPT-style (post-norm, LayerNorm, learned positions, standard MLP).
 
 After 25,000 steps:
 
@@ -344,7 +353,7 @@ norm = NORM_REGISTRY.build("rmsnorm", dim=512)
 
 **Write tests earlier.** I had a RoPE bug that only showed up at sequence lengths > 512. A tiny reference-implementation test would've caught it.
 
-**Profile before optimizing.** I spent a week on a CUDA kernel for a few percent end-to-end speedup. The real bottleneck was attention—and SDPA already handles that well.
+**Profile before optimizing.** I spent a week on a CUDA kernel for a few percent end-to-end speedup. The real bottleneck was attention, and SDPA already handles that well. (Note: SDPA picks Flash/memory-efficient/math kernels depending on your PyTorch build, GPU, dtype, and tensor shapes.)
 
 **Keep configs boring.** Hydra is powerful, but it adds conceptual overhead. For many research codebases, dataclasses + argparse is enough.
 
@@ -355,18 +364,18 @@ norm = NORM_REGISTRY.build("rmsnorm", dim=512)
 If you want to browse the implementation: [github.com/RetamalVictor/TinyLM-Lab](https://github.com/RetamalVictor/TinyLM-Lab)
 
 The main files:
-- `tinylm/model/transformer.py` — the forward pass
-- `tinylm/components/normalization/rmsnorm.py` — RMSNorm dispatch
-- `tinylm/components/positional/rope.py` — RoPE
-- `tinylm/components/attention/mha.py` — MHA/GQA/MQA
-- `csrc/rmsnorm_cuda.cu` — RMSNorm kernel
+- `tinylm/model/transformer.py`: the forward pass
+- `tinylm/components/normalization/rmsnorm.py`: RMSNorm dispatch
+- `tinylm/components/positional/rope.py`: RoPE
+- `tinylm/components/attention/mha.py`: MHA/GQA/MQA
+- `csrc/rmsnorm_cuda.cu`: RMSNorm kernel
 
 ---
 
 ## References
 
-- [Attention Is All You Need](https://arxiv.org/abs/1706.03762) — The original transformer
-- [LLaMA: Open and Efficient Foundation Language Models](https://arxiv.org/abs/2302.13971) — LLaMA architecture
-- [Root Mean Square Layer Normalization](https://arxiv.org/abs/1910.07467) — RMSNorm
-- [RoFormer: Enhanced Transformer with Rotary Position Embedding](https://arxiv.org/abs/2104.09864) — RoPE
-- [GLU Variants Improve Transformer](https://arxiv.org/abs/2002.05202) — SwiGLU / gated MLPs
+- [Attention Is All You Need](https://arxiv.org/abs/1706.03762): The original transformer
+- [LLaMA: Open and Efficient Foundation Language Models](https://arxiv.org/abs/2302.13971): LLaMA architecture
+- [Root Mean Square Layer Normalization](https://arxiv.org/abs/1910.07467): RMSNorm
+- [RoFormer: Enhanced Transformer with Rotary Position Embedding](https://arxiv.org/abs/2104.09864): RoPE
+- [GLU Variants Improve Transformer](https://arxiv.org/abs/2002.05202): SwiGLU / gated MLPs
