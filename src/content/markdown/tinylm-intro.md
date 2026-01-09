@@ -12,7 +12,7 @@ This isn't a tutorial. It's a walkthrough of what I learned building it—the pa
 
 ## The Core Loop
 
-Every transformer forward pass is the same loop. Here's the actual code path:
+Every transformer forward pass is the same loop. Here's a simplified version of the real forward path:
 
 ```python
 def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -28,7 +28,7 @@ def forward(self, x: torch.Tensor) -> torch.Tensor:
     return logits
 ```
 
-That's it. Everything else is implementation detail inside `block()`:
+Structurally, transformers are boring: embed → repeat block → norm → head. The interesting complexity is inside `block()`:
 
 ```python
 def forward(self, x, pos_ctx, cache, layer_idx, start_pos):
@@ -64,9 +64,9 @@ y = x / sqrt(mean(x²) + ε) * <span style="color: #22d3ee">γ</span></pre>
   <span><span style="color: #9ca3af">■</span> learned bias</span>
 </div>
 
-Why does dropping mean subtraction work? The [RMSNorm paper](https://arxiv.org/abs/1910.07467) argues that re-centering is redundant when you already have bias terms in subsequent layers. The network learns to compensate. What *does* matter is controlling activation magnitudes—without normalization, residual connections cause exponential growth through deep networks.
+Why does dropping mean subtraction work? The [RMSNorm paper](https://arxiv.org/abs/1910.07467)'s core claim is empirical: you can drop mean-centering and still train well. What *does* matter is controlling activation scale—without normalization, residual connections cause scale drift and variance accumulation across depth.
 
-RMSNorm gives you the stability benefit with fewer operations: one reduction (sum of squares) instead of two (sum for mean, then sum of squared deviations).
+RMSNorm gives you that stability with fewer operations: one reduction (sum of squares) instead of two (sum for mean, then sum of squared deviations).
 
 The CUDA kernel makes this concrete—three phases, each with a different parallelism pattern:
 
@@ -79,7 +79,7 @@ __global__ void rmsnorm_fwd_kernel(...) {
 
   <span style="color: #f9e2af">__shared__</span> float <span style="color: #f9e2af">s_inv_rms</span>;
   if (tid == 0)
-      <span style="color: #f9e2af">s_inv_rms</span> = <span style="color: #a6e3a1">rsqrtf</span>(reduced / hidden + eps);  <span style="color: #6c7086">// 1 HW instruction</span>
+      <span style="color: #f9e2af">s_inv_rms</span> = <span style="color: #a6e3a1">rsqrtf</span>(reduced / hidden + eps);  <span style="color: #6c7086">// fast SFU op</span>
   <span style="color: #f9e2af">__syncthreads</span>();  <span style="color: #6c7086">// all threads now see s_inv_rms</span>
 
   for (int i = tid; i < hidden; i += stride)
@@ -89,11 +89,11 @@ __global__ void rmsnorm_fwd_kernel(...) {
 <div style="display: flex; gap: 1.5rem; margin: 0.5rem 0 1rem; font-size: 0.8rem; flex-wrap: wrap;">
   <span><span style="color: #89b4fa">■</span> parallel reduce</span>
   <span><span style="color: #f9e2af">■</span> shared memory</span>
-  <span><span style="color: #a6e3a1">■</span> rsqrtf (1 instruction)</span>
+  <span><span style="color: #a6e3a1">■</span> rsqrtf (fast intrinsic)</span>
   <span><span style="color: #a78bfa">■</span> learned scale γ</span>
 </div>
 
-`rsqrtf` (reciprocal square root) is a single hardware instruction on NVIDIA GPUs. We compute it once, broadcast via shared memory, and every thread reads it. The reduction uses warp shuffles—no atomics, no global memory traffic.
+On NVIDIA GPUs, `rsqrtf` is a fast device intrinsic—it maps to the Special Function Unit (SFU), which is why [CUDA best practices](https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/) recommend it for normalization. We compute it once, broadcast via shared memory, and every thread reads the result. The reduction uses warp shuffles—in this kernel, no atomics or global memory traffic.
 
 I cache `inv_rms` for the backward pass. Computing gradients through the normalization requires the same value, and recomputing it would double the memory bandwidth.
 
@@ -154,7 +154,7 @@ def apply(self, x, start_pos):
     return torch.cat([x1*cos - x2*sin, x1*sin + x2*cos], dim=-1)
 ```
 
-No learned parameters, no additive interference with the content embedding, and it extrapolates to longer sequences than seen during training (with some degradation).
+No learned parameters, no additive interference with the content embedding, and it often extrapolates better than learned absolute embeddings to longer sequences—though performance can still degrade.
 
 ### SwiGLU: The Third Projection
 
@@ -185,7 +185,7 @@ Three projections means 50% more parameters, right? Here's the trick—use a sma
 SwiGLU:   3 × dim × <span style="color: #fab387">8d/3</span> = <span style="color: #a6e3a1">8d²</span>  <span style="color: #6c7086">← same!</span></pre>
 </div>
 
-Same parameter count, more expressiveness. The implementation rounds to multiples of 256 for GPU efficiency:
+If you choose the hidden dimension accordingly, same parameter count but more expressiveness. The implementation rounds to multiples of 256 for GPU efficiency:
 
 ```python
 hidden_dim = int(dim * 4 * 2 / 3)                 # 8/3 ≈ 2.67x instead of 4x
@@ -239,9 +239,17 @@ Pre-allocating `[batch, n_kv_heads, max_seq_len, head_dim]` means zero allocatio
 
 ### GQA: Trading KV Capacity for Speed
 
-The KV cache is often the memory bottleneck during inference. For a 7B model generating 2048 tokens, you're storing 537 MB of key-value pairs—per layer.
+The KV cache is often the memory bottleneck during inference. How much memory? Easy to compute:
 
-Grouped-Query Attention (GQA) observes that K and V don't need as much capacity as Q. Multiple Q heads can share the same K,V head:
+```
+KV cache bytes = 2 × B × n_kv_heads × T × d_head × bytes_per_elem
+```
+
+For LLaMA-2 7B (fp16, batch=1, seq=2048, n_kv=32, d_head=128):
+- **Per layer**: ~32 MB
+- **Across 32 layers**: ~1 GB total
+
+Grouped-Query Attention (GQA) reduces `n_kv_heads`, scaling that linearly. Multiple Q heads share the same K,V head:
 
 ```python
 # MHA: n_heads = n_kv_heads = 32    (every Q head has its own KV)
@@ -249,15 +257,15 @@ Grouped-Query Attention (GQA) observes that K and V don't need as much capacity 
 # MQA: n_heads = 32, n_kv_heads = 1  (all Q heads share one KV head)
 ```
 
-The KV cache scales with `n_kv_heads`, not `n_heads`:
+For a 7B model (32 layers, fp16, 2048 ctx):
 
-| Variant | KV Cache Size (2048 ctx) | Quality |
-|---------|-------------------------|---------|
-| MHA (32 KV heads) | 537 MB | Baseline |
-| GQA (8 KV heads) | 134 MB | ~Same |
-| MQA (1 KV head) | 17 MB | Slight loss |
+| Variant | Per Layer | Total Model |
+|---------|-----------|-------------|
+| MHA (32 KV heads) | ~32 MB | ~1 GB |
+| GQA (8 KV heads) | ~8 MB | ~256 MB |
+| MQA (1 KV head) | ~1 MB | ~32 MB |
 
-LLaMA 2 70B uses GQA with 8 KV heads for 64 Q heads—an 8× reduction in KV cache with no measurable quality loss. The intuition: Q needs capacity to ask diverse questions, but K and V just need to store the context. The implementation handles all three variants:
+[LLaMA 2 70B](https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/config.json) uses GQA with 8 KV heads for 64 Q heads—an 8× reduction in KV cache, commonly reported to preserve quality in practice. The intuition: Q needs capacity to ask diverse questions, but K and V just need to store the context. The implementation handles all three variants:
 
 ```python
 def _repeat_kv(self, kv):
