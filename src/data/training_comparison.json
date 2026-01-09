@@ -1,0 +1,42 @@
+{
+  "llama": {
+    "name": "LLaMA",
+    "config": {
+      "norm": "RMSNorm (pre)",
+      "pos_emb": "RoPE",
+      "activation": "SiLU",
+      "mlp": "Gated (SwiGLU)",
+      "bias": false
+    },
+    "final": {
+      "train_loss": 1.3746,
+      "val_loss": 1.2501,
+      "train_ppl": 3.95,
+      "val_ppl": 3.49
+    }
+  },
+  "gpt": {
+    "name": "GPT",
+    "config": {
+      "norm": "LayerNorm (post)",
+      "pos_emb": "Learned",
+      "activation": "GELU",
+      "mlp": "Standard",
+      "bias": true
+    },
+    "final": {
+      "train_loss": 1.5235,
+      "val_loss": 1.3318,
+      "train_ppl": 4.59,
+      "val_ppl": 3.79
+    }
+  },
+  "training": {
+    "model_params": "13.77M",
+    "dataset": "TinyStories",
+    "steps": 25000,
+    "batch_size": 32,
+    "seq_len": 512,
+    "lr": 0.0003
+  }
+}

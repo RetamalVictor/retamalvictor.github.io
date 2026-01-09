@@ -102,7 +102,13 @@ export class TernaryEngine {
         if (!vocabResponse.ok) {
             throw new Error(`Failed to load vocab: ${vocabResponse.statusText}`);
         }
-        this.vocab = await vocabResponse.json();
+        const vocabData = await vocabResponse.json();
+        // Handle both snake_case and camelCase keys
+        this.vocab = {
+            chars: vocabData.chars,
+            charToIdx: vocabData.charToIdx || vocabData.char_to_idx,
+            vocabSize: vocabData.vocabSize || vocabData.vocab_size,
+        };
 
         // Parse header
         const dataView = new DataView(modelBuffer);

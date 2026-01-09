@@ -34,7 +34,7 @@ export class BlogPostPage {
     private allPosts: BlogPost[] = [];
     private prevPost: BlogPost | null = null;
     private nextPost: BlogPost | null = null;
-    private ternaryDemo: any = null;  // TernaryLMDemo instance
+    private ternaryDemos: any[] = [];  // TernaryLMDemo instances
 
     constructor(container: HTMLElement) {
         this.container = container;
@@ -414,12 +414,13 @@ export class BlogPostPage {
             // Lazy load the demo component
             import('../components/ternary').then(({ TernaryLMDemo }) => {
                 try {
-                    this.ternaryDemo = new TernaryLMDemo({
+                    const demo = new TernaryLMDemo({
                         containerId: 'ternary-lm-demo',
-                        modelPath: '/assets/models/browser_char_lm.tbin',
-                        maxTokens: 150,
-                        defaultPrompt: 'ROMEO: ',
+                        modelPath: '/assets/models/transformer',
+                        maxTokens: 50,  // Reduced for CPU inference speed
+                        defaultPrompt: 'The meaning of life is',
                     });
+                    this.ternaryDemos.push(demo);
                     console.log('Ternary LM demo initialized');
                 } catch (error) {
                     console.error('Failed to initialize ternary demo:', error);
@@ -511,9 +512,9 @@ export class BlogPostPage {
 
     public destroy(): void {
         // Cleanup demos
-        if (this.ternaryDemo) {
-            this.ternaryDemo.destroy();
-            this.ternaryDemo = null;
+        for (const demo of this.ternaryDemos) {
+            demo.destroy();
         }
+        this.ternaryDemos = [];
     }
 }

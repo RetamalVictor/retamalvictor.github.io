@@ -6,16 +6,34 @@
  */
 
 import { TernaryEngine } from './TernaryEngine';
+import { TernaryCPUEngine } from './TernaryCPUEngine';
+import { TransformerCPUEngine } from './TransformerCPUEngine';
 import {
     TernaryLMDemoConfig,
     DemoState,
     GenerationStats,
 } from './types';
 
+// Common interface for both engines
+interface InferenceEngine {
+    generate(
+        prompt: string,
+        maxTokens: number,
+        onToken?: (char: string, stats: GenerationStats) => void,
+        temperature?: number
+    ): Promise<string>;
+    getMemoryStats(): { packedWeightsKB: number; fp16EquivalentKB: number; compressionRatio: number; scalesKB: number };
+    getConfig(): { vocabSize: number; hiddenDim: number; contextLength: number; nLayers: number };
+    destroy(): void;
+    stop?(): void;  // Optional - only TransformerCPUEngine supports this
+}
+
 export class TernaryLMDemo {
     private container: HTMLElement;
     private config: TernaryLMDemoConfig;
-    private engine: TernaryEngine | null = null;
+    private engine: InferenceEngine | null = null;
+    private usingCPU = false;
+    private isTransformer = false;
     private state: DemoState;
     private isDestroyed = false;
 
@@ -44,16 +62,54 @@ export class TernaryLMDemo {
     private async init(): Promise<void> {
         this.render();
 
-        try {
-            this.engine = await TernaryEngine.create(this.config.modelPath);
-            this.state.status = 'ready';
-            this.render();
-        } catch (error) {
-            console.error('TernaryLMDemo init failed:', error);
-            this.state.status = 'error';
-            this.state.errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            this.showFallback();
+        // Detect model type from path
+        const isTransformerModel = this.config.modelPath.includes('transformer') ||
+            !this.config.modelPath.endsWith('.tbin');
+
+        if (isTransformerModel) {
+            // Use TransformerCPUEngine for SafeTensors models
+            try {
+                console.log('Loading transformer model...');
+                this.engine = await TransformerCPUEngine.create(this.config.modelPath);
+                this.usingCPU = true;
+                this.isTransformer = true;
+                console.log('Transformer CPU engine initialized');
+            } catch (error) {
+                console.error('Transformer engine failed:', error);
+                this.state.status = 'error';
+                this.state.errorMessage = error instanceof Error ? error.message : 'Failed to load model';
+                this.showFallback();
+                return;
+            }
+        } else {
+            // Use MLP engine for .tbin files
+            try {
+                if (navigator.gpu) {
+                    console.log('Attempting WebGPU initialization...');
+                    this.engine = await TernaryEngine.create(this.config.modelPath);
+                    this.usingCPU = false;
+                    console.log('WebGPU engine initialized');
+                } else {
+                    throw new Error('WebGPU not available');
+                }
+            } catch (webgpuError) {
+                console.warn('WebGPU failed, falling back to CPU:', webgpuError);
+                try {
+                    this.engine = await TernaryCPUEngine.create(this.config.modelPath);
+                    this.usingCPU = true;
+                    console.log('CPU engine initialized');
+                } catch (cpuError) {
+                    console.error('CPU engine also failed:', cpuError);
+                    this.state.status = 'error';
+                    this.state.errorMessage = cpuError instanceof Error ? cpuError.message : 'Failed to load model';
+                    this.showFallback();
+                    return;
+                }
+            }
         }
+
+        this.state.status = 'ready';
+        this.render();
     }
 
     /**
@@ -68,8 +124,11 @@ export class TernaryLMDemo {
                 <div class="px-4 py-3 border-b border-gray-700/50 flex items-center justify-between bg-[#0a0a0f]">
                     <div class="flex items-center gap-2">
                         <span class="text-[#00d4ff] text-sm">●</span>
-                        <span class="text-sm font-medium text-gray-300">Ternary LM Demo</span>
+                        <span class="text-sm font-medium text-gray-300">${this.isTransformer ? 'Ternary Transformer' : 'Ternary LM Demo'}</span>
                         <span class="text-xs text-gray-500 ml-2">1.58 bits/weight</span>
+                        <span class="text-xs px-1.5 py-0.5 rounded ${this.usingCPU ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400'}">
+                            ${this.usingCPU ? 'CPU' : 'WebGPU'}
+                        </span>
                     </div>
                     <button
                         id="toggle-hood"
@@ -93,6 +152,15 @@ export class TernaryLMDemo {
                             placeholder="Enter prompt..."
                             ${this.state.status === 'generating' ? 'disabled' : ''}
                         />
+                        ${this.state.status === 'generating' ? `
+                        <button
+                            id="stop-btn"
+                            class="px-4 py-2 rounded text-sm font-medium transition-all
+                                   bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30"
+                        >
+                            Stop
+                        </button>
+                        ` : `
                         <button
                             id="generate-btn"
                             class="px-4 py-2 rounded text-sm font-medium transition-all
@@ -103,6 +171,7 @@ export class TernaryLMDemo {
                         >
                             ${this.getButtonText()}
                         </button>
+                        `}
                     </div>
 
                     <!-- Output Display -->
@@ -243,23 +312,23 @@ export class TernaryLMDemo {
                     <!-- Architecture Info -->
                     <div class="bg-[#0a0a0f] rounded-lg p-4 border border-gray-700/30">
                         <div class="text-gray-400 text-xs mb-3 font-medium uppercase tracking-wide">
-                            Model Architecture
+                            ${this.isTransformer ? 'Transformer Architecture' : 'Model Architecture'}
                         </div>
                         <div class="space-y-2 text-xs">
                             <div class="flex justify-between">
                                 <span class="text-gray-500">Vocabulary</span>
-                                <span class="text-gray-300 font-mono">${config.vocabSize} chars</span>
+                                <span class="text-gray-300 font-mono">${config.vocabSize.toLocaleString()} ${this.isTransformer ? 'BPE' : 'chars'}</span>
                             </div>
                             <div class="flex justify-between">
-                                <span class="text-gray-500">Hidden dim</span>
+                                <span class="text-gray-500">${this.isTransformer ? 'Dim' : 'Hidden dim'}</span>
                                 <span class="text-gray-300 font-mono">${config.hiddenDim}</span>
                             </div>
                             <div class="flex justify-between">
                                 <span class="text-gray-500">Context</span>
-                                <span class="text-gray-300 font-mono">${config.contextLength} tokens</span>
+                                <span class="text-gray-300 font-mono">${config.contextLength.toLocaleString()} tokens</span>
                             </div>
                             <div class="flex justify-between">
-                                <span class="text-gray-500">Layers</span>
+                                <span class="text-gray-500">${this.isTransformer ? 'Blocks' : 'Layers'}</span>
                                 <span class="text-gray-300 font-mono">${config.nLayers}</span>
                             </div>
                         </div>
@@ -268,6 +337,12 @@ export class TernaryLMDemo {
                                 <span class="text-[#00d4ff]">●</span>
                                 <span class="text-gray-400">Weights: {-1, 0, +1}</span>
                             </div>
+                            ${this.isTransformer ? `
+                            <div class="flex items-center gap-2 text-xs mt-1">
+                                <span class="text-[#a855f7]">●</span>
+                                <span class="text-gray-400">RMSNorm + RoPE + SwiGLU</span>
+                            </div>
+                            ` : ''}
                         </div>
                     </div>
                 </div>
@@ -275,7 +350,9 @@ export class TernaryLMDemo {
                 <!-- Technical Note -->
                 <div class="px-4 pb-4 text-xs text-gray-500">
                     Running entirely in your browser using
-                    <span class="text-[#00d4ff]">WebGPU</span> compute shaders.
+                    ${this.usingCPU
+                        ? '<span class="text-yellow-400">JavaScript (CPU fallback)</span>'
+                        : '<span class="text-[#00d4ff]">WebGPU</span> compute shaders'}.
                     <a
                         href="https://github.com/RetamalVictor/bittorch"
                         target="_blank"
@@ -341,6 +418,12 @@ export class TernaryLMDemo {
             generateBtn.addEventListener('click', () => this.handleGenerate());
         }
 
+        // Stop button
+        const stopBtn = document.getElementById('stop-btn');
+        if (stopBtn) {
+            stopBtn.addEventListener('click', () => this.handleStop());
+        }
+
         // Prompt input - enter key
         const promptInput = document.getElementById('prompt-input') as HTMLInputElement;
         if (promptInput) {
@@ -362,6 +445,15 @@ export class TernaryLMDemo {
                 this.state.showUnderTheHood = !this.state.showUnderTheHood;
                 this.render();
             });
+        }
+    }
+
+    /**
+     * Handle stop button click.
+     */
+    private handleStop(): void {
+        if (this.engine?.stop) {
+            this.engine.stop();
         }
     }
 
