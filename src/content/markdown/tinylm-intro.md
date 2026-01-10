@@ -322,7 +322,7 @@ training:
   warmup_steps: 500
   grad_clip: 1.0
 
-hardware: Single RTX 3090
+hardware: Single A2000
 ```
 
 </details>
