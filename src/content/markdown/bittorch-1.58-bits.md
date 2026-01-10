@@ -1,6 +1,6 @@
 ---
 title: "1.58 Bits Per Weight: Implementing BitNet from Paper to CUDA"
-date: "2025-01-07"
+date: "2025-12-15"
 tags: ["machine-learning", "cuda", "quantization", "pytorch"]
 summary: "The story of building BitTorch: ternary neural networks from paper to CUDA. Why my first kernel was 20× slower than PyTorch, the gradient bug that cost a week, and what I learned about low-precision ML."
 readTime: "18 min"
