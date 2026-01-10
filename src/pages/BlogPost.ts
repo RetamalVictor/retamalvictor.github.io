@@ -5,6 +5,7 @@ import 'katex/dist/katex.min.css';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/github-dark.css';
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import { parseFrontmatter, extractSlugFromPath, type BlogPostMeta } from '../utils/frontmatter.js';
 
 // Auto-import all markdown files from content/markdown/
@@ -110,6 +111,29 @@ export class BlogPostPage {
 
         // Use marked to convert markdown to HTML
         let html = marked.parse(cleanedMarkdown) as string;
+
+        // Sanitize HTML to prevent XSS attacks while preserving safe content
+        html = DOMPurify.sanitize(html, {
+            ALLOWED_TAGS: [
+                'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'br', 'hr',
+                'ul', 'ol', 'li', 'dl', 'dt', 'dd',
+                'strong', 'em', 'b', 'i', 'u', 's', 'strike', 'del', 'ins',
+                'a', 'img', 'figure', 'figcaption',
+                'blockquote', 'pre', 'code', 'span',
+                'table', 'thead', 'tbody', 'tr', 'th', 'td',
+                'div', 'section', 'article', 'aside',
+                'sup', 'sub', 'mark', 'abbr', 'details', 'summary'
+            ],
+            ALLOWED_ATTR: [
+                'href', 'src', 'alt', 'title', 'class', 'id', 'name',
+                'target', 'rel', 'width', 'height', 'loading',
+                'colspan', 'rowspan', 'scope', 'style'
+            ],
+            ALLOW_DATA_ATTR: false,
+            ADD_ATTR: ['target'],
+            FORBID_TAGS: ['script', 'style', 'iframe', 'form', 'input', 'object', 'embed'],
+            FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover']
+        });
 
         // Fix image paths for production (add base URL)
         const baseUrl = import.meta.env.BASE_URL || '/';

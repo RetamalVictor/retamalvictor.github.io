@@ -4,6 +4,9 @@ export interface Route {
     title?: string;
 }
 
+// Allowed characters for route parameters (alphanumeric, hyphens, underscores, dots)
+const SAFE_PARAM_PATTERN = /^[a-zA-Z0-9_.-]+$/;
+
 export class Router {
     private routes: Map<string, Route> = new Map();
     private currentRoute: string = '/';
@@ -132,7 +135,15 @@ export class Router {
         routeParts.forEach((part, index) => {
             if (part.startsWith(':')) {
                 const paramName = part.substring(1);
-                params[paramName] = currentParts[index];
+                const paramValue = currentParts[index] || '';
+
+                // Validate parameter against safe pattern to prevent injection attacks
+                if (!SAFE_PARAM_PATTERN.test(paramValue)) {
+                    console.warn(`Router: Invalid parameter value for ${paramName}: ${paramValue}`);
+                    params[paramName] = '';  // Return empty string for invalid params
+                } else {
+                    params[paramName] = paramValue;
+                }
             }
         });
 
