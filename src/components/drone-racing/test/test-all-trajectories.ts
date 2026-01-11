@@ -21,6 +21,8 @@ import {
     HairpinTrajectory,
     SnakeTrajectory,
     RaceTrackTrajectory,
+    Racing3DTrajectory,
+    SplitSTrajectory,
 } from '../trajectory';
 
 const simDt = 0.02;  // 50 Hz simulation
@@ -207,7 +209,7 @@ console.log('='.repeat(80));
 console.log(`Simulation dt: ${simDt}s (${1/simDt} Hz)`);
 
 // Create all trajectories using default parameters (which should be tuned for good tracking)
-const height = 4.0;
+const height = 5.0;
 
 const trajectories: Trajectory[] = [
     new CircleTrajectory({ height, radius: 15.0, speed: 12.0 }),
@@ -215,6 +217,9 @@ const trajectories: Trajectory[] = [
     new HairpinTrajectory({ height, turnRadius: 8.0, straightLength: 25.0, speed: 10.0 }),
     new SnakeTrajectory({ height }),    // Use defaults (speed: 10, with smooth turnarounds)
     new RaceTrackTrajectory({ height, gateSpacing: 20.0, turnRadius: 10.0, speed: 10.0 }),
+    // 3D trajectories
+    new Racing3DTrajectory({ height, trackLength: 80.0, minHeight: 2.0, maxHeight: 10.0, speed: 12.0 }),
+    new SplitSTrajectory({ height, loopRadius: 6.0, gateSpacing: 25.0, numGates: 2, speed: 10.0 }),
 ];
 
 // Run tests

@@ -16,6 +16,10 @@ export { SnakeTrajectory, DEFAULT_SNAKE_PARAMS } from './SnakeTrajectory';
 export type { SnakeParams } from './SnakeTrajectory';
 export { RaceTrackTrajectory, DEFAULT_RACETRACK_PARAMS } from './RaceTrackTrajectory';
 export type { RaceTrackParams } from './RaceTrackTrajectory';
+export { Racing3DTrajectory, DEFAULT_RACING3D_PARAMS } from './Racing3DTrajectory';
+export type { Racing3DParams } from './Racing3DTrajectory';
+export { SplitSTrajectory, DEFAULT_SPLITS_PARAMS } from './SplitSTrajectory';
+export type { SplitSParams } from './SplitSTrajectory';
 
 import { Trajectory } from './Trajectory';
 import { CircleTrajectory } from './CircleTrajectory';
@@ -23,11 +27,13 @@ import { Figure8Trajectory } from './Figure8Trajectory';
 import { HairpinTrajectory } from './HairpinTrajectory';
 import { SnakeTrajectory } from './SnakeTrajectory';
 import { RaceTrackTrajectory } from './RaceTrackTrajectory';
+import { Racing3DTrajectory } from './Racing3DTrajectory';
+import { SplitSTrajectory } from './SplitSTrajectory';
 
 /**
  * Available trajectory types
  */
-export type TrajectoryType = 'circle' | 'figure8' | 'hairpin' | 'snake' | 'racetrack';
+export type TrajectoryType = 'circle' | 'figure8' | 'hairpin' | 'snake' | 'racetrack' | 'racing3d' | 'splits';
 
 /**
  * Trajectory metadata for UI
@@ -64,6 +70,16 @@ export const TRAJECTORY_INFO: TrajectoryInfo[] = [
         name: 'Race Track',
         description: 'Multi-gate racing course',
     },
+    {
+        type: 'racing3d',
+        name: '3D Racing',
+        description: 'Full 3D with dives and climbs',
+    },
+    {
+        type: 'splits',
+        name: 'Split-S',
+        description: 'Power loops through gates',
+    },
 ];
 
 /**
@@ -92,6 +108,12 @@ export function createTrajectory(
         case 'racetrack':
             // Race track with various turn radii
             return new RaceTrackTrajectory({ speed: Math.min(speed, 12.0), height, gateSpacing: 25.0, turnRadius: 10.0 });
+        case 'racing3d':
+            // Full 3D racing with altitude changes
+            return new Racing3DTrajectory({ speed: Math.min(speed, 15.0), height, trackLength: 80.0, minHeight: 2.0, maxHeight: 10.0 });
+        case 'splits':
+            // Split-S maneuvers through gates
+            return new SplitSTrajectory({ speed: Math.min(speed, 12.0), height, loopRadius: 6.0, gateSpacing: 25.0, numGates: 2 });
         default:
             return new CircleTrajectory({ speed, height, radius: 20.0 });
     }

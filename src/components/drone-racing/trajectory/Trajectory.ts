@@ -44,9 +44,10 @@ export abstract class Trajectory {
 
     /**
      * Get position at normalized time t ∈ [0, 1]
-     * Returns { x, z } in the horizontal plane
+     * Returns { x, y, z } - subclasses can override y for 3D trajectories
+     * Default y = this.height for 2D trajectories
      */
-    protected abstract getPositionAtPhase(phase: number): { x: number; z: number };
+    protected abstract getPositionAtPhase(phase: number): { x: number; y?: number; z: number };
 
     /**
      * Get waypoint at time t
@@ -55,8 +56,9 @@ export abstract class Trajectory {
         const period = this.getPeriod();
         const phase = (t % period) / period;
 
-        // Get position
+        // Get position (y defaults to this.height for 2D trajectories)
         const pos = this.getPositionAtPhase(phase);
+        const y = pos.y !== undefined ? pos.y : this.height;
 
         // Compute velocity using central difference
         const dt = 0.0001;
@@ -65,14 +67,20 @@ export abstract class Trajectory {
         const pos1 = this.getPositionAtPhase(phase1);
         const pos2 = this.getPositionAtPhase(phase2);
 
+        const y1 = pos1.y !== undefined ? pos1.y : this.height;
+        const y2 = pos2.y !== undefined ? pos2.y : this.height;
+
         let vx = (pos2.x - pos1.x) / (2 * dt);
+        let vy = (y2 - y1) / (2 * dt);
         let vz = (pos2.z - pos1.z) / (2 * dt);
 
-        // Normalize velocity to target speed
-        const vMag = Math.sqrt(vx * vx + vz * vz);
+        // Normalize velocity to target speed (3D magnitude)
+        const vMag = Math.sqrt(vx * vx + vy * vy + vz * vz);
         if (vMag > 1e-6) {
-            vx = (vx / vMag) * this.speed;
-            vz = (vz / vMag) * this.speed;
+            const scale = this.speed / vMag;
+            vx *= scale;
+            vy *= scale;
+            vz *= scale;
         }
 
         // Compute acceleration using central difference on velocity
@@ -80,9 +88,10 @@ export abstract class Trajectory {
         const wp1 = this.getVelocityAtTime(t - dt2);
         const wp2 = this.getVelocityAtTime(t + dt2);
         const ax = (wp2.vx - wp1.vx) / (2 * dt2);
+        const ay = (wp2.vy - wp1.vy) / (2 * dt2);
         const az = (wp2.vz - wp1.vz) / (2 * dt2);
 
-        // Compute heading and heading rate
+        // Compute heading and heading rate (heading is in XZ plane)
         const heading = Math.atan2(vx, vz);
         const heading1 = Math.atan2(wp1.vx, wp1.vz);
         const heading2 = Math.atan2(wp2.vx, wp2.vz);
@@ -93,9 +102,9 @@ export abstract class Trajectory {
         headingRate = Math.max(-maxHeadingRate, Math.min(maxHeadingRate, headingRate));
 
         return {
-            position: { x: pos.x, y: this.height, z: pos.z },
-            velocity: { x: vx, y: 0, z: vz },
-            acceleration: { x: ax, y: 0, z: az },
+            position: { x: pos.x, y, z: pos.z },
+            velocity: { x: vx, y: vy, z: vz },
+            acceleration: { x: ax, y: ay, z: az },
             jerk: { x: 0, y: 0, z: 0 },
             heading,
             headingRate,
@@ -106,7 +115,7 @@ export abstract class Trajectory {
     /**
      * Helper to get velocity at a specific time (for numerical differentiation)
      */
-    private getVelocityAtTime(t: number): { vx: number; vz: number } {
+    private getVelocityAtTime(t: number): { vx: number; vy: number; vz: number } {
         const period = this.getPeriod();
         const dt = 0.0001;
         const phase1 = ((t - dt) % period + period) / period % 1;
@@ -114,16 +123,22 @@ export abstract class Trajectory {
         const pos1 = this.getPositionAtPhase(phase1);
         const pos2 = this.getPositionAtPhase(phase2);
 
+        const y1 = pos1.y !== undefined ? pos1.y : this.height;
+        const y2 = pos2.y !== undefined ? pos2.y : this.height;
+
         let vx = (pos2.x - pos1.x) / (2 * dt);
+        let vy = (y2 - y1) / (2 * dt);
         let vz = (pos2.z - pos1.z) / (2 * dt);
 
-        const vMag = Math.sqrt(vx * vx + vz * vz);
+        const vMag = Math.sqrt(vx * vx + vy * vy + vz * vz);
         if (vMag > 1e-6) {
-            vx = (vx / vMag) * this.speed;
-            vz = (vz / vMag) * this.speed;
+            const scale = this.speed / vMag;
+            vx *= scale;
+            vy *= scale;
+            vz *= scale;
         }
 
-        return { vx, vz };
+        return { vx, vy, vz };
     }
 
     /**
@@ -144,7 +159,8 @@ export abstract class Trajectory {
         for (let i = 0; i <= numPoints; i++) {
             const phase = i / numPoints;
             const pos = this.getPositionAtPhase(phase);
-            points.push({ x: pos.x, y: this.height, z: pos.z });
+            const y = pos.y !== undefined ? pos.y : this.height;
+            points.push({ x: pos.x, y, z: pos.z });
         }
 
         return points;
