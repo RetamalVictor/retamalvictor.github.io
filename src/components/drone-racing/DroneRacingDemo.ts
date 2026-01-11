@@ -4,16 +4,21 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 // Core components
 import { RacingDrone } from './core/RacingDrone';
 import { MPC } from './control/MPC';
-import { Waypoint, ControlCommand } from './types';
+import { ControlCommand } from './types';
+
+// Trajectory system
+import {
+    Trajectory,
+    TrajectoryType,
+    TRAJECTORY_INFO,
+    createTrajectory,
+} from './trajectory';
 
 /**
- * Minimal Drone Racing Demo
+ * Drone Racing Demo
  *
- * Clean demo using only core components:
- * - RacingDrone (DroneDynamics + DroneVisualization)
- * - MPC (true Model Predictive Control)
- *
- * Demonstrates the drone tracking a circular reference trajectory.
+ * Interactive demonstration of MPC-controlled drone racing.
+ * Features multiple trajectory types that can be selected via UI.
  */
 export class DroneRacingDemo {
     // DOM elements
@@ -29,11 +34,12 @@ export class DroneRacingDemo {
     // Core components
     private drone: RacingDrone;
     private mpc: MPC;
+    private trajectory: Trajectory;
 
-    // Trajectory parameters - Racing drone speeds!
-    private readonly trajectoryRadius = 25.0;   // Large racing track
-    private readonly trajectoryHeight = 4.0;    // Good altitude for visibility
-    private readonly trajectorySpeed = 20.0;    // 20 m/s = 72 km/h racing speed
+    // Configuration
+    private currentTrajectoryType: TrajectoryType = 'circle';
+    private readonly defaultSpeed = 15.0;
+    private readonly defaultHeight = 4.0;
 
     // State
     private simulationTime: number = 0;
@@ -47,8 +53,9 @@ export class DroneRacingDemo {
     private trailPositions: THREE.Vector3[] = [];
     private readonly maxTrailLength = 1000;
 
-    // Debug overlay
+    // UI elements
     private debugOverlay: HTMLElement | null = null;
+    private trajectoryButtons: Map<TrajectoryType, HTMLButtonElement> = new Map();
 
     constructor(containerId: string) {
         // Get container
@@ -78,9 +85,9 @@ export class DroneRacingDemo {
         // Create scene
         this.scene = new THREE.Scene();
 
-        // Create camera - positioned for large racing track
+        // Create camera
         this.camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
-        this.camera.position.set(40, 20, 40);
+        this.camera.position.set(50, 30, 50);
         this.camera.lookAt(0, 4, 0);
 
         // Create controls
@@ -92,6 +99,7 @@ export class DroneRacingDemo {
         // Initialize components
         this.drone = new RacingDrone();
         this.mpc = new MPC();
+        this.trajectory = createTrajectory(this.currentTrajectoryType, this.defaultSpeed, this.defaultHeight);
 
         // Setup scene
         this.setupScene();
@@ -120,15 +128,15 @@ export class DroneRacingDemo {
         directionalLight.position.set(10, 20, 10);
         this.scene.add(directionalLight);
 
-        // Ground grid
-        const gridHelper = new THREE.GridHelper(40, 40, 0x2a2a3e, 0x1a1a2e);
+        // Ground grid - larger for bigger tracks
+        const gridHelper = new THREE.GridHelper(100, 50, 0x2a2a3e, 0x1a1a2e);
         this.scene.add(gridHelper);
 
         // Add drone
         this.scene.add(this.drone.mesh);
 
         // Create trajectory visualization
-        this.createTrajectoryVisualization();
+        this.updateTrajectoryVisualization();
 
         // Create drone trail
         this.createDroneTrail();
@@ -138,30 +146,71 @@ export class DroneRacingDemo {
      * Setup UI elements
      */
     private setupUI(): void {
-        // Controls container
+        // Main controls container (top-left)
         const controlsDiv = document.createElement('div');
         controlsDiv.style.cssText = `
             position: absolute;
             top: 16px;
             left: 16px;
             display: flex;
-            gap: 8px;
+            flex-direction: column;
+            gap: 12px;
         `;
 
-        // Reset button
-        const resetBtn = this.createButton('Reset', () => this.resetSimulation());
-        controlsDiv.appendChild(resetBtn);
+        // Playback controls
+        const playbackDiv = document.createElement('div');
+        playbackDiv.style.cssText = 'display: flex; gap: 8px;';
 
-        // Pause/Play button
+        const resetBtn = this.createButton('Reset', () => this.resetSimulation());
+        playbackDiv.appendChild(resetBtn);
+
         const pauseBtn = this.createButton('Pause', () => {
             this.isRunning = !this.isRunning;
             pauseBtn.textContent = this.isRunning ? 'Pause' : 'Play';
         });
-        controlsDiv.appendChild(pauseBtn);
+        playbackDiv.appendChild(pauseBtn);
+
+        controlsDiv.appendChild(playbackDiv);
+
+        // Trajectory selection panel
+        const trajectoryPanel = document.createElement('div');
+        trajectoryPanel.style.cssText = `
+            background: rgba(10, 10, 15, 0.9);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+        `;
+
+        const panelTitle = document.createElement('div');
+        panelTitle.textContent = 'Trajectory';
+        panelTitle.style.cssText = `
+            color: #00d4ff;
+            font-family: monospace;
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        `;
+        trajectoryPanel.appendChild(panelTitle);
+
+        const buttonsContainer = document.createElement('div');
+        buttonsContainer.style.cssText = `
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        `;
+
+        for (const info of TRAJECTORY_INFO) {
+            const btn = this.createTrajectoryButton(info.type, info.name, info.description);
+            this.trajectoryButtons.set(info.type, btn);
+            buttonsContainer.appendChild(btn);
+        }
+
+        trajectoryPanel.appendChild(buttonsContainer);
+        controlsDiv.appendChild(trajectoryPanel);
 
         this.container.appendChild(controlsDiv);
 
-        // Debug overlay
+        // Debug overlay (top-right)
         this.debugOverlay = document.createElement('div');
         this.debugOverlay.style.cssText = `
             position: absolute;
@@ -178,6 +227,9 @@ export class DroneRacingDemo {
             line-height: 1.4;
         `;
         this.container.appendChild(this.debugOverlay);
+
+        // Highlight initial trajectory button
+        this.updateTrajectoryButtonStyles();
     }
 
     /**
@@ -208,21 +260,73 @@ export class DroneRacingDemo {
     }
 
     /**
-     * Create circular trajectory visualization
+     * Create trajectory selection button
      */
-    private createTrajectoryVisualization(): void {
-        const points: THREE.Vector3[] = [];
-        const segments = 100;
+    private createTrajectoryButton(type: TrajectoryType, name: string, description: string): HTMLButtonElement {
+        const btn = document.createElement('button');
+        btn.innerHTML = `<strong>${name}</strong><br><span style="font-size: 9px; opacity: 0.7;">${description}</span>`;
+        btn.style.cssText = `
+            padding: 8px 12px;
+            background: rgba(10, 10, 15, 0.6);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 6px;
+            color: #00d4ff;
+            font-family: monospace;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+            width: 180px;
+        `;
+        btn.addEventListener('click', () => this.selectTrajectory(type));
+        return btn;
+    }
 
-        for (let i = 0; i <= segments; i++) {
-            const angle = (i / segments) * Math.PI * 2;
-            points.push(new THREE.Vector3(
-                this.trajectoryRadius * Math.cos(angle),
-                this.trajectoryHeight,
-                this.trajectoryRadius * Math.sin(angle)
-            ));
+    /**
+     * Select a trajectory type
+     */
+    private selectTrajectory(type: TrajectoryType): void {
+        if (type === this.currentTrajectoryType) return;
+
+        this.currentTrajectoryType = type;
+        this.trajectory = createTrajectory(type, this.defaultSpeed, this.defaultHeight);
+
+        this.updateTrajectoryButtonStyles();
+        this.updateTrajectoryVisualization();
+        this.resetSimulation();
+    }
+
+    /**
+     * Update trajectory button styles
+     */
+    private updateTrajectoryButtonStyles(): void {
+        for (const [type, btn] of this.trajectoryButtons) {
+            if (type === this.currentTrajectoryType) {
+                btn.style.background = 'rgba(0, 212, 255, 0.3)';
+                btn.style.borderColor = 'rgba(0, 212, 255, 0.8)';
+            } else {
+                btn.style.background = 'rgba(10, 10, 15, 0.6)';
+                btn.style.borderColor = 'rgba(0, 212, 255, 0.3)';
+            }
+        }
+    }
+
+    /**
+     * Update trajectory visualization
+     */
+    private updateTrajectoryVisualization(): void {
+        // Remove old trajectory line
+        if (this.trajectoryLine) {
+            this.scene.remove(this.trajectoryLine);
+            this.trajectoryLine.geometry.dispose();
+            (this.trajectoryLine.material as THREE.Material).dispose();
         }
 
+        // Get trajectory points
+        const trajPoints = this.trajectory.getVisualizationPoints(200);
+        const points = trajPoints.map(p => new THREE.Vector3(p.x, p.y, p.z));
+
+        // Create new line
         const geometry = new THREE.BufferGeometry().setFromPoints(points);
         const material = new THREE.LineBasicMaterial({
             color: 0xa855f7,
@@ -231,6 +335,26 @@ export class DroneRacingDemo {
         });
         this.trajectoryLine = new THREE.Line(geometry, material);
         this.scene.add(this.trajectoryLine);
+
+        // Update camera position based on trajectory size
+        this.adjustCameraForTrajectory();
+    }
+
+    /**
+     * Adjust camera position based on trajectory
+     */
+    private adjustCameraForTrajectory(): void {
+        const points = this.trajectory.getVisualizationPoints(50);
+        let maxDist = 0;
+        for (const p of points) {
+            const dist = Math.sqrt(p.x * p.x + p.z * p.z);
+            if (dist > maxDist) maxDist = dist;
+        }
+
+        const cameraDistance = maxDist * 2.5;
+        this.camera.position.set(cameraDistance * 0.7, cameraDistance * 0.4, cameraDistance * 0.7);
+        this.controls.target.set(0, this.defaultHeight, 0);
+        this.controls.update();
     }
 
     /**
@@ -279,40 +403,6 @@ export class DroneRacingDemo {
     }
 
     /**
-     * Get reference waypoint at time t (circular trajectory)
-     */
-    private getReference(t: number): Waypoint {
-        const omega = this.trajectorySpeed / this.trajectoryRadius;
-        const angle = omega * t;
-
-        // Position
-        const x = this.trajectoryRadius * Math.cos(angle);
-        const z = this.trajectoryRadius * Math.sin(angle);
-
-        // Velocity (tangent)
-        const vx = -this.trajectorySpeed * Math.sin(angle);
-        const vz = this.trajectorySpeed * Math.cos(angle);
-
-        // Acceleration (centripetal)
-        const centripetalAccel = (this.trajectorySpeed * this.trajectorySpeed) / this.trajectoryRadius;
-        const ax = -centripetalAccel * Math.cos(angle);
-        const az = -centripetalAccel * Math.sin(angle);
-
-        // Heading (direction of motion) - nose points along velocity
-        const heading = Math.atan2(vx, vz);
-
-        return {
-            position: { x, y: this.trajectoryHeight, z },
-            velocity: { x: vx, y: 0, z: vz },
-            acceleration: { x: ax, y: 0, z: az },
-            jerk: { x: 0, y: 0, z: 0 },
-            heading,
-            headingRate: -omega,  // Negative because heading decreases as we go counterclockwise
-            time: t,
-        };
-    }
-
-    /**
      * Reset simulation
      */
     private resetSimulation(): void {
@@ -321,17 +411,15 @@ export class DroneRacingDemo {
         this.trailPositions = [];
 
         // Position drone at trajectory start
-        const startRef = this.getReference(0);
-        this.drone.reset({
-            x: startRef.position.x,
-            y: startRef.position.y,
-            z: startRef.position.z,
-        });
-        this.drone.setHeading(startRef.heading);
+        const initialState = this.trajectory.getInitialState();
+        const startWp = this.trajectory.getWaypoint(0);
+
+        this.drone.reset(initialState.position);
+        this.drone.setHeading(initialState.heading);
         this.drone.setVelocity(
-            startRef.velocity.x,
-            startRef.velocity.y,
-            startRef.velocity.z
+            startWp.velocity.x,
+            startWp.velocity.y,
+            startWp.velocity.z
         );
     }
 
@@ -367,7 +455,7 @@ export class DroneRacingDemo {
         // Compute MPC control
         const command = this.mpc.computeControl(
             droneState,
-            (t) => this.getReference(t),
+            (t) => this.trajectory.getWaypoint(t),
             this.simulationTime
         );
 
@@ -387,10 +475,13 @@ export class DroneRacingDemo {
     /**
      * Update debug overlay
      */
-    private updateDebugOverlay(state: { position: { x: number; y: number; z: number }; velocity: { x: number; y: number; z: number } }, command: ControlCommand): void {
+    private updateDebugOverlay(
+        state: { position: { x: number; y: number; z: number }; velocity: { x: number; y: number; z: number } },
+        command: ControlCommand
+    ): void {
         if (!this.debugOverlay) return;
 
-        const ref = this.getReference(this.simulationTime);
+        const ref = this.trajectory.getWaypoint(this.simulationTime);
         const posError = Math.sqrt(
             (state.position.x - ref.position.x) ** 2 +
             (state.position.y - ref.position.y) ** 2 +
@@ -401,17 +492,17 @@ export class DroneRacingDemo {
             state.velocity.y ** 2 +
             state.velocity.z ** 2
         );
+        const period = this.trajectory.getPeriod();
+        const lapProgress = ((this.simulationTime % period) / period * 100).toFixed(0);
 
         this.debugOverlay.innerHTML = `
-            <div style="margin-bottom: 8px; font-weight: bold;">MPC Demo</div>
+            <div style="margin-bottom: 8px; font-weight: bold;">${this.trajectory.getName()}</div>
             <div><b>Time:</b> ${this.simulationTime.toFixed(2)}s</div>
-            <div style="margin-top: 6px;"><b>Position:</b></div>
-            <div>(${state.position.x.toFixed(2)}, ${state.position.y.toFixed(2)}, ${state.position.z.toFixed(2)})</div>
-            <div style="margin-top: 6px;"><b>Speed:</b> ${speed.toFixed(2)} m/s</div>
-            <div><b>Pos Error:</b> ${posError.toFixed(3)} m</div>
-            <div style="margin-top: 6px;"><b>Command:</b></div>
-            <div>Thrust: ${command.thrust.toFixed(2)} m/s²</div>
-            <div>Rates: (${command.rollRate.toFixed(2)}, ${command.pitchRate.toFixed(2)}, ${command.yawRate.toFixed(2)})</div>
+            <div><b>Lap:</b> ${lapProgress}%</div>
+            <div style="margin-top: 6px;"><b>Speed:</b> ${speed.toFixed(1)} m/s (${(speed * 3.6).toFixed(0)} km/h)</div>
+            <div><b>Tracking Error:</b> ${posError.toFixed(3)} m</div>
+            <div style="margin-top: 6px;"><b>Thrust:</b> ${command.thrust.toFixed(1)} m/s²</div>
+            <div><b>Rates:</b> (${command.rollRate.toFixed(1)}, ${command.pitchRate.toFixed(1)}, ${command.yawRate.toFixed(1)})</div>
         `;
     }
 
