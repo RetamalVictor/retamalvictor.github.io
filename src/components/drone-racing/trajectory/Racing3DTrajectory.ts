@@ -21,6 +21,7 @@
  */
 
 import { Trajectory, TrajectoryParams } from './Trajectory';
+import { GatePosition } from '../types';
 
 export interface Racing3DParams extends TrajectoryParams {
     trackLength: number;    // Total XZ track length
@@ -153,5 +154,28 @@ export class Racing3DTrajectory extends Trajectory {
             y: p0.y + frac * (p1.y - p0.y),
             z: p0.z + frac * (p1.z - p0.z),
         };
+    }
+
+    /**
+     * Place gates at key altitude change points around the 3D track
+     */
+    public override getGatePositions(): GatePosition[] {
+        const period = this.getPeriod();
+
+        // Place 6 gates at even intervals around the track
+        // This includes points at different altitudes
+        const numGates = 6;
+        const gates: GatePosition[] = [];
+
+        for (let i = 0; i < numGates; i++) {
+            const phase = i / numGates;
+            const wp = this.getWaypoint(phase * period);
+            gates.push({
+                position: { ...wp.position },
+                heading: wp.heading,
+            });
+        }
+
+        return gates;
     }
 }

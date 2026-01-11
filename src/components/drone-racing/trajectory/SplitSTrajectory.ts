@@ -26,6 +26,7 @@
  */
 
 import { Trajectory, TrajectoryParams } from './Trajectory';
+import { GatePosition } from '../types';
 
 export interface SplitSParams extends TrajectoryParams {
     loopRadius: number;     // Radius of the vertical loops
@@ -203,5 +204,39 @@ export class SplitSTrajectory extends Trajectory {
 
         // Should not reach here
         return { x: 0, y: this.height, z: 0 };
+    }
+
+    /**
+     * Place gates at the apex of each loop (top of the split-S maneuver)
+     * This is where the drone does the sudden change of direction
+     */
+    public override getGatePositions(): GatePosition[] {
+        const gates: GatePosition[] = [];
+        const R = this.loopRadius;
+        const straightLen = this.gateSpacing * 0.4;
+
+        // For each gate, calculate the apex position (top of the loop)
+        // Each gate sequence moves: straightLen (approach) + 0 (loop_up stays at same z) + 2R (dive)
+        // So accumulated z before gate n: n * (straightLen + 2R) + straightLen
+        for (let gate = 0; gate < this.numGates; gate++) {
+            // Z position: accumulated from previous gates + current approach
+            // Previous gates contribute: gate * (straightLen + 2*R)
+            // Current approach: straightLen
+            const gateZ = gate * (straightLen + 2 * R) + straightLen;
+
+            // Y position: top of the loop (base height + 2 * radius)
+            const gateY = this.height + 2 * R;
+
+            gates.push({
+                position: {
+                    x: 0,
+                    y: gateY,  // Gate at apex height
+                    z: gateZ,
+                },
+                heading: Math.PI,  // Gate faces -Z (drone comes from +Z side, inverted)
+            });
+        }
+
+        return gates;
     }
 }

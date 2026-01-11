@@ -10,6 +10,7 @@
  */
 
 import { Trajectory, TrajectoryParams } from './Trajectory';
+import { GatePosition } from '../types';
 
 export interface Figure8Params extends TrajectoryParams {
     size: number;       // Size of the figure-8 (half-width)
@@ -50,5 +51,27 @@ export class Figure8Trajectory extends Trajectory {
             x: this.size * Math.sin(t),
             z: (this.size / 2) * Math.sin(2 * t),
         };
+    }
+
+    /**
+     * Place gates at key points: center crossing and extremes of both loops
+     */
+    public override getGatePositions(): GatePosition[] {
+        const period = this.getPeriod();
+
+        // Gate phases:
+        // 0.0 = center crossing (start)
+        // 0.25 = far end of first loop (x = +size)
+        // 0.5 = center crossing again
+        // 0.75 = far end of second loop (x = -size)
+        const gatePhases = [0.0, 0.25, 0.5, 0.75];
+
+        return gatePhases.map(phase => {
+            const wp = this.getWaypoint(phase * period);
+            return {
+                position: { ...wp.position },
+                heading: wp.heading,
+            };
+        });
     }
 }

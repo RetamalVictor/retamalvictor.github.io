@@ -5,7 +5,7 @@
  * common utility methods for trajectory generation.
  */
 
-import { Waypoint } from '../types';
+import { Waypoint, GatePosition } from '../types';
 
 /**
  * Trajectory configuration shared by all trajectory types
@@ -175,5 +175,28 @@ export abstract class Trajectory {
             position: wp.position,
             heading: wp.heading,
         };
+    }
+
+    /**
+     * Get gate positions for this trajectory
+     * Default implementation places gates at regular intervals
+     * Subclasses can override to place gates at specific points
+     */
+    public getGatePositions(numGates: number = 4): GatePosition[] {
+        const gates: GatePosition[] = [];
+        const period = this.getPeriod();
+
+        for (let i = 0; i < numGates; i++) {
+            const phase = i / numGates;
+            const t = phase * period;
+            const wp = this.getWaypoint(t);
+
+            gates.push({
+                position: { ...wp.position },
+                heading: wp.heading,
+            });
+        }
+
+        return gates;
     }
 }

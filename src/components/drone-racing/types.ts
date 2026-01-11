@@ -84,3 +84,22 @@ export const DEFAULT_CONFIG: RacingConfig = {
     controlRate: 50,
     commandDelay: 0.05,
 };
+
+// ============================================
+// Racing Gates
+// ============================================
+
+/** Racing gate that the drone must fly through */
+export interface Gate {
+    position: Vector3;      // Center of gate
+    orientation: Quaternion; // Gate facing direction
+    width: number;          // Gate width (meters)
+    height: number;         // Gate height (meters)
+    index: number;          // Gate number in sequence
+}
+
+/** Gate position data from trajectory (before full orientation is computed) */
+export interface GatePosition {
+    position: Vector3;
+    heading: number;        // Yaw angle the gate faces (rad)
+}
