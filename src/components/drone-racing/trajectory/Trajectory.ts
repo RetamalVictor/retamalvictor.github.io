@@ -11,7 +11,7 @@ import { Waypoint, GatePosition } from '../types';
  * Trajectory configuration shared by all trajectory types
  */
 export interface TrajectoryParams {
-    speed: number;      // Base speed in m/s
+    speed: number;      // Target speed in m/s (set by trajectory generator based on path)
     height: number;     // Flight altitude in m
 }
 

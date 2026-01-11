@@ -207,33 +207,35 @@ export class SplitSTrajectory extends Trajectory {
     }
 
     /**
-     * Place gates at the apex of each loop (top of the split-S maneuver)
-     * This is where the drone does the sudden change of direction
+     * Place gates where the drone must enter from BEHIND (the "wrong" side)
+     *
+     * The split-S maneuver:
+     * - Drone approaches gate but can't enter (facing wrong way)
+     * - Flies up and over (loop_up)
+     * - Dives back THROUGH the gate from behind
+     *
+     * Gate is at the START of each loop, at base height.
+     * Drone passes through during the dive, entering from +Z going toward -Z.
      */
     public override getGatePositions(): GatePosition[] {
         const gates: GatePosition[] = [];
         const R = this.loopRadius;
         const straightLen = this.gateSpacing * 0.4;
 
-        // For each gate, calculate the apex position (top of the loop)
-        // Each gate sequence moves: straightLen (approach) + 0 (loop_up stays at same z) + 2R (dive)
-        // So accumulated z before gate n: n * (straightLen + 2R) + straightLen
         for (let gate = 0; gate < this.numGates; gate++) {
-            // Z position: accumulated from previous gates + current approach
-            // Previous gates contribute: gate * (straightLen + 2*R)
-            // Current approach: straightLen
-            const gateZ = gate * (straightLen + 2 * R) + straightLen;
-
-            // Y position: top of the loop (base height + 2 * radius)
-            const gateY = this.height + 2 * R;
+            // Z position: at the end of approach straight (where loop begins)
+            // Previous maneuvers: gate * (straightLen + 2R)
+            // Current approach: + straightLen
+            // Offset -2.5m along trajectory (drone travels -Z when passing through)
+            const gateZ = gate * (straightLen + 2 * R) + straightLen - 2.5;
 
             gates.push({
                 position: {
                     x: 0,
-                    y: gateY,  // Gate at apex height
+                    y: this.height,  // Gate at base height
                     z: gateZ,
                 },
-                heading: Math.PI,  // Gate faces -Z (drone comes from +Z side, inverted)
+                heading: Math.PI,  // Gate faces -Z (drone enters from +Z side, coming from behind)
             });
         }
 

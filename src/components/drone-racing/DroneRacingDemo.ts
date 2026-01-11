@@ -50,6 +50,13 @@ export class DroneRacingDemo {
     private lastFrameTime: number = 0;
     private animationFrameId: number = 0;
 
+    // Visibility-based pausing
+    private isPaused: boolean = false;
+    private isVisible: boolean = true;
+    private isPageVisible: boolean = true;
+    private intersectionObserver: IntersectionObserver | null = null;
+    private boundVisibilityHandler: () => void;
+
     // Visualization
     private trajectoryLine: THREE.Line | null = null;
     private droneTrail: THREE.Line | null = null;
@@ -65,6 +72,9 @@ export class DroneRacingDemo {
     private showHowItWorks: boolean = false;
 
     constructor(containerId: string) {
+        // Bind visibility handler
+        this.boundVisibilityHandler = this.handlePageVisibility.bind(this);
+
         // Get container
         const container = document.getElementById(containerId);
         if (!container) {
@@ -118,6 +128,9 @@ export class DroneRacingDemo {
         // Handle resize
         this.handleResize();
         window.addEventListener('resize', () => this.handleResize());
+
+        // Setup visibility-based pausing
+        this.setupVisibilityHandling();
 
         // Start animation
         this.animate();
@@ -678,9 +691,58 @@ export class DroneRacingDemo {
     }
 
     /**
+     * Setup visibility-based pausing (IntersectionObserver + Page Visibility API)
+     */
+    private setupVisibilityHandling(): void {
+        // IntersectionObserver for viewport visibility
+        this.intersectionObserver = new IntersectionObserver(
+            (entries) => {
+                entries.forEach(entry => {
+                    this.isVisible = entry.isIntersecting;
+                    this.updatePauseState();
+                });
+            },
+            { threshold: 0.1 }
+        );
+        this.intersectionObserver.observe(this.container);
+
+        // Page Visibility API
+        document.addEventListener('visibilitychange', this.boundVisibilityHandler);
+    }
+
+    /**
+     * Handle page visibility changes
+     */
+    private handlePageVisibility(): void {
+        this.isPageVisible = document.visibilityState === 'visible';
+        this.updatePauseState();
+    }
+
+    /**
+     * Update pause state based on visibility
+     */
+    private updatePauseState(): void {
+        const shouldPause = !this.isVisible || !this.isPageVisible;
+
+        if (shouldPause && !this.isPaused) {
+            this.isPaused = true;
+            if (this.animationFrameId) {
+                cancelAnimationFrame(this.animationFrameId);
+                this.animationFrameId = 0;
+            }
+        } else if (!shouldPause && this.isPaused) {
+            this.isPaused = false;
+            this.lastFrameTime = performance.now() / 1000;
+            this.animate();
+        }
+    }
+
+    /**
      * Main animation loop
      */
     private animate(): void {
+        if (this.isPaused) return;
+
         this.animationFrameId = requestAnimationFrame(() => this.animate());
 
         const currentTime = performance.now() / 1000;
@@ -778,7 +840,20 @@ export class DroneRacingDemo {
      * Cleanup
      */
     public destroy(): void {
-        cancelAnimationFrame(this.animationFrameId);
+        // Stop animation
+        this.isPaused = true;
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = 0;
+        }
+
+        // Clean up visibility observers
+        if (this.intersectionObserver) {
+            this.intersectionObserver.disconnect();
+            this.intersectionObserver = null;
+        }
+        document.removeEventListener('visibilitychange', this.boundVisibilityHandler);
+
         window.removeEventListener('resize', () => this.handleResize());
 
         this.renderer.dispose();
