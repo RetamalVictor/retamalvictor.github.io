@@ -546,23 +546,23 @@ class Portfolio {
                 overflow: hidden;
             `;
 
-            // Floating close button (top-right corner, outside content)
+            // Close button (top-right corner inside modal)
             const closeBtn = document.createElement('button');
             closeBtn.innerHTML = `
-                <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                 </svg>
             `;
             closeBtn.style.cssText = `
                 position: absolute;
-                top: -40px;
-                right: 0;
-                background: rgba(255, 255, 255, 0.15);
-                border: 1px solid rgba(255, 255, 255, 0.3);
-                border-radius: 8px;
+                top: 12px;
+                right: 12px;
+                background: rgba(255, 255, 255, 0.1);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 50%;
                 color: #ffffff;
                 cursor: pointer;
-                padding: 8px;
+                padding: 10px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -570,23 +570,24 @@ class Portfolio {
                 z-index: 60;
             `;
             closeBtn.addEventListener('mouseenter', () => {
-                closeBtn.style.background = 'rgba(255, 255, 255, 0.25)';
-                closeBtn.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+                closeBtn.style.background = 'rgba(255, 0, 0, 0.3)';
+                closeBtn.style.borderColor = 'rgba(255, 100, 100, 0.5)';
             });
             closeBtn.addEventListener('mouseleave', () => {
-                closeBtn.style.background = 'rgba(255, 255, 255, 0.15)';
-                closeBtn.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                closeBtn.style.background = 'rgba(255, 255, 255, 0.1)';
+                closeBtn.style.borderColor = 'rgba(255, 255, 255, 0.2)';
             });
-            closeBtn.addEventListener('click', () => this.toggleExpand());
+            closeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.toggleExpand();
+            });
             this.expandedWrapper.appendChild(closeBtn);
 
             // Move demo container into expanded wrapper
             const contentArea = document.createElement('div');
             contentArea.style.cssText = 'flex: 1; overflow: hidden;';
 
-            // Store original parent and position
-            const originalParent = demoContainer.parentNode;
-            const originalNextSibling = demoContainer.nextSibling;
+            // Store original parent reference for restoration
             demoContainer.dataset.originalParent = 'demo-section';
 
             // Move container
@@ -729,6 +730,7 @@ class Portfolio {
                     Navigation.toCV();
                 });
             }
+
         }, 100);
     }
 

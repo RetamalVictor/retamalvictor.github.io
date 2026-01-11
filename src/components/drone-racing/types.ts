@@ -103,3 +103,42 @@ export interface GatePosition {
     position: Vector3;
     heading: number;        // Yaw angle the gate faces (rad)
 }
+
+// ============================================
+// Trajectory Generation
+// ============================================
+
+/**
+ * Gate waypoint for trajectory generation
+ *
+ * Used as input to TrajectoryGenerator to define where gates are
+ * and what direction the drone should enter them from.
+ */
+export interface GateWaypoint {
+    position: Vector3;      // Gate center position
+    entranceDir: Vector3;   // Unit vector - direction drone enters FROM
+    speed?: number;         // Optional target speed at gate (auto-computed if not set)
+}
+
+/**
+ * Trajectory segment interface
+ *
+ * Represents a single segment of a generated trajectory (line or arc).
+ * The generator chains these together to form the full path.
+ */
+export interface TrajectorySegment {
+    /** Get position at normalized parameter t ∈ [0, 1] */
+    getPosition(t: number): Vector3;
+
+    /** Get velocity at normalized parameter t ∈ [0, 1] */
+    getVelocity(t: number): Vector3;
+
+    /** Get acceleration at normalized parameter t ∈ [0, 1] */
+    getAcceleration(t: number): Vector3;
+
+    /** Get total duration of this segment in seconds */
+    getDuration(): number;
+
+    /** Get total arc length of this segment in meters */
+    getLength(): number;
+}

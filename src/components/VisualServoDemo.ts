@@ -59,6 +59,13 @@ export class VisualServoDemo {
     private lastTime: number = 0;
     private controlEnabled: boolean = true;
 
+    // Visibility-based pausing
+    private isPaused: boolean = false;
+    private isVisible: boolean = true;
+    private isPageVisible: boolean = true;
+    private intersectionObserver: IntersectionObserver | null = null;
+    private boundVisibilityHandler: () => void;
+
     // Constants
     private readonly TARGET_SIZE = 1.0;
     private cameraWidth: number = 192;
@@ -75,6 +82,9 @@ export class VisualServoDemo {
         this.raycaster = new THREE.Raycaster();
         this.mouse = new THREE.Vector2();
         this.dragPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+
+        // Bind visibility handler for cleanup
+        this.boundVisibilityHandler = this.handlePageVisibility.bind(this);
 
         this.init();
     }
@@ -102,6 +112,7 @@ export class VisualServoDemo {
             this.computeDesiredFeatures();
             this.isInitialized = true;
             this.lastTime = performance.now() / 1000;
+            this.setupVisibilityHandling();
             this.animate();
         } catch (error) {
             console.error('VisualServoDemo initialization failed:', error);
@@ -682,7 +693,52 @@ export class VisualServoDemo {
         this.renderer.setSize(width, height);
     }
 
+    /**
+     * Setup visibility-based pausing to reduce CPU usage
+     */
+    private setupVisibilityHandling(): void {
+        // IntersectionObserver to detect when scrolled out of view
+        this.intersectionObserver = new IntersectionObserver(
+            (entries) => {
+                entries.forEach(entry => {
+                    this.isVisible = entry.isIntersecting;
+                    this.updatePauseState();
+                });
+            },
+            { threshold: 0.1 }
+        );
+        this.intersectionObserver.observe(this.container);
+
+        // Page Visibility API to detect when tab is not active
+        document.addEventListener('visibilitychange', this.boundVisibilityHandler);
+    }
+
+    private handlePageVisibility = (): void => {
+        this.isPageVisible = document.visibilityState === 'visible';
+        this.updatePauseState();
+    };
+
+    private updatePauseState(): void {
+        const shouldPause = !this.isVisible || !this.isPageVisible;
+
+        if (shouldPause && !this.isPaused) {
+            // Pause
+            this.isPaused = true;
+            if (this.animationId) {
+                cancelAnimationFrame(this.animationId);
+                this.animationId = null;
+            }
+        } else if (!shouldPause && this.isPaused) {
+            // Resume
+            this.isPaused = false;
+            this.lastTime = performance.now() / 1000;
+            this.animate();
+        }
+    }
+
     private animate = (): void => {
+        if (this.isPaused) return;
+
         this.animationId = requestAnimationFrame(this.animate);
 
         const now = performance.now() / 1000;
@@ -767,9 +823,19 @@ export class VisualServoDemo {
     }
 
     public destroy(): void {
+        // Stop animation
+        this.isPaused = true;
         if (this.animationId) {
             cancelAnimationFrame(this.animationId);
+            this.animationId = null;
         }
+
+        // Clean up visibility observers
+        if (this.intersectionObserver) {
+            this.intersectionObserver.disconnect();
+            this.intersectionObserver = null;
+        }
+        document.removeEventListener('visibilitychange', this.boundVisibilityHandler);
 
         if (this.renderer) {
             this.renderer.dispose();
