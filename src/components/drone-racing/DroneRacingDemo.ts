@@ -41,7 +41,7 @@ export class DroneRacingDemo {
 
     // Configuration
     private currentTrajectoryType: TrajectoryType = 'splits';
-    private readonly defaultSpeed = 15.0;
+    private readonly defaultSpeed = 18.0;
     private readonly defaultHeight = 4.0;
 
     // State

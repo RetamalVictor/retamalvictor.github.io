@@ -85,36 +85,36 @@ export const TRAJECTORY_INFO: TrajectoryInfo[] = [
 /**
  * Factory function to create trajectories
  * Speed is limited based on trajectory curvature to ensure drone can track it
+ * Centripetal acceleration limit: v²/r < 25 m/s²
  */
 export function createTrajectory(
     type: TrajectoryType,
-    speed: number = 12.0,
+    speed: number = 18.0,
     height: number = 4.0
 ): Trajectory {
     switch (type) {
         case 'circle':
-            // Circle has constant curvature, can handle higher speeds
-            return new CircleTrajectory({ speed: Math.min(speed, 15.0), height, radius: 20.0 });
+            // Circle r=25m: max v = sqrt(25*25) = 25 m/s
+            return new CircleTrajectory({ speed: Math.min(speed, 22.0), height, radius: 25.0 });
         case 'figure8':
-            // Figure-8 has tight curvature at center, needs lower speed
-            // Max speed ~ sqrt(5 * size) for centripetal accel < 20 m/s²
-            return new Figure8Trajectory({ speed: Math.min(speed, 8.0), height, size: 20.0 });
+            // Figure-8 size=25m, tightest radius ~6m: max v = sqrt(25*6) = 12 m/s
+            return new Figure8Trajectory({ speed: Math.min(speed, 12.0), height, size: 25.0 });
         case 'hairpin':
-            // Hairpin has tight 180° turns, moderate speed
-            return new HairpinTrajectory({ speed: Math.min(speed, 12.0), height, turnRadius: 8.0, straightLength: 30.0 });
+            // Hairpin r=12m: max v = sqrt(25*12) = 17 m/s
+            return new HairpinTrajectory({ speed: Math.min(speed, 16.0), height, turnRadius: 12.0, straightLength: 40.0 });
         case 'snake':
-            // Snake with smooth turnarounds
-            return new SnakeTrajectory({ speed: Math.min(speed, 10.0), height });
+            // Snake with wider turns
+            return new SnakeTrajectory({ speed: Math.min(speed, 14.0), height });
         case 'racetrack':
-            // Race track with various turn radii
-            return new RaceTrackTrajectory({ speed: Math.min(speed, 12.0), height, gateSpacing: 25.0, turnRadius: 10.0 });
+            // Race track r=15m: max v = sqrt(25*15) = 19 m/s
+            return new RaceTrackTrajectory({ speed: Math.min(speed, 18.0), height, gateSpacing: 30.0, turnRadius: 15.0 });
         case 'racing3d':
-            // Full 3D racing with altitude changes
-            return new Racing3DTrajectory({ speed: Math.min(speed, 15.0), height, trackLength: 80.0, minHeight: 2.0, maxHeight: 10.0 });
+            // Full 3D racing with altitude changes, larger track
+            return new Racing3DTrajectory({ speed: Math.min(speed, 20.0), height, trackLength: 120.0, minHeight: 2.0, maxHeight: 12.0 });
         case 'splits':
-            // Split-S maneuvers through gates
-            return new SplitSTrajectory({ speed: Math.min(speed, 12.0), height, loopRadius: 6.0, gateSpacing: 25.0, numGates: 2 });
+            // Split-S r=8m: max v = sqrt(25*8) = 14 m/s
+            return new SplitSTrajectory({ speed: Math.min(speed, 14.0), height, loopRadius: 8.0, gateSpacing: 35.0, numGates: 3 });
         default:
-            return new CircleTrajectory({ speed, height, radius: 20.0 });
+            return new CircleTrajectory({ speed, height, radius: 25.0 });
     }
 }

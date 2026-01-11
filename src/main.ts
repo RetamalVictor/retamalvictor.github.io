@@ -14,6 +14,16 @@ import { config } from './utils/config.js';
 import { templateManager } from './utils/template.js';
 import type { Project } from './types/index.js';
 
+// Demo types for home page tabs
+type HeroDemoType = 'ibvs' | 'ternary' | 'drone-racing';
+
+// Demo hints for each type
+const DEMO_HINTS: Record<HeroDemoType, string> = {
+    'ibvs': 'Drag the target',
+    'ternary': 'Enter a prompt',
+    'drone-racing': 'Use mouse to orbit',
+};
+
 class Portfolio {
     private header!: Header;
     private projects: Project[] = [];
@@ -26,6 +36,11 @@ class Portfolio {
     private blogPostPage: BlogPostPage | null = null;
     private demoListPage: DemoListPage | null = null;
     private demoPage: DemoPage | null = null;
+
+    // Demo tab state
+    private activeDemo: HeroDemoType = 'ibvs';
+    private currentDemoInstance: any = null;
+    private isExpanded: boolean = false;
 
     constructor() {
         this.init();
@@ -334,27 +349,312 @@ class Portfolio {
 
     private setupThreeViewers(): void {
         try {
-            // Initialize Visual Servoing demo
+            // Initialize Visual Servoing demo (default)
             const heroContainer = document.getElementById('hero-three-scene');
             if (heroContainer) {
                 this.heroDemo = new VisualServoDemo({
                     containerId: 'hero-three-scene',
                     backgroundColor: 0x0a0a0f
                 });
+                this.currentDemoInstance = this.heroDemo;
 
                 // Setup reset button
                 const resetBtn = document.getElementById('reset-demo-btn');
                 if (resetBtn && this.heroDemo) {
                     resetBtn.addEventListener('click', () => {
-                        this.heroDemo?.reset();
+                        this.resetCurrentDemo();
                     });
                 }
 
                 // Setup info panel toggle
                 this.setupInfoPanel();
+
+                // Setup demo tabs
+                this.setupDemoTabs();
+
+                // Setup expand button
+                this.setupExpandButton();
             }
         } catch (error) {
             console.error('Failed to initialize Visual Servo demo:', error);
+        }
+    }
+
+    private setupDemoTabs(): void {
+        const tabs = document.querySelectorAll('#demo-tabs .demo-tab');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const demoType = tab.getAttribute('data-demo') as HeroDemoType;
+                if (demoType && demoType !== this.activeDemo) {
+                    this.switchDemo(demoType);
+                }
+            });
+        });
+    }
+
+    private async switchDemo(demoType: HeroDemoType): Promise<void> {
+        // Destroy current demo
+        if (this.currentDemoInstance) {
+            if (typeof this.currentDemoInstance.destroy === 'function') {
+                this.currentDemoInstance.destroy();
+            }
+            this.currentDemoInstance = null;
+            this.heroDemo = null;
+        }
+
+        // Clear container
+        const container = document.getElementById('hero-three-scene');
+        if (!container) return;
+        container.innerHTML = '<div class="text-center text-gray-500 p-8"><div class="animate-pulse">Loading demo...</div></div>';
+
+        // Update active tab styling
+        const tabs = document.querySelectorAll('#demo-tabs .demo-tab');
+        tabs.forEach(tab => {
+            const tabDemo = tab.getAttribute('data-demo');
+            if (tabDemo === demoType) {
+                tab.classList.remove('text-gray-400', 'border-transparent', 'hover:text-gray-300', 'hover:border-gray-600');
+                tab.classList.add('text-accent-cyan', 'border-accent-cyan', 'bg-dark-surface/50');
+            } else {
+                tab.classList.remove('text-accent-cyan', 'border-accent-cyan', 'bg-dark-surface/50');
+                tab.classList.add('text-gray-400', 'border-transparent', 'hover:text-gray-300', 'hover:border-gray-600');
+            }
+        });
+
+        // Update hint text
+        const hint = document.getElementById('demo-hint');
+        if (hint) {
+            hint.textContent = DEMO_HINTS[demoType];
+            // Hide hint for ternary (it has its own UI)
+            hint.style.display = demoType === 'ternary' ? 'none' : 'block';
+        }
+
+        // Show/hide external "How it works" button
+        // TernaryLMDemo and DroneRacingDemo have their own built-in panels
+        const infoToggle = document.getElementById('info-panel-toggle');
+        if (infoToggle) {
+            (infoToggle as HTMLElement).style.display = demoType === 'ibvs' ? 'flex' : 'none';
+        }
+
+        // Show/hide reset button (only IBVS uses external reset)
+        const resetBtn = document.getElementById('reset-demo-btn');
+        if (resetBtn) {
+            resetBtn.style.display = demoType === 'ibvs' ? 'block' : 'none';
+        }
+
+        this.activeDemo = demoType;
+
+        // Create new demo
+        try {
+            switch (demoType) {
+                case 'ibvs':
+                    container.innerHTML = '';
+                    this.heroDemo = new VisualServoDemo({
+                        containerId: 'hero-three-scene',
+                        backgroundColor: 0x0a0a0f
+                    });
+                    this.currentDemoInstance = this.heroDemo;
+                    break;
+
+                case 'ternary':
+                    // Lazy load TernaryLMDemo
+                    const { TernaryLMDemo } = await import('./components/ternary/TernaryLMDemo.js');
+                    container.innerHTML = '';
+                    this.currentDemoInstance = new TernaryLMDemo({
+                        containerId: 'hero-three-scene',
+                        modelPath: '/assets/models/transformer',
+                        defaultPrompt: 'ROMEO: ',
+                        maxTokens: 100
+                    });
+                    break;
+
+                case 'drone-racing':
+                    // Lazy load DroneRacingDemo
+                    const { DroneRacingDemo } = await import('./components/drone-racing/DroneRacingDemo.js');
+                    container.innerHTML = '';
+                    this.currentDemoInstance = new DroneRacingDemo('hero-three-scene');
+                    break;
+            }
+        } catch (error) {
+            console.error(`Failed to load ${demoType} demo:`, error);
+            container.innerHTML = `<div class="text-center text-red-400 p-8">Failed to load demo</div>`;
+        }
+    }
+
+    private resetCurrentDemo(): void {
+        if (this.activeDemo === 'ibvs' && this.heroDemo) {
+            this.heroDemo.reset();
+        }
+        // Other demos don't have reset functionality
+    }
+
+    private setupExpandButton(): void {
+        const expandBtn = document.getElementById('expand-demo-btn');
+        if (!expandBtn) return;
+
+        expandBtn.addEventListener('click', () => {
+            this.toggleExpand();
+        });
+
+        // Close on escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.isExpanded) {
+                this.toggleExpand();
+            }
+        });
+    }
+
+    private expandOverlay: HTMLElement | null = null;
+    private expandedWrapper: HTMLElement | null = null;
+
+    private toggleExpand(): void {
+        const demoContainer = document.getElementById('demo-container');
+        const expandBtn = document.getElementById('expand-demo-btn');
+        if (!demoContainer || !expandBtn) return;
+
+        this.isExpanded = !this.isExpanded;
+
+        if (this.isExpanded) {
+            // Create dark overlay
+            this.expandOverlay = document.createElement('div');
+            this.expandOverlay.id = 'expand-overlay';
+            this.expandOverlay.style.cssText = `
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.85);
+                z-index: 40;
+            `;
+            this.expandOverlay.addEventListener('click', () => this.toggleExpand());
+            document.body.appendChild(this.expandOverlay);
+
+            // Create expanded wrapper
+            this.expandedWrapper = document.createElement('div');
+            this.expandedWrapper.id = 'expanded-demo-wrapper';
+            this.expandedWrapper.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                width: 90vw;
+                height: 85vh;
+                max-width: 1400px;
+                background: #0a0a0f;
+                border: 1px solid #1e1e2e;
+                border-radius: 12px;
+                z-index: 50;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+            `;
+
+            // Floating close button (top-right corner, outside content)
+            const closeBtn = document.createElement('button');
+            closeBtn.innerHTML = `
+                <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            `;
+            closeBtn.style.cssText = `
+                position: absolute;
+                top: -40px;
+                right: 0;
+                background: rgba(255, 255, 255, 0.15);
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                border-radius: 8px;
+                color: #ffffff;
+                cursor: pointer;
+                padding: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.2s;
+                z-index: 60;
+            `;
+            closeBtn.addEventListener('mouseenter', () => {
+                closeBtn.style.background = 'rgba(255, 255, 255, 0.25)';
+                closeBtn.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+            });
+            closeBtn.addEventListener('mouseleave', () => {
+                closeBtn.style.background = 'rgba(255, 255, 255, 0.15)';
+                closeBtn.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+            });
+            closeBtn.addEventListener('click', () => this.toggleExpand());
+            this.expandedWrapper.appendChild(closeBtn);
+
+            // Move demo container into expanded wrapper
+            const contentArea = document.createElement('div');
+            contentArea.style.cssText = 'flex: 1; overflow: hidden;';
+
+            // Store original parent and position
+            const originalParent = demoContainer.parentNode;
+            const originalNextSibling = demoContainer.nextSibling;
+            demoContainer.dataset.originalParent = 'demo-section';
+
+            // Move container
+            contentArea.appendChild(demoContainer);
+            this.expandedWrapper.appendChild(contentArea);
+            document.body.appendChild(this.expandedWrapper);
+
+            // Update container styles for expanded view
+            demoContainer.classList.remove('relative');
+            demoContainer.style.height = '100%';
+            const threeContainer = demoContainer.querySelector('.three-container') as HTMLElement;
+            if (threeContainer) {
+                threeContainer.classList.remove('h-80', 'lg:h-96');
+                threeContainer.style.height = '100%';
+            }
+
+            // Update button icon
+            expandBtn.innerHTML = `
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            `;
+            expandBtn.title = 'Close expanded view';
+
+            // Trigger resize after a short delay for layout to settle
+            setTimeout(() => window.dispatchEvent(new Event('resize')), 100);
+        } else {
+            // Restore demo container to original position
+            const demoSection = document.getElementById('demo-section');
+            if (demoSection && demoContainer) {
+                // Find the tab bar and insert after it
+                const tabBar = demoSection.querySelector('.flex.items-center.justify-between');
+                if (tabBar && tabBar.nextSibling) {
+                    demoSection.insertBefore(demoContainer, tabBar.nextSibling);
+                } else {
+                    demoSection.appendChild(demoContainer);
+                }
+
+                // Restore container styles
+                demoContainer.classList.add('relative');
+                demoContainer.style.height = '';
+                const threeContainer = demoContainer.querySelector('.three-container') as HTMLElement;
+                if (threeContainer) {
+                    threeContainer.classList.add('h-80', 'lg:h-96');
+                    threeContainer.style.height = '';
+                }
+            }
+
+            // Remove overlay and wrapper
+            if (this.expandOverlay) {
+                this.expandOverlay.remove();
+                this.expandOverlay = null;
+            }
+            if (this.expandedWrapper) {
+                this.expandedWrapper.remove();
+                this.expandedWrapper = null;
+            }
+
+            // Update button icon
+            expandBtn.innerHTML = `
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
+                </svg>
+            `;
+            expandBtn.title = 'Expand demo';
+
+            // Trigger resize
+            setTimeout(() => window.dispatchEvent(new Event('resize')), 100);
         }
     }
 

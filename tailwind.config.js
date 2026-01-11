@@ -4,6 +4,15 @@ module.exports = {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx,html}",
   ],
+  safelist: [
+    // Classes used in dynamic template literals (TernaryLMDemo)
+    'text-accent-cyan',
+    'text-accent-purple',
+    'bg-dark-bg',
+    'bg-dark-surface',
+    'border-dark-border',
+    'hover:bg-dark-surface',
+  ],
   theme: {
     extend: {
       colors: {
