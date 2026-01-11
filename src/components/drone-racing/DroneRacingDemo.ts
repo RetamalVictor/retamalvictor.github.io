@@ -14,7 +14,7 @@ import { TrajectoryGenerator } from './planning/TrajectoryGenerator';
 import { SimplifiedMPC } from './control/SimplifiedMPC';
 
 // Types
-import { RacingConfig, DEFAULT_CONFIG, Trajectory, PipelineStatus, GateDetection } from './types';
+import { RacingConfig, DEFAULT_CONFIG, Trajectory, PipelineStatus, GateDetection, Waypoint } from './types';
 
 /**
  * Drone Racing Demo - Main Orchestrator
@@ -37,6 +37,9 @@ export class DroneRacingDemo {
     private canvas: HTMLCanvasElement;
     private cameraCanvas: HTMLCanvasElement;
     private statusBar: HTMLElement | null = null;
+    private debugOverlay: HTMLElement | null = null;
+    private logPanel: HTMLElement | null = null;
+    private logHistory: string[] = [];
 
     // Three.js
     private renderer: THREE.WebGLRenderer;
@@ -64,8 +67,29 @@ export class DroneRacingDemo {
     private predictionPoints: THREE.Points | null = null;
     private lastDetections: GateDetection[] = [];
 
+    // Drone trail visualization
+    private droneTrail: THREE.Line | null = null;
+    private trailPositions: THREE.Vector3[] = [];
+    private readonly maxTrailLength = 50000;  // Keep long trail for trajectory study
+
     // Animation
     private animationFrameId: number = 0;
+
+    // Test mode: simple line trajectory
+    private testMode: boolean = true;  // Set to true for simple line test
+    private targetSpeed: number = 3.0;  // Target speed for test trajectory (controlled by slider)
+
+    // Plotting data
+    private plotCanvas: HTMLCanvasElement | null = null;
+    private plotData: {
+        time: number[];
+        posError: number[];
+        velocity: number[];
+        tilt: number[];
+        pitch: number[];
+        thrust: number[];
+    } = { time: [], posError: [], velocity: [], tilt: [], pitch: [], thrust: [] };
+    private readonly maxPlotPoints = 300;  // ~5 seconds at 60fps
 
     constructor(containerId: string, config: Partial<RacingConfig> = {}) {
         this.config = { ...DEFAULT_CONFIG, ...config };
@@ -167,11 +191,18 @@ export class DroneRacingDemo {
         const gridHelper = new THREE.GridHelper(40, 40, 0x2a2a3e, 0x1a1a2e);
         this.scene.add(gridHelper);
 
-        // Add track
+        // Add track (but hide gates for trajectory study)
         this.scene.add(this.track.trackGroup);
+        // Hide all gate meshes - only show reference trajectory
+        for (const gate of this.track.gates) {
+            gate.mesh.visible = false;
+        }
 
         // Add drone
         this.scene.add(this.drone.mesh);
+
+        // Create drone trail line
+        this.createDroneTrail();
 
         // Create trajectory line
         this.createTrajectoryVisualization();
@@ -246,6 +277,7 @@ export class DroneRacingDemo {
         speedSlider.style.width = '80px';
         speedSlider.addEventListener('input', () => {
             const speed = parseFloat(speedSlider.value);
+            this.targetSpeed = speed;  // Update target speed for test mode
             this.trajectoryGenerator.setMaxSpeed(speed);
             this.generateTrajectory();
             speedValue.textContent = speed.toFixed(1) + ' m/s';
@@ -273,6 +305,81 @@ export class DroneRacingDemo {
             color: #888;
         `;
         this.container.appendChild(cameraLabel);
+
+        // Debug overlay (top right)
+        this.debugOverlay = document.createElement('div');
+        this.debugOverlay.style.cssText = `
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: rgba(0, 0, 0, 0.85);
+            border: 1px solid rgba(255, 100, 100, 0.5);
+            border-radius: 8px;
+            padding: 12px;
+            font-family: monospace;
+            font-size: 11px;
+            color: #ff6666;
+            max-width: 300px;
+            line-height: 1.4;
+        `;
+        this.debugOverlay.innerHTML = 'DEBUG: Initializing...';
+        this.container.appendChild(this.debugOverlay);
+
+        // Log panel (bottom right, scrollable history)
+        this.logPanel = document.createElement('div');
+        this.logPanel.style.cssText = `
+            position: absolute;
+            bottom: 60px;
+            right: 16px;
+            width: 350px;
+            height: 200px;
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid rgba(100, 255, 100, 0.5);
+            border-radius: 8px;
+            padding: 8px;
+            font-family: monospace;
+            font-size: 10px;
+            color: #88ff88;
+            overflow-y: auto;
+            line-height: 1.3;
+        `;
+        this.logPanel.innerHTML = '<div style="color: #ffaa00;">LOG HISTORY:</div>';
+        this.container.appendChild(this.logPanel);
+
+        // Real-time plots canvas
+        this.plotCanvas = document.createElement('canvas');
+        this.plotCanvas.width = 400;
+        this.plotCanvas.height = 300;
+        this.plotCanvas.style.cssText = `
+            position: absolute;
+            top: 60px;
+            right: 16px;
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid rgba(0, 212, 255, 0.5);
+            border-radius: 8px;
+        `;
+        this.container.appendChild(this.plotCanvas);
+    }
+
+    /**
+     * Add a log entry (visible in the log panel)
+     */
+    private log(message: string): void {
+        const timestamp = this.simulationTime.toFixed(2);
+        const entry = `[${timestamp}s] ${message}`;
+        this.logHistory.push(entry);
+
+        // Keep last 50 entries
+        if (this.logHistory.length > 50) {
+            this.logHistory.shift();
+        }
+
+        // Update log panel
+        if (this.logPanel) {
+            this.logPanel.innerHTML = '<div style="color: #ffaa00; margin-bottom: 4px;">LOG HISTORY:</div>' +
+                this.logHistory.map(e => `<div>${e}</div>`).join('');
+            this.logPanel.scrollTop = this.logPanel.scrollHeight;
+        }
     }
 
     /**
@@ -310,10 +417,175 @@ export class DroneRacingDemo {
     }
 
     /**
+     * Create drone trail line for visualizing actual path
+     */
+    private createDroneTrail(): void {
+        const geometry = new THREE.BufferGeometry();
+        // Pre-allocate buffer for trail positions
+        const positions = new Float32Array(this.maxTrailLength * 3);
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometry.setDrawRange(0, 0);  // Start with nothing visible
+
+        const material = new THREE.LineBasicMaterial({
+            color: 0x22c55e,  // Green for actual path
+            opacity: 0.9,
+            transparent: true,
+            linewidth: 2,
+        });
+
+        this.droneTrail = new THREE.Line(geometry, material);
+        this.scene.add(this.droneTrail);
+    }
+
+    /**
+     * Update drone trail with current position
+     */
+    private updateDroneTrail(): void {
+        if (!this.droneTrail) return;
+
+        const pos = this.drone.getPosition();
+        this.trailPositions.push(pos.clone());
+
+        // Update geometry - reallocate if needed
+        const geometry = this.droneTrail.geometry;
+        const currentBuffer = geometry.attributes.position.array as Float32Array;
+
+        // If buffer is too small, create a larger one
+        if (this.trailPositions.length * 3 > currentBuffer.length) {
+            const newSize = Math.min(this.trailPositions.length * 2, this.maxTrailLength) * 3;
+            const newPositions = new Float32Array(newSize);
+            newPositions.set(currentBuffer);
+            geometry.setAttribute('position', new THREE.BufferAttribute(newPositions, 3));
+        }
+
+        const positions = geometry.attributes.position.array as Float32Array;
+
+        // Only update the latest position (optimization)
+        const idx = this.trailPositions.length - 1;
+        positions[idx * 3] = this.trailPositions[idx].x;
+        positions[idx * 3 + 1] = this.trailPositions[idx].y;
+        positions[idx * 3 + 2] = this.trailPositions[idx].z;
+
+        geometry.attributes.position.needsUpdate = true;
+        geometry.setDrawRange(0, this.trailPositions.length);
+    }
+
+    /**
+     * Clear drone trail
+     */
+    private clearDroneTrail(): void {
+        this.trailPositions = [];
+        if (this.droneTrail) {
+            this.droneTrail.geometry.setDrawRange(0, 0);
+        }
+    }
+
+    /**
+     * Generate a circular trajectory for testing
+     * Drone flies in a circle in the XZ plane at constant height
+     */
+    private generateTestTrajectory(): void {
+        const speed = this.targetSpeed;  // Use slider-controlled speed
+
+        // Calculate radius to keep centripetal acceleration under 3 m/s²
+        // a_centripetal = v²/r, so r = v²/a_max
+        const maxCentripetalAccel = 3.0;  // m/s² - well within tilt limits
+        const minRadius = (speed * speed) / maxCentripetalAccel;
+        const radius = Math.max(10.0, minRadius);  // At least 10m, more if needed
+
+        const height = 2.0;  // meters
+        const sampleRate = 50;  // Hz
+
+        // Angular velocity: ω = v / r
+        const omega = speed / radius;
+
+        // One full circle duration: T = 2πr / v
+        const duration = (2 * Math.PI * radius) / speed;
+
+        // Centripetal acceleration: a = v² / r
+        const centripetalAccel = (speed * speed) / radius;
+
+        const waypoints: Waypoint[] = [];
+        const dt = 1 / sampleRate;
+
+        for (let t = 0; t <= duration + dt; t += dt) {
+            const angle = omega * t;  // Current angle in radians
+
+            // Position on circle (starting at +X, going counterclockwise when viewed from above)
+            const x = radius * Math.cos(angle);
+            const z = radius * Math.sin(angle);
+
+            // Velocity (tangent to circle)
+            const vx = -speed * Math.sin(angle);
+            const vz = speed * Math.cos(angle);
+
+            // Acceleration (centripetal, pointing toward center)
+            const ax = -centripetalAccel * Math.cos(angle);
+            const az = -centripetalAccel * Math.sin(angle);
+
+            // Heading: direction of motion (tangent)
+            // atan2(vz, vx) but we want heading where +Z is forward
+            const heading = Math.atan2(vx, vz);
+
+            waypoints.push({
+                position: { x, y: height, z },
+                velocity: { x: vx, y: 0, z: vz },
+                acceleration: { x: ax, y: 0, z: az },
+                jerk: { x: 0, y: 0, z: 0 },
+                heading: heading,
+                headingRate: omega,  // Constant turn rate
+                time: t,
+            });
+        }
+
+        this.trajectory = {
+            segments: [{
+                startWaypoint: waypoints[0],
+                endWaypoint: waypoints[waypoints.length - 1],
+                duration: duration,
+                gateId: -1,  // Test mode indicator
+            }],
+            totalDuration: duration,
+            waypoints: waypoints,
+        };
+
+        this.log(`<span style="color:#00ff00">TEST MODE: Circle trajectory</span>`);
+        this.log(`Speed: ${speed.toFixed(1)} m/s, Radius: ${radius.toFixed(1)}m, Duration: ${duration.toFixed(1)}s`);
+        this.log(`Centripetal accel: ${centripetalAccel.toFixed(2)} m/s² (max 3.0)`);
+
+        // Debug: log first few waypoints
+        console.log('=== CIRCLE TRAJECTORY DEBUG ===');
+        console.log(`Duration: ${duration.toFixed(2)}s, Waypoints: ${waypoints.length}`);
+        for (let i = 0; i < Math.min(5, waypoints.length); i++) {
+            const wp = waypoints[i];
+            console.log(`WP[${i}] t=${wp.time.toFixed(2)}: pos=(${wp.position.x.toFixed(2)}, ${wp.position.y.toFixed(2)}, ${wp.position.z.toFixed(2)}) vel=(${wp.velocity.x.toFixed(2)}, ${wp.velocity.y.toFixed(2)}, ${wp.velocity.z.toFixed(2)}) acc=(${wp.acceleration.x.toFixed(2)}, ${wp.acceleration.y.toFixed(2)}, ${wp.acceleration.z.toFixed(2)})`);
+        }
+    }
+
+    /**
      * Generate trajectory through track
      */
     private generateTrajectory(): void {
+        if (this.testMode) {
+            this.generateTestTrajectory();
+            return;
+        }
+
         this.trajectory = this.trajectoryGenerator.generateRacingTrajectory(this.track);
+
+        // DEBUG: Log trajectory info
+        console.log('=== TRAJECTORY DEBUG ===');
+        console.log('Total duration:', this.trajectory.totalDuration);
+        console.log('Num waypoints:', this.trajectory.waypoints.length);
+        console.log('First 5 waypoints:');
+        this.trajectory.waypoints.slice(0, 5).forEach((wp, i) => {
+            console.log(`  [${i}] pos:`, wp.position, 'vel:', wp.velocity);
+        });
+        console.log('Gate positions:');
+        this.track.gates.forEach((g, i) => {
+            const pos = g.getCenter();
+            console.log(`  Gate ${i}: [${pos.x.toFixed(2)}, ${pos.y.toFixed(2)}, ${pos.z.toFixed(2)}]`);
+        });
 
         // Update visualization
         if (this.trajectoryLine) {
@@ -344,21 +616,65 @@ export class DroneRacingDemo {
         // Reset track
         this.track.reset();
 
-        // Position drone at first gate approach
-        const firstGate = this.track.gates[0];
-        const startPos = firstGate.getApproachPosition(2);
-        this.drone.reset({ x: startPos.x, y: startPos.y, z: startPos.z });
-
-        // Set initial heading toward first gate
-        const toGate = firstGate.getCenter().sub(startPos);
-        const heading = Math.atan2(toGate.x, toGate.z);
-        this.drone.setHeading(heading);
-
         // Reset MPC
         this.mpc.reset();
 
-        // Regenerate trajectory
+        // Clear plot data
+        this.plotData = { time: [], posError: [], velocity: [], tilt: [], pitch: [], thrust: [] };
+
+        // Clear drone trail
+        this.clearDroneTrail();
+
+        // Regenerate trajectory first
         this.generateTrajectory();
+
+        // CRITICAL: Position drone AT trajectory start to match initial conditions
+        if (!this.trajectory) return;
+
+        // Get start waypoint based on mode
+        const startWaypoint = this.testMode
+            ? this.trajectory.waypoints[0]
+            : this.trajectoryGenerator.getWaypointAtTime(this.trajectory, 0);
+
+        this.drone.reset({
+            x: startWaypoint.position.x,
+            y: startWaypoint.position.y,
+            z: startWaypoint.position.z
+        });
+        this.drone.setHeading(startWaypoint.heading);
+        this.drone.setVelocity(
+            startWaypoint.velocity.x,
+            startWaypoint.velocity.y,
+            startWaypoint.velocity.z
+        );
+
+        // Clear log and add reset info
+        this.logHistory = [];
+        this.log(`<span style="color:#00ffff">RESET - Matched to trajectory start</span>`);
+        this.log(`Drone: (${startWaypoint.position.x.toFixed(1)}, ${startWaypoint.position.y.toFixed(1)}, ${startWaypoint.position.z.toFixed(1)})`);
+        this.log(`Velocity: (${startWaypoint.velocity.x.toFixed(1)}, ${startWaypoint.velocity.y.toFixed(1)}, ${startWaypoint.velocity.z.toFixed(1)})`);
+        this.log(`Accel: (${startWaypoint.acceleration.x.toFixed(2)}, ${startWaypoint.acceleration.y.toFixed(2)}, ${startWaypoint.acceleration.z.toFixed(2)})`);
+        this.log(`Trajectory: ${this.trajectory.segments.length} segments, ${this.trajectory.totalDuration.toFixed(1)}s total`);
+
+        // Debug: verify drone state matches
+        console.log('=== RESET DEBUG ===');
+        console.log('Start waypoint:', startWaypoint);
+        const postResetState = this.drone.getState();
+        console.log('Drone state after reset:', postResetState);
+
+        // SANITY CHECK: Verify quaternion after setHeading (per plan Step 1)
+        const state = this.drone.getState();
+        const q = state.orientation;
+        const threeQuat = new THREE.Quaternion(q.x, q.y, q.z, q.w);
+        const euler = new THREE.Euler().setFromQuaternion(threeQuat, 'YXZ');
+        const rollDeg = euler.z * 180 / Math.PI;
+        const pitchDeg = euler.x * 180 / Math.PI;
+        const yawDeg = euler.y * 180 / Math.PI;
+        this.log(`Quat: w=${q.w.toFixed(3)} x=${q.x.toFixed(3)} y=${q.y.toFixed(3)} z=${q.z.toFixed(3)}`);
+        this.log(`Euler(YXZ): roll=${rollDeg.toFixed(1)}° pitch=${pitchDeg.toFixed(1)}° yaw=${yawDeg.toFixed(1)}°`);
+        if (Math.abs(rollDeg) > 1 || Math.abs(pitchDeg) > 1) {
+            this.log(`<span style="color:#ff0000">BUG: Expected roll≈0 pitch≈0 at reset!</span>`);
+        }
     }
 
     /**
@@ -383,10 +699,115 @@ export class DroneRacingDemo {
         this.updateCameraView();
         this.updateStatusBar();
         this.updatePredictionVisualization();
+        this.drawPlots();
 
         // Render
         this.renderer.render(this.scene, this.camera);
     }
+
+    /**
+     * Draw real-time plots
+     */
+    private drawPlots(): void {
+        if (!this.plotCanvas) return;
+        const ctx = this.plotCanvas.getContext('2d');
+        if (!ctx) return;
+
+        const w = this.plotCanvas.width;
+        const h = this.plotCanvas.height;
+
+        // Clear
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
+        ctx.fillRect(0, 0, w, h);
+
+        // Title
+        ctx.fillStyle = '#00d4ff';
+        ctx.font = 'bold 12px monospace';
+        ctx.fillText('REAL-TIME PLOTS', 10, 15);
+
+        // Plot areas (3 rows)
+        const plotH = 80;
+        const plotY = [30, 120, 210];
+        const plotLabels = ['Pos Error (m)', 'Speed (m/s)', 'Pitch (deg)'];
+        const plotColors = ['#ff6666', '#66ff66', '#6666ff'];
+        const plotData = [this.plotData.posError, this.plotData.velocity, this.plotData.pitch];
+        const plotRanges = [[0, 2], [0, 12], [-30, 30]];  // [min, max] for each plot
+
+        for (let p = 0; p < 3; p++) {
+            const y0 = plotY[p];
+            const data = plotData[p];
+            const [minV, maxV] = plotRanges[p];
+
+            // Background
+            ctx.fillStyle = 'rgba(30, 30, 40, 0.8)';
+            ctx.fillRect(50, y0, w - 60, plotH);
+
+            // Border
+            ctx.strokeStyle = 'rgba(100, 100, 100, 0.5)';
+            ctx.strokeRect(50, y0, w - 60, plotH);
+
+            // Label
+            ctx.fillStyle = plotColors[p];
+            ctx.font = '10px monospace';
+            ctx.fillText(plotLabels[p], 5, y0 + plotH / 2);
+
+            // Zero line for pitch
+            if (p === 2) {
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.beginPath();
+                const zeroY = y0 + plotH * (1 - (0 - minV) / (maxV - minV));
+                ctx.moveTo(50, zeroY);
+                ctx.lineTo(w - 10, zeroY);
+                ctx.stroke();
+            }
+
+            // Target line for velocity (only if within plot bounds)
+            if (p === 1 && this.targetSpeed >= minV && this.targetSpeed <= maxV) {
+                ctx.strokeStyle = 'rgba(255, 255, 0, 0.5)';
+                ctx.beginPath();
+                const targetY = y0 + plotH * (1 - (this.targetSpeed - minV) / (maxV - minV));
+                ctx.moveTo(50, targetY);
+                ctx.lineTo(w - 10, targetY);
+                ctx.stroke();
+                ctx.fillStyle = '#ffff00';
+                ctx.fillText(`${this.targetSpeed.toFixed(0)}`, w - 45, targetY - 2);
+            }
+
+            // Draw data
+            if (data.length > 1) {
+                ctx.strokeStyle = plotColors[p];
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+
+                const xScale = (w - 60) / this.maxPlotPoints;
+
+                for (let i = 0; i < data.length; i++) {
+                    const x = 50 + i * xScale;
+                    const v = Math.max(minV, Math.min(maxV, data[i]));
+                    const y = y0 + plotH * (1 - (v - minV) / (maxV - minV));
+
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+                ctx.lineWidth = 1;
+
+                // Current value
+                const currentVal = data[data.length - 1];
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(currentVal.toFixed(2), w - 45, y0 + 12);
+            }
+
+            // Y-axis labels
+            ctx.fillStyle = '#888888';
+            ctx.font = '9px monospace';
+            ctx.fillText(maxV.toString(), 50, y0 + 10);
+            ctx.fillText(minV.toString(), 50, y0 + plotH - 2);
+        }
+    }
+
+    // DEBUG: frame counter for logging
+    private debugFrameCount = 0;
 
     /**
      * Update simulation step
@@ -398,15 +819,121 @@ export class DroneRacingDemo {
         const prevPosition = this.drone.getPosition();
 
         // Get reference waypoint
-        const getReference = (t: number) =>
-            this.trajectoryGenerator.getWaypointAtTime(this.trajectory!, t);
+        const getReference = (t: number): Waypoint => {
+            if (this.testMode) {
+                // Simple interpolation for test trajectory
+                const traj = this.trajectory!;
+                const wrappedT = t % traj.totalDuration;
+                const idx = Math.floor(wrappedT * 50);  // 50 Hz sample rate
+                const maxIdx = traj.waypoints.length - 1;
+                return traj.waypoints[Math.min(idx, maxIdx)];
+            }
+            return this.trajectoryGenerator.getWaypointAtTime(this.trajectory!, t);
+        };
 
         // Compute MPC control
         const droneState = this.drone.getState();
         const command = this.mpc.computeControl(droneState, getReference, this.simulationTime);
 
+        // Compute tracking errors
+        const ref = getReference(this.simulationTime);
+        const posErr = {
+            x: ref.position.x - droneState.position.x,
+            y: ref.position.y - droneState.position.y,
+            z: ref.position.z - droneState.position.z,
+        };
+        const posErrMag = Math.sqrt(posErr.x*posErr.x + posErr.y*posErr.y + posErr.z*posErr.z);
+        const droneSpeed = Math.sqrt(droneState.velocity.x**2 + droneState.velocity.y**2 + droneState.velocity.z**2);
+
+        // Compute Euler angles from quaternion using YXZ order (Three.js Y-up convention)
+        // CRITICAL: Must use same order as MPC for consistency
+        const q = droneState.orientation;
+        const threeQuat = new THREE.Quaternion(q.x, q.y, q.z, q.w);
+        const euler = new THREE.Euler().setFromQuaternion(threeQuat, 'YXZ');
+        const roll = euler.z;   // Roll around Z
+        const pitch = euler.x;  // Pitch around X
+        // const yaw = euler.y;    // Yaw around Y (not used in tilt calculation)
+        const tiltDeg = Math.sqrt(roll*roll + pitch*pitch) * 180 / Math.PI;
+        const pitchDeg = pitch * 180 / Math.PI;
+
+        // Record data for plots
+        this.plotData.time.push(this.simulationTime);
+        this.plotData.posError.push(posErrMag);
+        this.plotData.velocity.push(droneSpeed);  // Total speed magnitude
+        this.plotData.tilt.push(tiltDeg);
+        this.plotData.pitch.push(pitchDeg);
+        this.plotData.thrust.push(command.thrust);
+
+        // Keep only last N points
+        if (this.plotData.time.length > this.maxPlotPoints) {
+            this.plotData.time.shift();
+            this.plotData.posError.shift();
+            this.plotData.velocity.shift();
+            this.plotData.tilt.shift();
+            this.plotData.pitch.shift();
+            this.plotData.thrust.shift();
+        }
+
+        // DEBUG: Detailed logging for first 60 frames (~1 second)
+        this.debugFrameCount++;
+        if (this.debugFrameCount <= 60 && this.debugFrameCount % 10 === 0) {
+            console.log(`=== FRAME ${this.debugFrameCount} (t=${this.simulationTime.toFixed(3)}s) ===`);
+            console.log(`Drone: pos=(${droneState.position.x.toFixed(2)}, ${droneState.position.y.toFixed(2)}, ${droneState.position.z.toFixed(2)})`);
+            console.log(`       vel=(${droneState.velocity.x.toFixed(2)}, ${droneState.velocity.y.toFixed(2)}, ${droneState.velocity.z.toFixed(2)})`);
+            console.log(`Ref:   pos=(${ref.position.x.toFixed(2)}, ${ref.position.y.toFixed(2)}, ${ref.position.z.toFixed(2)})`);
+            console.log(`       vel=(${ref.velocity.x.toFixed(2)}, ${ref.velocity.y.toFixed(2)}, ${ref.velocity.z.toFixed(2)})`);
+            console.log(`       acc=(${ref.acceleration.x.toFixed(2)}, ${ref.acceleration.y.toFixed(2)}, ${ref.acceleration.z.toFixed(2)})`);
+            console.log(`Error: ${posErrMag.toFixed(3)}m`);
+            console.log(`Cmd: thrust=${command.thrust.toFixed(2)}, roll=${command.rollRate.toFixed(3)}, pitch=${command.pitchRate.toFixed(3)}, yaw=${command.yawRate.toFixed(3)}`);
+            console.log(`Euler: roll=${(roll*180/Math.PI).toFixed(1)}°, pitch=${(pitch*180/Math.PI).toFixed(1)}°`);
+        }
+
+        // DEBUG: Update overlay every 10 frames
+        if (this.debugFrameCount % 10 === 0 && this.debugOverlay) {
+            this.debugOverlay.innerHTML = `
+                <div style="color: #ffaa00; margin-bottom: 8px; font-weight: bold;">DEBUG PANEL</div>
+                <div><b>Time:</b> ${this.simulationTime.toFixed(2)}s</div>
+                <div style="margin-top: 6px; color: #88ff88;"><b>DRONE STATE:</b></div>
+                <div>Pos: (${droneState.position.x.toFixed(2)}, ${droneState.position.y.toFixed(2)}, ${droneState.position.z.toFixed(2)})</div>
+                <div>Vel: (${droneState.velocity.x.toFixed(2)}, ${droneState.velocity.y.toFixed(2)}, ${droneState.velocity.z.toFixed(2)})</div>
+                <div>Speed: ${droneSpeed.toFixed(2)} m/s</div>
+                <div>Tilt: ${tiltDeg.toFixed(1)}° (roll=${(roll*180/Math.PI).toFixed(1)}° pitch=${(pitch*180/Math.PI).toFixed(1)}°)</div>
+                <div style="margin-top: 6px; color: #88aaff;"><b>REFERENCE:</b></div>
+                <div>Pos: (${ref.position.x.toFixed(2)}, ${ref.position.y.toFixed(2)}, ${ref.position.z.toFixed(2)})</div>
+                <div>Vel: (${ref.velocity.x.toFixed(2)}, ${ref.velocity.y.toFixed(2)}, ${ref.velocity.z.toFixed(2)})</div>
+                <div>Accel: (${ref.acceleration.x.toFixed(2)}, ${ref.acceleration.y.toFixed(2)}, ${ref.acceleration.z.toFixed(2)})</div>
+                <div style="margin-top: 6px; color: #ff8888;"><b>ERRORS:</b></div>
+                <div>Pos Error: ${posErrMag.toFixed(2)}m</div>
+                <div style="margin-top: 6px; color: #ffff88;"><b>COMMAND:</b></div>
+                <div>Thrust: ${command.thrust.toFixed(2)} m/s² (gravity=9.81)</div>
+                <div>Roll/Pitch/Yaw: ${command.rollRate.toFixed(2)} / ${command.pitchRate.toFixed(2)} / ${command.yawRate.toFixed(2)} rad/s</div>
+                <div style="margin-top: 6px; color: #aaaaaa;"><b>dt:</b> ${(dt*1000).toFixed(1)}ms</div>
+            `;
+        }
+
+        // Log important events every 0.5s
+        if (this.debugFrameCount % 30 === 0) {
+            this.log(`pos=(${droneState.position.x.toFixed(1)},${droneState.position.y.toFixed(1)},${droneState.position.z.toFixed(1)}) vel=(${droneState.velocity.x.toFixed(1)},${droneState.velocity.y.toFixed(1)},${droneState.velocity.z.toFixed(1)})`);
+            this.log(`  ref=(${ref.position.x.toFixed(1)},${ref.position.y.toFixed(1)},${ref.position.z.toFixed(1)}) err=${posErrMag.toFixed(1)}m tilt=${tiltDeg.toFixed(0)}°`);
+            this.log(`  cmd: T=${command.thrust.toFixed(1)} r=${command.rollRate.toFixed(2)} p=${command.pitchRate.toFixed(2)}`);
+        }
+
+        // Log warnings - less frequent
+        if (posErrMag > 5.0 && this.debugFrameCount % 30 === 0) {
+            this.log(`<span style="color:#ff6666">WARNING: Large error ${posErrMag.toFixed(1)}m</span>`);
+        }
+        if (droneState.position.y < 0.5 && this.debugFrameCount % 30 === 0) {
+            this.log(`<span style="color:#ff0000">CRASH: y=${droneState.position.y.toFixed(2)} tilt=${tiltDeg.toFixed(0)}° thrust=${command.thrust.toFixed(1)}</span>`);
+        }
+        if (tiltDeg > 20 && this.debugFrameCount % 30 === 0) {
+            this.log(`<span style="color:#ffaa00">High tilt: ${tiltDeg.toFixed(1)}° roll=${(roll*180/Math.PI).toFixed(1)}° pitch=${(pitch*180/Math.PI).toFixed(1)}°</span>`);
+        }
+
         // Update drone dynamics
         this.drone.update(command, dt);
+
+        // Update drone trail visualization
+        this.updateDroneTrail();
 
         // Update simulation time
         this.simulationTime += dt;
@@ -414,7 +941,9 @@ export class DroneRacingDemo {
         // Check gate passage
         const currentPosition = this.drone.getPosition();
         if (this.track.checkGatePassage(prevPosition, currentPosition)) {
+            const passedGate = this.track.getCurrentGateIndex();
             this.track.advanceGate();
+            this.log(`<span style="color:#00ff00">PASSED GATE ${passedGate}! Next: ${this.track.getCurrentGateIndex()}</span>`);
         }
 
         // Run detection

@@ -85,6 +85,20 @@ export class Navigation {
     }
 
     /**
+     * Navigate to demos list page
+     */
+    public static toDemos(): void {
+        Navigation.to('/demos');
+    }
+
+    /**
+     * Navigate to specific demo
+     */
+    public static toDemo(id: string): void {
+        Navigation.to(`/demos/${id}`);
+    }
+
+    /**
      * Force a full page reload navigation (useful for external links or when router fails)
      */
     public static reload(path: string): void {
