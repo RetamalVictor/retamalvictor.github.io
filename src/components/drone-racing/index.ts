@@ -1,29 +1,36 @@
 /**
- * Drone Racing Demo - Module Exports
+ * Drone Racing - Module Exports
  *
- * Interactive demo showcasing autonomous drone racing pipeline:
- * - Gate Detection (PnP pose estimation)
- * - Trajectory Generation (minimum-jerk profiles)
- * - MPC Control (trajectory tracking)
+ * Clean architecture with separation of concerns:
+ * - DroneDynamics: Pure physics simulation
+ * - DroneVisualization: Pure 3D rendering
+ * - MPC: True Model Predictive Control with Sequential QP
  */
 
-// Main demo
+// Demo
 export { DroneRacingDemo } from './DroneRacingDemo';
 
-// Core components
+// Core - Dynamics
+export { DroneDynamics, DEFAULT_DYNAMICS_PARAMS } from './core/DroneDynamics';
+export type { DynamicsParams, DynamicsState } from './core/DroneDynamics';
+
+// Core - Composed drone (dynamics + visualization)
 export { RacingDrone } from './core/RacingDrone';
-export { RaceGate } from './core/RaceGate';
-export { RaceTrack } from './core/RaceTrack';
+export type { RacingDroneConfig } from './core/RacingDrone';
 
-// Perception
-export { GateDetector } from './perception/GateDetector';
-export { PnPSolver } from './perception/PnPSolver';
+// Visualization
+export { DroneVisualization, DEFAULT_VISUALIZATION_CONFIG } from './visualization/DroneVisualization';
+export type { DroneVisualizationConfig } from './visualization/DroneVisualization';
 
-// Planning
-export { TrajectoryGenerator } from './planning/TrajectoryGenerator';
+// Control - MPC
+export { MPC, DEFAULT_MPC_CONFIG } from './control/MPC';
+export type { MPCConfig, MPCReference } from './control/MPC';
 
-// Control
-export { SimplifiedMPC } from './control/SimplifiedMPC';
+export { MPCModel } from './control/MPCModel';
+export type { MPCState, MPCInput, LinearizedDynamics } from './control/MPCModel';
+
+export { QPSolver, MatrixUtils } from './control/QPSolver';
+export type { QPProblem, QPSolution, QPOptions } from './control/QPSolver';
 
 // Types
 export * from './types';
