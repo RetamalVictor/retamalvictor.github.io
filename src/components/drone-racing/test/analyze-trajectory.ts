@@ -5,9 +5,9 @@
  * and comparing them to drone capabilities.
  */
 
-import { createTrajectory, TrajectoryType } from '../trajectory';
+import { createTrajectory } from '../trajectory';
 
-const DRONE_MAX_ACCEL = 30.0;  // m/s² (what MPC can command)
+const DRONE_MAX_ACCEL = 50.0;  // m/s² (what racing MPC can command - 5g)
 const SAMPLE_DT = 0.01;        // 100 Hz sampling
 
 interface AnalysisPoint {
@@ -22,12 +22,12 @@ interface AnalysisPoint {
     requiredCentripetalAccel: number;  // v²/r
 }
 
-function analyzeTrajectory(name: string, type: TrajectoryType) {
+function analyzeTrajectory(name: string) {
     console.log('\n' + '='.repeat(80));
     console.log(`TRAJECTORY ANALYSIS: ${name}`);
     console.log('='.repeat(80));
 
-    const trajectory = createTrajectory(type);
+    const trajectory = createTrajectory();
     const period = trajectory.getPeriod();
 
     console.log(`\nTrajectory period: ${period.toFixed(2)} s`);
@@ -119,13 +119,10 @@ function analyzeTrajectory(name: string, type: TrajectoryType) {
 // Run analysis
 console.log('TRAJECTORY FEASIBILITY ANALYSIS');
 console.log('================================');
-console.log(`Drone max acceleration: ${DRONE_MAX_ACCEL} m/s²`);
+console.log(`Drone max acceleration: ${DRONE_MAX_ACCEL} m/s² (5g racing drone)`);
 console.log(`Required min turn radius at 70 km/h: ${(19.4 * 19.4 / DRONE_MAX_ACCEL).toFixed(1)} m`);
 
-analyzeTrajectory('Figure-8 (Racing Scale)', 'figure8');
-analyzeTrajectory('Split-S (Racing Scale)', 'splits');
-analyzeTrajectory('Dive (Stacked Gates)', 'dive');
-analyzeTrajectory('Crazy (Chaos Mode)', 'crazy');
+analyzeTrajectory('Racing Track (Power Loop)');
 
 console.log('\n' + '='.repeat(80));
 console.log('ANALYSIS COMPLETE');

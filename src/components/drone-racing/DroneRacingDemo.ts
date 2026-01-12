@@ -9,13 +9,14 @@ import { ControlCommand } from './types';
 // Trajectory system
 import {
     Trajectory,
-    TrajectoryType,
-    TRAJECTORY_INFO,
     createTrajectory,
 } from './trajectory';
 
 // Gate visualization
 import { GateManager } from './visualization/GateVisualization';
+
+// Utilities
+import { VisibilityManager } from '../../utils/VisibilityManager';
 
 /**
  * Drone Racing Demo
@@ -40,9 +41,14 @@ export class DroneRacingDemo {
     private trajectory: Trajectory;
 
     // Configuration
-    private currentTrajectoryType: TrajectoryType = 'splits';
     private readonly defaultSpeed = 18.0;
     private readonly defaultHeight = 4.0;
+
+    // Camera mode
+    private cameraMode: 'overview' | 'follow' = 'overview';
+    private followDistance = 15;  // Distance behind drone
+    private followHeight = 6;     // Height above drone
+    private smoothedHeading = 0;  // Smoothed heading for camera
 
     // State
     private simulationTime: number = 0;
@@ -52,10 +58,8 @@ export class DroneRacingDemo {
 
     // Visibility-based pausing
     private isPaused: boolean = false;
-    private isVisible: boolean = true;
-    private isPageVisible: boolean = true;
-    private intersectionObserver: IntersectionObserver | null = null;
-    private boundVisibilityHandler: () => void;
+    private visibilityManager: VisibilityManager | null = null;
+    private boundHandleResize: () => void;
 
     // Visualization
     private trajectoryLine: THREE.Line | null = null;
@@ -66,14 +70,14 @@ export class DroneRacingDemo {
 
     // UI elements
     private debugOverlay: HTMLElement | null = null;
-    private trajectoryButtons: Map<TrajectoryType, HTMLButtonElement> = new Map();
+    private cameraButtons: { overview: HTMLButtonElement | null; follow: HTMLButtonElement | null } = { overview: null, follow: null };
     private howItWorksPanel: HTMLElement | null = null;
     private howItWorksOverlay: HTMLElement | null = null;
     private showHowItWorks: boolean = false;
 
     constructor(containerId: string) {
-        // Bind visibility handler
-        this.boundVisibilityHandler = this.handlePageVisibility.bind(this);
+        // Bind event handlers for proper cleanup
+        this.boundHandleResize = this.handleResize.bind(this);
 
         // Get container
         const container = document.getElementById(containerId);
@@ -116,7 +120,7 @@ export class DroneRacingDemo {
         // Initialize components
         this.drone = new RacingDrone();
         this.mpc = new MPC();
-        this.trajectory = createTrajectory(this.currentTrajectoryType, this.defaultSpeed, this.defaultHeight);
+        this.trajectory = createTrajectory(this.defaultSpeed, this.defaultHeight);
 
         // Setup scene
         this.setupScene();
@@ -127,7 +131,7 @@ export class DroneRacingDemo {
 
         // Handle resize
         this.handleResize();
-        window.addEventListener('resize', () => this.handleResize());
+        window.addEventListener('resize', this.boundHandleResize);
 
         // Setup visibility-based pausing
         this.setupVisibilityHandling();
@@ -148,8 +152,9 @@ export class DroneRacingDemo {
         directionalLight.position.set(10, 20, 10);
         this.scene.add(directionalLight);
 
-        // Ground grid - larger for bigger tracks
-        const gridHelper = new THREE.GridHelper(100, 50, 0x2a2a3e, 0x1a1a2e);
+        // Ground grid - large enough for the track
+        const gridHelper = new THREE.GridHelper(150, 75, 0x2a2a3e, 0x1a1a2e);
+        gridHelper.position.set(20, 0, 20);  // Center under the track
         this.scene.add(gridHelper);
 
         // Add drone
@@ -195,81 +200,37 @@ export class DroneRacingDemo {
 
         controlsDiv.appendChild(playbackDiv);
 
-        // Trajectory selection panel (collapsible)
-        const trajectoryPanel = document.createElement('div');
-        trajectoryPanel.style.cssText = `
+        // Camera mode panel
+        const cameraPanel = document.createElement('div');
+        cameraPanel.style.cssText = `
             background: rgba(10, 10, 15, 0.9);
             border: 1px solid rgba(0, 212, 255, 0.3);
             border-radius: 8px;
             padding: 12px;
         `;
 
-        let isTrajectoryPanelCollapsed = false;
-
-        const panelHeader = document.createElement('div');
-        panelHeader.style.cssText = `
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            cursor: pointer;
-            user-select: none;
-        `;
-
-        const panelTitle = document.createElement('div');
-        panelTitle.textContent = 'Trajectory';
-        panelTitle.style.cssText = `
+        const cameraTitle = document.createElement('div');
+        cameraTitle.textContent = 'Camera';
+        cameraTitle.style.cssText = `
             color: #00d4ff;
             font-family: monospace;
             font-size: 12px;
             font-weight: bold;
+            margin-bottom: 10px;
         `;
+        cameraPanel.appendChild(cameraTitle);
 
-        const collapseArrow = document.createElement('span');
-        collapseArrow.textContent = '▼';
-        collapseArrow.style.cssText = `
-            color: #00d4ff;
-            font-size: 10px;
-            transition: transform 0.2s;
-        `;
+        const cameraButtonsDiv = document.createElement('div');
+        cameraButtonsDiv.style.cssText = 'display: flex; gap: 8px;';
 
-        panelHeader.appendChild(panelTitle);
-        panelHeader.appendChild(collapseArrow);
-        trajectoryPanel.appendChild(panelHeader);
+        this.cameraButtons.overview = this.createCameraButton('Overview', 'overview');
+        this.cameraButtons.follow = this.createCameraButton('Follow', 'follow');
 
-        const buttonsContainer = document.createElement('div');
-        buttonsContainer.style.cssText = `
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            margin-top: 10px;
-            overflow: hidden;
-            transition: max-height 0.3s ease, opacity 0.2s ease;
-            max-height: 500px;
-        `;
+        cameraButtonsDiv.appendChild(this.cameraButtons.overview);
+        cameraButtonsDiv.appendChild(this.cameraButtons.follow);
+        cameraPanel.appendChild(cameraButtonsDiv);
 
-        panelHeader.addEventListener('click', () => {
-            isTrajectoryPanelCollapsed = !isTrajectoryPanelCollapsed;
-            if (isTrajectoryPanelCollapsed) {
-                buttonsContainer.style.maxHeight = '0';
-                buttonsContainer.style.opacity = '0';
-                buttonsContainer.style.marginTop = '0';
-                collapseArrow.style.transform = 'rotate(-90deg)';
-            } else {
-                buttonsContainer.style.maxHeight = '500px';
-                buttonsContainer.style.opacity = '1';
-                buttonsContainer.style.marginTop = '10px';
-                collapseArrow.style.transform = 'rotate(0deg)';
-            }
-        });
-
-        for (const info of TRAJECTORY_INFO) {
-            const btn = this.createTrajectoryButton(info.type, info.name, info.description);
-            this.trajectoryButtons.set(info.type, btn);
-            buttonsContainer.appendChild(btn);
-        }
-
-        trajectoryPanel.appendChild(buttonsContainer);
-        controlsDiv.appendChild(trajectoryPanel);
+        controlsDiv.appendChild(cameraPanel);
 
         this.container.appendChild(controlsDiv);
 
@@ -291,8 +252,8 @@ export class DroneRacingDemo {
         `;
         this.container.appendChild(this.debugOverlay);
 
-        // Highlight initial trajectory button
-        this.updateTrajectoryButtonStyles();
+        // Highlight initial camera button
+        this.updateCameraButtonStyles();
 
         // "How it works" button (bottom-right)
         const howItWorksBtn = document.createElement('button');
@@ -509,11 +470,11 @@ export class DroneRacingDemo {
     }
 
     /**
-     * Create trajectory selection button
+     * Create camera mode button
      */
-    private createTrajectoryButton(type: TrajectoryType, name: string, description: string): HTMLButtonElement {
+    private createCameraButton(label: string, mode: 'overview' | 'follow'): HTMLButtonElement {
         const btn = document.createElement('button');
-        btn.innerHTML = `<strong>${name}</strong><br><span style="font-size: 9px; opacity: 0.7;">${description}</span>`;
+        btn.textContent = label;
         btn.style.cssText = `
             padding: 8px 12px;
             background: rgba(10, 10, 15, 0.6);
@@ -524,33 +485,40 @@ export class DroneRacingDemo {
             font-size: 11px;
             cursor: pointer;
             transition: all 0.2s;
-            text-align: left;
-            width: 180px;
         `;
-        btn.addEventListener('click', () => this.selectTrajectory(type));
+        btn.addEventListener('click', () => this.setCameraMode(mode));
         return btn;
     }
 
     /**
-     * Select a trajectory type
+     * Set camera mode
      */
-    private selectTrajectory(type: TrajectoryType): void {
-        if (type === this.currentTrajectoryType) return;
+    private setCameraMode(mode: 'overview' | 'follow'): void {
+        if (mode === this.cameraMode) return;
 
-        this.currentTrajectoryType = type;
-        this.trajectory = createTrajectory(type, this.defaultSpeed, this.defaultHeight);
+        this.cameraMode = mode;
+        this.updateCameraButtonStyles();
 
-        this.updateTrajectoryButtonStyles();
-        this.updateTrajectoryVisualization();
-        this.resetSimulation();
+        if (mode === 'overview') {
+            // Re-enable orbit controls and adjust camera for overview
+            this.controls.enabled = true;
+            this.adjustCameraForTrajectory();
+        } else {
+            // Disable orbit controls for follow mode
+            this.controls.enabled = false;
+        }
     }
 
     /**
-     * Update trajectory button styles
+     * Update camera button styles
      */
-    private updateTrajectoryButtonStyles(): void {
-        for (const [type, btn] of this.trajectoryButtons) {
-            if (type === this.currentTrajectoryType) {
+    private updateCameraButtonStyles(): void {
+        const modes: ('overview' | 'follow')[] = ['overview', 'follow'];
+        for (const mode of modes) {
+            const btn = this.cameraButtons[mode];
+            if (!btn) continue;
+
+            if (mode === this.cameraMode) {
                 btn.style.background = 'rgba(0, 212, 255, 0.3)';
                 btn.style.borderColor = 'rgba(0, 212, 255, 0.8)';
             } else {
@@ -603,19 +571,37 @@ export class DroneRacingDemo {
     }
 
     /**
-     * Adjust camera position based on trajectory
+     * Adjust camera position - spectator view from stadium seating
      */
     private adjustCameraForTrajectory(): void {
-        const points = this.trajectory.getVisualizationPoints(50);
-        let maxDist = 0;
-        for (const p of points) {
-            const dist = Math.sqrt(p.x * p.x + p.z * p.z);
-            if (dist > maxDist) maxDist = dist;
+        const gatePositions = this.trajectory.getGatePositions();
+
+        if (gatePositions.length === 0) {
+            this.camera.position.set(50, 15, 50);
+            this.controls.target.set(0, this.defaultHeight, 0);
+            this.controls.update();
+            return;
         }
 
-        const cameraDistance = maxDist * 2.5;
-        this.camera.position.set(cameraDistance * 0.7, cameraDistance * 0.4, cameraDistance * 0.7);
-        this.controls.target.set(0, this.defaultHeight, 0);
+        // Compute center of all gates
+        let sumX = 0, sumY = 0, sumZ = 0;
+        for (const gate of gatePositions) {
+            sumX += gate.position.x;
+            sumY += gate.position.y;
+            sumZ += gate.position.z;
+        }
+        const centerX = sumX / gatePositions.length;
+        const centerY = sumY / gatePositions.length;
+        const centerZ = sumZ / gatePositions.length;
+
+        // Spectator position: on the side of the track, elevated like bleachers
+        // Positioned to the left side (negative X), looking at the action
+        this.camera.position.set(
+            -25,    // Side of track (spectator stands)
+            18,     // Elevated like stadium seating
+            25      // Midway along the track
+        );
+        this.controls.target.set(centerX, centerY, centerZ);
         this.controls.update();
     }
 
@@ -691,50 +677,25 @@ export class DroneRacingDemo {
     }
 
     /**
-     * Setup visibility-based pausing (IntersectionObserver + Page Visibility API)
+     * Setup visibility-based pausing using VisibilityManager
      */
     private setupVisibilityHandling(): void {
-        // IntersectionObserver for viewport visibility
-        this.intersectionObserver = new IntersectionObserver(
-            (entries) => {
-                entries.forEach(entry => {
-                    this.isVisible = entry.isIntersecting;
-                    this.updatePauseState();
-                });
-            },
-            { threshold: 0.1 }
-        );
-        this.intersectionObserver.observe(this.container);
-
-        // Page Visibility API
-        document.addEventListener('visibilitychange', this.boundVisibilityHandler);
-    }
-
-    /**
-     * Handle page visibility changes
-     */
-    private handlePageVisibility(): void {
-        this.isPageVisible = document.visibilityState === 'visible';
-        this.updatePauseState();
-    }
-
-    /**
-     * Update pause state based on visibility
-     */
-    private updatePauseState(): void {
-        const shouldPause = !this.isVisible || !this.isPageVisible;
-
-        if (shouldPause && !this.isPaused) {
-            this.isPaused = true;
-            if (this.animationFrameId) {
-                cancelAnimationFrame(this.animationFrameId);
-                this.animationFrameId = 0;
+        this.visibilityManager = new VisibilityManager(
+            this.container,
+            (paused) => {
+                if (paused) {
+                    this.isPaused = true;
+                    if (this.animationFrameId) {
+                        cancelAnimationFrame(this.animationFrameId);
+                        this.animationFrameId = 0;
+                    }
+                } else {
+                    this.isPaused = false;
+                    this.lastFrameTime = performance.now() / 1000;
+                    this.animate();
+                }
             }
-        } else if (!shouldPause && this.isPaused) {
-            this.isPaused = false;
-            this.lastFrameTime = performance.now() / 1000;
-            this.animate();
-        }
+        );
     }
 
     /**
@@ -754,11 +715,61 @@ export class DroneRacingDemo {
             this.updateSimulation(Math.min(dt, 0.05));
         }
 
-        // Update controls
-        this.controls.update();
+        // Update camera based on mode
+        if (this.cameraMode === 'follow') {
+            this.updateFollowCamera();
+        } else {
+            this.controls.update();
+        }
 
         // Render
         this.renderer.render(this.scene, this.camera);
+    }
+
+    /**
+     * Update camera to follow the drone from behind
+     */
+    private updateFollowCamera(): void {
+        const dronePos = this.drone.getPosition();
+        const droneState = this.drone.getState();
+
+        // Compute target heading from velocity direction
+        const vx = droneState.velocity.x;
+        const vz = droneState.velocity.z;
+        const speed = Math.sqrt(vx * vx + vz * vz);
+
+        let targetHeading: number;
+        if (speed > 1.0) {
+            // Use velocity direction when moving fast enough
+            targetHeading = Math.atan2(vx, vz);
+        } else {
+            // Keep current heading when slow/stationary
+            targetHeading = this.smoothedHeading;
+        }
+
+        // Smooth the heading change (handles angle wrapping)
+        let headingDiff = targetHeading - this.smoothedHeading;
+        // Wrap to [-PI, PI]
+        while (headingDiff > Math.PI) headingDiff -= 2 * Math.PI;
+        while (headingDiff < -Math.PI) headingDiff += 2 * Math.PI;
+
+        // Very smooth heading interpolation to avoid jitter
+        const headingSmoothness = 0.03;
+        this.smoothedHeading += headingDiff * headingSmoothness;
+
+        // Calculate camera position BEHIND the drone (opposite to smoothed heading)
+        const targetCamPos = new THREE.Vector3(
+            dronePos.x - Math.sin(this.smoothedHeading) * this.followDistance,
+            dronePos.y + this.followHeight,
+            dronePos.z - Math.cos(this.smoothedHeading) * this.followDistance
+        );
+
+        // Smooth camera position transition
+        const positionSmoothness = 0.06;
+        this.camera.position.lerp(targetCamPos, positionSmoothness);
+
+        // Look at the drone
+        this.camera.lookAt(dronePos);
     }
 
     /**
@@ -847,14 +858,12 @@ export class DroneRacingDemo {
             this.animationFrameId = 0;
         }
 
-        // Clean up visibility observers
-        if (this.intersectionObserver) {
-            this.intersectionObserver.disconnect();
-            this.intersectionObserver = null;
+        // Clean up visibility manager and resize listener
+        if (this.visibilityManager) {
+            this.visibilityManager.destroy();
+            this.visibilityManager = null;
         }
-        document.removeEventListener('visibilitychange', this.boundVisibilityHandler);
-
-        window.removeEventListener('resize', () => this.handleResize());
+        window.removeEventListener('resize', this.boundHandleResize);
 
         this.renderer.dispose();
         this.controls.dispose();
