@@ -43,6 +43,7 @@ export class DroneRacingDemo {
     // Configuration
     private readonly defaultSpeed = 18.0;
     private readonly defaultHeight = 4.0;
+    private readonly showTrajectoryLine = false;  // Set to true for debugging
 
     // Camera mode
     private cameraMode: 'overview' | 'follow' = 'overview';
@@ -206,8 +207,9 @@ export class DroneRacingDemo {
         const cameraDiv = document.createElement('div');
         cameraDiv.className = 'absolute top-3 left-3 flex gap-2 z-10';
 
-        const overviewIcon = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/></svg>`;
-        const followIcon = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>`;
+        // Overview: wide view icon, Follow: crosshair/target icon
+        const overviewIcon = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>`;
+        const followIcon = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/></svg>`;
 
         this.cameraButtons.overview = document.createElement('button');
         this.cameraButtons.overview.className = 'p-2 rounded-lg bg-dark-surface/80 border border-dark-border hover:border-accent-cyan hover:text-accent-cyan transition-colors text-gray-400';
@@ -279,21 +281,25 @@ export class DroneRacingDemo {
             this.scene.remove(this.trajectoryLine);
             this.trajectoryLine.geometry.dispose();
             (this.trajectoryLine.material as THREE.Material).dispose();
+            this.trajectoryLine = null;
         }
 
-        // Get trajectory points
-        const trajPoints = this.trajectory.getVisualizationPoints(200);
-        const points = trajPoints.map(p => new THREE.Vector3(p.x, p.y, p.z));
+        // Only show trajectory line if debugging is enabled
+        if (this.showTrajectoryLine) {
+            // Get trajectory points
+            const trajPoints = this.trajectory.getVisualizationPoints(200);
+            const points = trajPoints.map(p => new THREE.Vector3(p.x, p.y, p.z));
 
-        // Create new line
-        const geometry = new THREE.BufferGeometry().setFromPoints(points);
-        const material = new THREE.LineBasicMaterial({
-            color: 0xa855f7,
-            opacity: 0.6,
-            transparent: true,
-        });
-        this.trajectoryLine = new THREE.Line(geometry, material);
-        this.scene.add(this.trajectoryLine);
+            // Create new line
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const material = new THREE.LineBasicMaterial({
+                color: 0xa855f7,
+                opacity: 0.6,
+                transparent: true,
+            });
+            this.trajectoryLine = new THREE.Line(geometry, material);
+            this.scene.add(this.trajectoryLine);
+        }
 
         // Update gates
         this.updateGates();
@@ -556,11 +562,12 @@ export class DroneRacingDemo {
             state.velocity.z ** 2
         );
         const period = this.trajectory.getPeriod();
-        const lapProgress = ((this.simulationTime % period) / period * 100).toFixed(0);
+        const lapTime = this.simulationTime % period;
+        const lapTimeStr = lapTime.toFixed(1);
 
         this.debugOverlay.innerHTML = `
             <div><span class="text-gray-400">Speed</span> ${(speed * 3.6).toFixed(0)} km/h</div>
-            <div><span class="text-gray-400">Lap</span> ${lapProgress}%</div>
+            <div><span class="text-gray-400">Lap</span> ${lapTimeStr}s</div>
         `;
     }
 
