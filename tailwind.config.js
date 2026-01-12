@@ -12,6 +12,17 @@ module.exports = {
     'bg-dark-surface',
     'border-dark-border',
     'hover:bg-dark-surface',
+    // Classes used in DroneRacingDemo
+    'bg-dark-surface/80',
+    'bg-dark-surface/90',
+    'bg-accent-cyan/20',
+    'border-accent-cyan',
+    'border-accent-cyan/30',
+    'hover:border-accent-cyan',
+    'hover:text-accent-cyan',
+    'text-gray-400',
+    'font-mono',
+    'text-sm',
   ],
   theme: {
     extend: {

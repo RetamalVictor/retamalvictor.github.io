@@ -71,9 +71,6 @@ export class DroneRacingDemo {
     // UI elements
     private debugOverlay: HTMLElement | null = null;
     private cameraButtons: { overview: HTMLButtonElement | null; follow: HTMLButtonElement | null } = { overview: null, follow: null };
-    private howItWorksPanel: HTMLElement | null = null;
-    private howItWorksOverlay: HTMLElement | null = null;
-    private showHowItWorks: boolean = false;
 
     constructor(containerId: string) {
         // Bind event handlers for proper cleanup
@@ -174,320 +171,67 @@ export class DroneRacingDemo {
      * Setup UI elements
      */
     private setupUI(): void {
-        // Main controls container (top-left)
+        // Control buttons (bottom-right, same style as IBVS)
         const controlsDiv = document.createElement('div');
-        controlsDiv.style.cssText = `
-            position: absolute;
-            top: 16px;
-            left: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        `;
+        controlsDiv.className = 'absolute bottom-3 right-3 flex gap-2 z-10';
 
-        // Playback controls
-        const playbackDiv = document.createElement('div');
-        playbackDiv.style.cssText = 'display: flex; gap: 8px;';
+        // Reset button
+        const resetBtn = document.createElement('button');
+        resetBtn.className = 'p-2 rounded-lg bg-dark-surface/80 border border-dark-border hover:border-accent-cyan hover:text-accent-cyan transition-colors text-gray-400';
+        resetBtn.title = 'Reset';
+        resetBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+        </svg>`;
+        resetBtn.addEventListener('click', () => this.resetSimulation());
+        controlsDiv.appendChild(resetBtn);
 
-        const resetBtn = this.createButton('Reset', () => this.resetSimulation());
-        playbackDiv.appendChild(resetBtn);
+        // Pause button
+        const pauseIcon = `<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`;
+        const playIcon = `<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>`;
 
-        const pauseBtn = this.createButton('Pause', () => {
+        const pauseBtn = document.createElement('button');
+        pauseBtn.className = 'p-2 rounded-lg bg-dark-surface/80 border border-dark-border hover:border-accent-cyan hover:text-accent-cyan transition-colors text-gray-400';
+        pauseBtn.title = 'Pause';
+        pauseBtn.innerHTML = pauseIcon;
+        pauseBtn.addEventListener('click', () => {
             this.isRunning = !this.isRunning;
-            pauseBtn.textContent = this.isRunning ? 'Pause' : 'Play';
+            pauseBtn.innerHTML = this.isRunning ? pauseIcon : playIcon;
+            pauseBtn.title = this.isRunning ? 'Pause' : 'Play';
         });
-        playbackDiv.appendChild(pauseBtn);
-
-        controlsDiv.appendChild(playbackDiv);
-
-        // Camera mode panel
-        const cameraPanel = document.createElement('div');
-        cameraPanel.style.cssText = `
-            background: rgba(10, 10, 15, 0.9);
-            border: 1px solid rgba(0, 212, 255, 0.3);
-            border-radius: 8px;
-            padding: 12px;
-        `;
-
-        const cameraTitle = document.createElement('div');
-        cameraTitle.textContent = 'Camera';
-        cameraTitle.style.cssText = `
-            color: #00d4ff;
-            font-family: monospace;
-            font-size: 12px;
-            font-weight: bold;
-            margin-bottom: 10px;
-        `;
-        cameraPanel.appendChild(cameraTitle);
-
-        const cameraButtonsDiv = document.createElement('div');
-        cameraButtonsDiv.style.cssText = 'display: flex; gap: 8px;';
-
-        this.cameraButtons.overview = this.createCameraButton('Overview', 'overview');
-        this.cameraButtons.follow = this.createCameraButton('Follow', 'follow');
-
-        cameraButtonsDiv.appendChild(this.cameraButtons.overview);
-        cameraButtonsDiv.appendChild(this.cameraButtons.follow);
-        cameraPanel.appendChild(cameraButtonsDiv);
-
-        controlsDiv.appendChild(cameraPanel);
+        controlsDiv.appendChild(pauseBtn);
 
         this.container.appendChild(controlsDiv);
 
-        // Debug overlay (top-right)
+        // Camera mode buttons (top-left)
+        const cameraDiv = document.createElement('div');
+        cameraDiv.className = 'absolute top-3 left-3 flex gap-2 z-10';
+
+        const overviewIcon = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/></svg>`;
+        const followIcon = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>`;
+
+        this.cameraButtons.overview = document.createElement('button');
+        this.cameraButtons.overview.className = 'p-2 rounded-lg bg-dark-surface/80 border border-dark-border hover:border-accent-cyan hover:text-accent-cyan transition-colors text-gray-400';
+        this.cameraButtons.overview.title = 'Overview';
+        this.cameraButtons.overview.innerHTML = overviewIcon;
+        this.cameraButtons.overview.addEventListener('click', () => this.setCameraMode('overview'));
+        cameraDiv.appendChild(this.cameraButtons.overview);
+
+        this.cameraButtons.follow = document.createElement('button');
+        this.cameraButtons.follow.className = 'p-2 rounded-lg bg-dark-surface/80 border border-dark-border hover:border-accent-cyan hover:text-accent-cyan transition-colors text-gray-400';
+        this.cameraButtons.follow.title = 'Follow';
+        this.cameraButtons.follow.innerHTML = followIcon;
+        this.cameraButtons.follow.addEventListener('click', () => this.setCameraMode('follow'));
+        cameraDiv.appendChild(this.cameraButtons.follow);
+
+        this.container.appendChild(cameraDiv);
+
+        // Info overlay (top-right) - only speed and lap
         this.debugOverlay = document.createElement('div');
-        this.debugOverlay.style.cssText = `
-            position: absolute;
-            top: 16px;
-            right: 16px;
-            background: rgba(0, 0, 0, 0.85);
-            border: 1px solid rgba(0, 212, 255, 0.5);
-            border-radius: 8px;
-            padding: 12px;
-            font-family: monospace;
-            font-size: 11px;
-            color: #00d4ff;
-            max-width: 250px;
-            line-height: 1.4;
-        `;
+        this.debugOverlay.className = 'absolute top-3 right-3 bg-dark-surface/90 border border-dark-border rounded-lg px-4 py-3 font-mono text-sm text-accent-cyan z-10';
         this.container.appendChild(this.debugOverlay);
 
         // Highlight initial camera button
         this.updateCameraButtonStyles();
-
-        // "How it works" button (bottom-right)
-        const howItWorksBtn = document.createElement('button');
-        howItWorksBtn.innerHTML = `
-            <svg class="w-4 h-4" style="width: 16px; height: 16px; margin-right: 6px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-            <span>How it works</span>
-        `;
-        howItWorksBtn.style.cssText = `
-            position: absolute;
-            bottom: 16px;
-            right: 16px;
-            display: flex;
-            align-items: center;
-            padding: 8px 12px;
-            background: rgba(168, 85, 247, 0.1);
-            border: 1px solid rgba(168, 85, 247, 0.4);
-            border-radius: 8px;
-            color: #a855f7;
-            font-family: system-ui, sans-serif;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.2s;
-        `;
-        howItWorksBtn.addEventListener('mouseenter', () => {
-            howItWorksBtn.style.background = 'rgba(168, 85, 247, 0.2)';
-            howItWorksBtn.style.borderColor = '#a855f7';
-        });
-        howItWorksBtn.addEventListener('mouseleave', () => {
-            howItWorksBtn.style.background = 'rgba(168, 85, 247, 0.1)';
-            howItWorksBtn.style.borderColor = 'rgba(168, 85, 247, 0.4)';
-        });
-        howItWorksBtn.addEventListener('click', () => this.toggleHowItWorks());
-        this.container.appendChild(howItWorksBtn);
-
-        // Create "How it works" panel and overlay
-        this.createHowItWorksPanel();
-    }
-
-    private createHowItWorksPanel(): void {
-        // Overlay
-        this.howItWorksOverlay = document.createElement('div');
-        this.howItWorksOverlay.style.cssText = `
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.5);
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s;
-            z-index: 40;
-        `;
-        this.howItWorksOverlay.addEventListener('click', () => this.toggleHowItWorks());
-        document.body.appendChild(this.howItWorksOverlay);
-
-        // Panel
-        this.howItWorksPanel = document.createElement('div');
-        this.howItWorksPanel.style.cssText = `
-            position: fixed;
-            top: 0;
-            right: 0;
-            height: 100%;
-            width: 384px;
-            max-width: 90vw;
-            background: #0a0a0f;
-            border-left: 1px solid #1e1e2e;
-            transform: translateX(100%);
-            transition: transform 0.3s ease-in-out;
-            z-index: 50;
-            overflow-y: auto;
-        `;
-        this.howItWorksPanel.innerHTML = this.renderHowItWorksContent();
-        document.body.appendChild(this.howItWorksPanel);
-
-        // Close button handler
-        const closeBtn = this.howItWorksPanel.querySelector('#drone-how-close');
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => this.toggleHowItWorks());
-        }
-
-        // Escape key handler
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.showHowItWorks) {
-                this.toggleHowItWorks();
-            }
-        });
-    }
-
-    private renderHowItWorksContent(): string {
-        const cyan = '#00d4ff';
-        const purple = '#a855f7';
-        const yellow = '#facc15';
-        const darkBg = '#0a0a0f';
-
-        return `
-            <!-- Panel Header -->
-            <div style="position: sticky; top: 0; background: ${darkBg}; border-bottom: 1px solid #1e1e2e; padding: 16px; display: flex; align-items: center; justify-content: space-between;">
-                <h2 style="font-size: 18px; font-weight: 600; color: ${cyan}; margin: 0;">Drone Racing Demo</h2>
-                <button id="drone-how-close" style="padding: 4px; border-radius: 4px; background: none; border: none; color: #9ca3af; cursor: pointer;">
-                    <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
-            </div>
-
-            <!-- Panel Content -->
-            <div style="padding: 16px; font-family: system-ui, sans-serif;">
-                <!-- Overview -->
-                <div style="margin-bottom: 24px;">
-                    <h3 style="font-weight: 500; margin-bottom: 8px; color: white;">Overview</h3>
-                    <p style="color: #9ca3af; line-height: 1.6;">
-                        This demo showcases <strong style="color: white;">Model Predictive Control (MPC)</strong> for autonomous drone racing.
-                        A quadrotor follows various trajectories while an MPC controller computes optimal control inputs.
-                    </p>
-                    <p style="color: #6b7280; font-size: 14px; margin-top: 8px;">
-                        Work in progress - more details coming soon.
-                    </p>
-                </div>
-
-                <!-- MPC Controller -->
-                <div style="margin-bottom: 24px;">
-                    <h3 style="font-weight: 500; margin-bottom: 8px; color: white;">MPC Controller</h3>
-                    <p style="color: #9ca3af; margin-bottom: 12px;">
-                        Model Predictive Control optimizes future control inputs by predicting system behavior:
-                    </p>
-                    <div style="background: ${darkBg}; border-radius: 8px; padding: 12px; font-family: monospace; font-size: 14px;">
-                        <div style="color: #d1d5db;"><span style="color: ${cyan};">min</span> Σ (x - x<sub>ref</sub>)ᵀQ(x - x<sub>ref</sub>) + uᵀRu</div>
-                        <div style="color: #6b7280; font-size: 12px; margin-top: 8px;">subject to: dynamics, input constraints</div>
-                    </div>
-                </div>
-
-                <!-- Trajectories -->
-                <div style="margin-bottom: 24px;">
-                    <h3 style="font-weight: 500; margin-bottom: 8px; color: white;">Trajectories</h3>
-                    <p style="color: #9ca3af; margin-bottom: 12px;">
-                        Multiple trajectory types demonstrate different racing scenarios:
-                    </p>
-                    <div style="font-size: 14px; color: #9ca3af;">
-                        <div style="margin-bottom: 4px;"><span style="color: ${cyan};">●</span> Circle - Basic circular path</div>
-                        <div style="margin-bottom: 4px;"><span style="color: ${cyan};">●</span> Figure 8 - Smooth transitions</div>
-                        <div style="margin-bottom: 4px;"><span style="color: ${cyan};">●</span> Race Track - Multi-gate course</div>
-                        <div style="margin-bottom: 4px;"><span style="color: ${cyan};">●</span> Hairpin - Sharp turns</div>
-                        <div><span style="color: ${cyan};">●</span> 3D Racing - Vertical maneuvers</div>
-                    </div>
-                </div>
-
-                <!-- Dynamics -->
-                <div style="margin-bottom: 24px;">
-                    <h3 style="font-weight: 500; margin-bottom: 8px; color: white;">Quadrotor Dynamics</h3>
-                    <p style="color: #9ca3af; margin-bottom: 12px;">
-                        6-DOF rigid body model with rate control:
-                    </p>
-                    <div style="background: ${darkBg}; border-radius: 8px; padding: 12px; font-family: monospace; font-size: 13px;">
-                        <div style="color: #d1d5db;"><span style="color: ${purple};">Inputs:</span> thrust, roll rate, pitch rate, yaw rate</div>
-                        <div style="color: #d1d5db; margin-top: 4px;"><span style="color: ${purple};">State:</span> position (x,y,z), velocity, orientation</div>
-                    </div>
-                </div>
-
-                <!-- Controls -->
-                <div>
-                    <h3 style="font-weight: 500; margin-bottom: 8px; color: white;">Controls</h3>
-                    <div style="font-size: 14px; color: #9ca3af;">
-                        <div style="margin-bottom: 4px;"><span style="color: ${yellow};">Mouse drag</span> - Orbit camera</div>
-                        <div style="margin-bottom: 4px;"><span style="color: ${yellow};">Scroll</span> - Zoom in/out</div>
-                        <div style="margin-bottom: 4px;"><span style="color: ${yellow};">Reset</span> - Restart simulation</div>
-                        <div><span style="color: ${yellow};">Pause/Play</span> - Toggle simulation</div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    private toggleHowItWorks(): void {
-        this.showHowItWorks = !this.showHowItWorks;
-
-        if (this.howItWorksPanel && this.howItWorksOverlay) {
-            if (this.showHowItWorks) {
-                this.howItWorksPanel.style.transform = 'translateX(0)';
-                this.howItWorksOverlay.style.opacity = '1';
-                this.howItWorksOverlay.style.pointerEvents = 'auto';
-            } else {
-                this.howItWorksPanel.style.transform = 'translateX(100%)';
-                this.howItWorksOverlay.style.opacity = '0';
-                this.howItWorksOverlay.style.pointerEvents = 'none';
-            }
-        }
-    }
-
-    /**
-     * Create styled button
-     */
-    private createButton(text: string, onClick: () => void): HTMLButtonElement {
-        const btn = document.createElement('button');
-        btn.textContent = text;
-        btn.style.cssText = `
-            padding: 8px 16px;
-            background: rgba(10, 10, 15, 0.8);
-            border: 1px solid rgba(0, 212, 255, 0.5);
-            border-radius: 6px;
-            color: #00d4ff;
-            font-family: monospace;
-            font-size: 12px;
-            cursor: pointer;
-            transition: all 0.2s;
-        `;
-        btn.addEventListener('mouseenter', () => {
-            btn.style.background = 'rgba(0, 212, 255, 0.2)';
-        });
-        btn.addEventListener('mouseleave', () => {
-            btn.style.background = 'rgba(10, 10, 15, 0.8)';
-        });
-        btn.addEventListener('click', onClick);
-        return btn;
-    }
-
-    /**
-     * Create camera mode button
-     */
-    private createCameraButton(label: string, mode: 'overview' | 'follow'): HTMLButtonElement {
-        const btn = document.createElement('button');
-        btn.textContent = label;
-        btn.style.cssText = `
-            padding: 8px 12px;
-            background: rgba(10, 10, 15, 0.6);
-            border: 1px solid rgba(0, 212, 255, 0.3);
-            border-radius: 6px;
-            color: #00d4ff;
-            font-family: monospace;
-            font-size: 11px;
-            cursor: pointer;
-            transition: all 0.2s;
-        `;
-        btn.addEventListener('click', () => this.setCameraMode(mode));
-        return btn;
     }
 
     /**
@@ -519,11 +263,9 @@ export class DroneRacingDemo {
             if (!btn) continue;
 
             if (mode === this.cameraMode) {
-                btn.style.background = 'rgba(0, 212, 255, 0.3)';
-                btn.style.borderColor = 'rgba(0, 212, 255, 0.8)';
+                btn.className = 'p-2 rounded-lg bg-accent-cyan/20 border border-accent-cyan text-accent-cyan transition-colors';
             } else {
-                btn.style.background = 'rgba(10, 10, 15, 0.6)';
-                btn.style.borderColor = 'rgba(0, 212, 255, 0.3)';
+                btn.className = 'p-2 rounded-lg bg-dark-surface/80 border border-dark-border hover:border-accent-cyan hover:text-accent-cyan transition-colors text-gray-400';
             }
         }
     }
@@ -804,16 +546,10 @@ export class DroneRacingDemo {
      */
     private updateDebugOverlay(
         state: { position: { x: number; y: number; z: number }; velocity: { x: number; y: number; z: number } },
-        command: ControlCommand
+        _command: ControlCommand
     ): void {
         if (!this.debugOverlay) return;
 
-        const ref = this.trajectory.getWaypoint(this.simulationTime);
-        const posError = Math.sqrt(
-            (state.position.x - ref.position.x) ** 2 +
-            (state.position.y - ref.position.y) ** 2 +
-            (state.position.z - ref.position.z) ** 2
-        );
         const speed = Math.sqrt(
             state.velocity.x ** 2 +
             state.velocity.y ** 2 +
@@ -823,13 +559,8 @@ export class DroneRacingDemo {
         const lapProgress = ((this.simulationTime % period) / period * 100).toFixed(0);
 
         this.debugOverlay.innerHTML = `
-            <div style="margin-bottom: 8px; font-weight: bold;">${this.trajectory.getName()}</div>
-            <div><b>Time:</b> ${this.simulationTime.toFixed(2)}s</div>
-            <div><b>Lap:</b> ${lapProgress}%</div>
-            <div style="margin-top: 6px;"><b>Speed:</b> ${speed.toFixed(1)} m/s (${(speed * 3.6).toFixed(0)} km/h)</div>
-            <div><b>Tracking Error:</b> ${posError.toFixed(3)} m</div>
-            <div style="margin-top: 6px;"><b>Thrust:</b> ${command.thrust.toFixed(1)} m/s²</div>
-            <div><b>Rates:</b> (${command.rollRate.toFixed(1)}, ${command.pitchRate.toFixed(1)}, ${command.yawRate.toFixed(1)})</div>
+            <div><span class="text-gray-400">Speed</span> ${(speed * 3.6).toFixed(0)} km/h</div>
+            <div><span class="text-gray-400">Lap</span> ${lapProgress}%</div>
         `;
     }
 
@@ -872,14 +603,6 @@ export class DroneRacingDemo {
         // Dispose gate manager
         if (this.gateManager) {
             this.gateManager.dispose();
-        }
-
-        // Clean up "How it works" panel and overlay
-        if (this.howItWorksPanel && this.howItWorksPanel.parentNode) {
-            this.howItWorksPanel.parentNode.removeChild(this.howItWorksPanel);
-        }
-        if (this.howItWorksOverlay && this.howItWorksOverlay.parentNode) {
-            this.howItWorksOverlay.parentNode.removeChild(this.howItWorksOverlay);
         }
 
         while (this.scene.children.length > 0) {
