@@ -57,6 +57,12 @@ export class DroneRacingDemo {
     private lastFrameTime: number = 0;
     private animationFrameId: number = 0;
 
+    // Lap timing and gate tracking
+    private currentLapStartTime: number = 0;
+    private bestLapTime: number = Infinity;
+    private nextGateIndex: number = 0;
+    private lastDroneZ: number = 0;  // For gate crossing detection
+
     // Visibility-based pausing
     private isPaused: boolean = false;
     private visibilityManager: VisibilityManager | null = null;
@@ -172,26 +178,12 @@ export class DroneRacingDemo {
      * Setup UI elements
      */
     private setupUI(): void {
-        // Control buttons (bottom-right, same style as IBVS)
-        const controlsDiv = document.createElement('div');
-        controlsDiv.className = 'absolute bottom-3 right-3 flex gap-2 z-10';
-
-        // Reset button
-        const resetBtn = document.createElement('button');
-        resetBtn.className = 'p-2 rounded-lg bg-dark-surface/80 border border-dark-border hover:border-accent-cyan hover:text-accent-cyan transition-colors text-gray-400';
-        resetBtn.title = 'Reset';
-        resetBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-        </svg>`;
-        resetBtn.addEventListener('click', () => this.resetSimulation());
-        controlsDiv.appendChild(resetBtn);
-
-        // Pause button
+        // Pause button (bottom-right, positioned to left of the unified reset button from hero.html)
         const pauseIcon = `<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`;
         const playIcon = `<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>`;
 
         const pauseBtn = document.createElement('button');
-        pauseBtn.className = 'p-2 rounded-lg bg-dark-surface/80 border border-dark-border hover:border-accent-cyan hover:text-accent-cyan transition-colors text-gray-400';
+        pauseBtn.className = 'absolute bottom-3 right-14 p-2 rounded-lg bg-dark-surface/80 border border-dark-border hover:border-accent-cyan hover:text-accent-cyan transition-colors text-gray-400 z-10';
         pauseBtn.title = 'Pause';
         pauseBtn.innerHTML = pauseIcon;
         pauseBtn.addEventListener('click', () => {
@@ -199,9 +191,7 @@ export class DroneRacingDemo {
             pauseBtn.innerHTML = this.isRunning ? pauseIcon : playIcon;
             pauseBtn.title = this.isRunning ? 'Pause' : 'Play';
         });
-        controlsDiv.appendChild(pauseBtn);
-
-        this.container.appendChild(controlsDiv);
+        this.container.appendChild(pauseBtn);
 
         // Camera mode buttons (top-left)
         const cameraDiv = document.createElement('div');
@@ -364,11 +354,13 @@ export class DroneRacingDemo {
 
         const material = new THREE.LineBasicMaterial({
             color: 0x22c55e,
-            opacity: 0.8,
+            opacity: 0.6,
             transparent: true,
+            depthWrite: false,  // Prevents z-fighting glitches
         });
 
         this.droneTrail = new THREE.Line(geometry, material);
+        this.droneTrail.renderOrder = 1;  // Render after other objects
         this.scene.add(this.droneTrail);
     }
 
@@ -401,10 +393,15 @@ export class DroneRacingDemo {
     /**
      * Reset simulation
      */
-    private resetSimulation(): void {
+    public resetSimulation(): void {
         this.simulationTime = 0;
         this.mpc.reset();
         this.trailPositions = [];
+
+        // Reset lap timing and gate tracking (keep best lap time)
+        this.currentLapStartTime = 0;
+        this.nextGateIndex = 0;
+        this.lastDroneZ = 0;
 
         // Reset gate states
         if (this.gateManager) {
@@ -540,11 +537,71 @@ export class DroneRacingDemo {
         // Update trail
         this.updateDroneTrail();
 
+        // Check gate crossing
+        this.checkGateCrossing(droneState.position);
+
         // Update time
         this.simulationTime += dt;
 
         // Update debug overlay
         this.updateDebugOverlay(droneState, command);
+    }
+
+    /**
+     * Check if drone has crossed through a gate
+     */
+    private checkGateCrossing(dronePos: { x: number; y: number; z: number }): void {
+        const gatePositions = this.trajectory.getGatePositions();
+        if (gatePositions.length === 0 || !this.gateManager) return;
+
+        const nextGate = gatePositions[this.nextGateIndex];
+        if (!nextGate) return;
+
+        // Simple gate crossing detection: check if drone passed the gate's Z plane
+        // (works for gates oriented along Z axis)
+        const gateZ = nextGate.position.z;
+        const gateX = nextGate.position.x;
+        const gateY = nextGate.position.y;
+
+        // Check if drone crossed the gate plane (Z coordinate)
+        const crossedZ = (this.lastDroneZ < gateZ && dronePos.z >= gateZ) ||
+                         (this.lastDroneZ > gateZ && dronePos.z <= gateZ);
+
+        if (crossedZ) {
+            // Check if drone is within gate bounds (approximately)
+            const dx = Math.abs(dronePos.x - gateX);
+            const dy = Math.abs(dronePos.y - gateY);
+            const gateHalfWidth = 2.0;  // Half of 3m gate + some tolerance
+            const gateHalfHeight = 2.0;
+
+            if (dx < gateHalfWidth && dy < gateHalfHeight) {
+                // Passed through gate!
+                this.gateManager.markGatePassed(this.nextGateIndex);
+
+                // Move to next gate
+                this.nextGateIndex++;
+
+                // Check if completed a lap
+                if (this.nextGateIndex >= gatePositions.length) {
+                    // Completed lap!
+                    const lapTime = this.simulationTime - this.currentLapStartTime;
+
+                    // Only record if we've been running for at least a few seconds
+                    if (this.currentLapStartTime > 0 && lapTime > 1.0) {
+                        if (lapTime < this.bestLapTime) {
+                            this.bestLapTime = lapTime;
+                        }
+                    }
+
+                    // Reset for next lap
+                    this.nextGateIndex = 0;
+                    this.currentLapStartTime = this.simulationTime;
+                    this.gateManager.resetGates();
+                }
+            }
+        }
+
+        this.lastDroneZ = dronePos.z;
     }
 
     /**
@@ -561,13 +618,13 @@ export class DroneRacingDemo {
             state.velocity.y ** 2 +
             state.velocity.z ** 2
         );
-        const period = this.trajectory.getPeriod();
-        const lapTime = this.simulationTime % period;
-        const lapTimeStr = lapTime.toFixed(1);
+        const currentLapTime = this.simulationTime - this.currentLapStartTime;
+        const bestLapStr = this.bestLapTime < Infinity ? `${this.bestLapTime.toFixed(1)}s` : '--';
 
         this.debugOverlay.innerHTML = `
             <div><span class="text-gray-400">Speed</span> ${(speed * 3.6).toFixed(0)} km/h</div>
-            <div><span class="text-gray-400">Lap</span> ${lapTimeStr}s</div>
+            <div><span class="text-gray-400">Lap</span> ${currentLapTime.toFixed(1)}s</div>
+            <div><span class="text-gray-400">Best</span> ${bestLapStr}</div>
         `;
     }
 

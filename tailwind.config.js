@@ -23,6 +23,8 @@ module.exports = {
     'text-gray-400',
     'font-mono',
     'text-sm',
+    'right-14',
+    'bottom-3',
   ],
   theme: {
     extend: {
