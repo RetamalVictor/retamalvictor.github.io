@@ -86,6 +86,78 @@ export const DEFAULT_CONFIG: RacingConfig = {
 };
 
 // ============================================
+// Demo Configuration (DroneRacingDemo)
+// ============================================
+
+export interface SimulationConfig {
+    defaultSpeed: number;       // Default trajectory speed (m/s)
+    defaultHeight: number;      // Default flight height (m)
+}
+
+export interface TrailConfig {
+    maxLength: number;          // Maximum trail points
+    color: number;              // Trail color (hex)
+    opacity: number;            // Trail opacity (0-1)
+}
+
+export interface GateToleranceConfig {
+    halfWidth: number;          // Half-width for crossing detection (m)
+    halfHeight: number;         // Half-height for crossing detection (m)
+}
+
+export interface DroneRacingDemoConfig {
+    simulation: SimulationConfig;
+    trail: TrailConfig;
+    gateTolerance: GateToleranceConfig;
+    showTrajectoryLine: boolean; // Debug: show trajectory path
+}
+
+export const DEFAULT_DEMO_CONFIG: DroneRacingDemoConfig = {
+    simulation: {
+        defaultSpeed: 18.0,     // 18 m/s (~65 km/h)
+        defaultHeight: 4.0,     // 4 meters
+    },
+    trail: {
+        maxLength: 1000,        // 1000 points max
+        color: 0x22c55e,        // Green
+        opacity: 0.6,
+    },
+    gateTolerance: {
+        halfWidth: 2.0,         // 2m (for 3m wide gate)
+        halfHeight: 2.0,        // 2m (for 3m tall gate)
+    },
+    showTrajectoryLine: false,  // Hidden by default
+};
+
+// ============================================
+// MPC State Indices (for type-safe array access)
+// ============================================
+
+export enum MPCStateIndex {
+    PX = 0,
+    PY = 1,
+    PZ = 2,
+    VX = 3,
+    VY = 4,
+    VZ = 5,
+    QW = 6,
+    QX = 7,
+    QY = 8,
+    QZ = 9,
+}
+
+export enum MPCInputIndex {
+    THRUST = 0,
+    ROLL_RATE = 1,
+    PITCH_RATE = 2,
+    YAW_RATE = 3,
+}
+
+// State and input dimensions
+export const MPC_STATE_DIM = 10;
+export const MPC_INPUT_DIM = 4;
+
+// ============================================
 // Racing Gates
 // ============================================
 

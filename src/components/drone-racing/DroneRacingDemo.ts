@@ -4,7 +4,6 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 // Core components
 import { RacingDrone } from './core/RacingDrone';
 import { MPC } from './control/MPC';
-import { ControlCommand } from './types';
 
 // Trajectory system
 import {
@@ -17,6 +16,7 @@ import { GateManager } from './visualization/GateVisualization';
 
 // Utilities
 import { VisibilityManager } from '../../utils/VisibilityManager';
+
 
 /**
  * Drone Racing Demo
@@ -61,7 +61,7 @@ export class DroneRacingDemo {
     private currentLapStartTime: number = 0;
     private bestLapTime: number = Infinity;
     private nextGateIndex: number = 0;
-    private lastDroneZ: number = 0;  // For gate crossing detection
+    private lastDroneZ: number = 0;
 
     // Visibility-based pausing
     private isPaused: boolean = false;
@@ -361,6 +361,7 @@ export class DroneRacingDemo {
 
         this.droneTrail = new THREE.Line(geometry, material);
         this.droneTrail.renderOrder = 1;  // Render after other objects
+        this.droneTrail.frustumCulled = false;  // Prevent disappearing when camera moves
         this.scene.add(this.droneTrail);
     }
 
@@ -403,7 +404,7 @@ export class DroneRacingDemo {
         this.nextGateIndex = 0;
         this.lastDroneZ = 0;
 
-        // Reset gate states
+        // Reset gate visualization
         if (this.gateManager) {
             this.gateManager.resetGates();
         }
@@ -544,7 +545,7 @@ export class DroneRacingDemo {
         this.simulationTime += dt;
 
         // Update debug overlay
-        this.updateDebugOverlay(droneState, command);
+        this.updateDebugOverlay(droneState);
     }
 
     /**
@@ -557,45 +558,36 @@ export class DroneRacingDemo {
         const nextGate = gatePositions[this.nextGateIndex];
         if (!nextGate) return;
 
-        // Simple gate crossing detection: check if drone passed the gate's Z plane
-        // (works for gates oriented along Z axis)
         const gateZ = nextGate.position.z;
         const gateX = nextGate.position.x;
         const gateY = nextGate.position.y;
 
-        // Check if drone crossed the gate plane (Z coordinate)
+        // Check if drone crossed the gate plane
         const crossedZ = (this.lastDroneZ < gateZ && dronePos.z >= gateZ) ||
                          (this.lastDroneZ > gateZ && dronePos.z <= gateZ);
 
         if (crossedZ) {
-            // Check if drone is within gate bounds (approximately)
             const dx = Math.abs(dronePos.x - gateX);
             const dy = Math.abs(dronePos.y - gateY);
-            const gateHalfWidth = 2.0;  // Half of 3m gate + some tolerance
+            const gateHalfWidth = 2.0;
             const gateHalfHeight = 2.0;
 
             if (dx < gateHalfWidth && dy < gateHalfHeight) {
-                // Passed through gate!
                 this.gateManager.markGatePassed(this.nextGateIndex);
-
-                // Move to next gate
                 this.nextGateIndex++;
 
-                // Check if completed a lap
                 if (this.nextGateIndex >= gatePositions.length) {
-                    // Completed lap!
+                    // Lap completed - measure from last gate to last gate
                     const lapTime = this.simulationTime - this.currentLapStartTime;
 
-                    // Only record if we've been running for at least a few seconds
-                    if (this.currentLapStartTime > 0 && lapTime > 1.0) {
-                        if (lapTime < this.bestLapTime) {
-                            this.bestLapTime = lapTime;
-                        }
+                    // Record if valid (skip first lap where currentLapStartTime was 0)
+                    if (this.currentLapStartTime > 0 && lapTime > 1.0 && lapTime < this.bestLapTime) {
+                        this.bestLapTime = lapTime;
                     }
 
-                    // Reset for next lap
-                    this.nextGateIndex = 0;
+                    // Start timer for next lap from this moment
                     this.currentLapStartTime = this.simulationTime;
+                    this.nextGateIndex = 0;
                     this.gateManager.resetGates();
                 }
             }
@@ -608,8 +600,7 @@ export class DroneRacingDemo {
      * Update debug overlay
      */
     private updateDebugOverlay(
-        state: { position: { x: number; y: number; z: number }; velocity: { x: number; y: number; z: number } },
-        _command: ControlCommand
+        state: { velocity: { x: number; y: number; z: number } }
     ): void {
         if (!this.debugOverlay) return;
 

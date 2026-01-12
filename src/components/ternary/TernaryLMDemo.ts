@@ -112,9 +112,9 @@ export class TernaryLMDemo {
         if (this.isDestroyed) return;
 
         this.container.innerHTML = `
-            <div class="bg-[#12121a] rounded-lg border border-gray-700/50 overflow-hidden shadow-xl">
+            <div class="bg-[#12121a] rounded-lg border border-gray-700/50 overflow-hidden shadow-xl h-full flex flex-col">
                 <!-- Header -->
-                <div class="px-4 py-3 border-b border-gray-700/50 flex items-center justify-between bg-[#0a0a0f]">
+                <div class="px-4 py-2 border-b border-gray-700/50 flex items-center justify-between bg-[#0a0a0f] flex-shrink-0">
                     <div class="flex items-center gap-2">
                         <span class="text-[#00d4ff] text-sm">●</span>
                         <span class="text-sm font-medium text-gray-300">${this.isTransformer ? 'Ternary Transformer' : 'Ternary LM Demo'}</span>
@@ -144,8 +144,8 @@ export class TernaryLMDemo {
                 </div>
 
                 <!-- Input Area -->
-                <div class="p-4">
-                    <div class="flex gap-2 mb-4">
+                <div class="p-3 flex-shrink-0">
+                    <div class="flex gap-2 mb-3">
                         <input
                             type="text"
                             id="prompt-input"
@@ -179,8 +179,8 @@ export class TernaryLMDemo {
                     </div>
 
                     <!-- Output Display -->
-                    <div class="font-mono text-sm bg-[#0a0a0f] p-4 rounded border border-gray-700/50
-                                min-h-[120px] max-h-[200px] overflow-y-auto">
+                    <div class="font-mono text-xs bg-[#0a0a0f] p-3 rounded border border-gray-700/50
+                                min-h-[60px] max-h-[100px] overflow-y-auto">
                         <span class="text-gray-500">${this.escapeHtml(this.state.prompt)}</span><span
                             class="text-[#a855f7]"
                             id="generated-output"
@@ -190,11 +190,14 @@ export class TernaryLMDemo {
                     </div>
                 </div>
 
-                <!-- Stats Bar -->
-                ${this.state.stats ? this.renderStatsBar() : this.renderLoadingStats()}
+                <!-- Scrollable area for Stats + Under the Hood -->
+                <div class="flex-1 overflow-y-auto min-h-0">
+                    <!-- Stats Bar -->
+                    ${this.state.stats ? this.renderStatsBar() : this.renderLoadingStats()}
 
-                <!-- Under the Hood Panel -->
-                ${this.state.showUnderTheHood ? this.renderUnderTheHood() : ''}
+                    <!-- Under the Hood Panel -->
+                    ${this.state.showUnderTheHood ? this.renderUnderTheHood() : ''}
+                </div>
             </div>
 
             <!-- How It Works Panel (slides in from right) -->
@@ -229,8 +232,8 @@ export class TernaryLMDemo {
         const memStats = this.engine?.getMemoryStats();
 
         return `
-            <div class="px-4 py-2 bg-[#0a0a0f]/50 border-t border-gray-700/50
-                        flex items-center gap-4 text-xs text-gray-400">
+            <div class="px-3 py-1.5 bg-[#0a0a0f]/50 border-t border-gray-700/50
+                        flex items-center gap-3 text-xs text-gray-400 flex-shrink-0">
                 <span>
                     <span class="text-[#00d4ff] font-medium">${stats.tokensPerSecond.toFixed(1)}</span>
                     tok/s
@@ -257,8 +260,8 @@ export class TernaryLMDemo {
     private renderLoadingStats(): string {
         if (this.state.status === 'loading') {
             return `
-                <div class="px-4 py-2 bg-[#0a0a0f]/50 border-t border-gray-700/50
-                            flex items-center gap-2 text-xs text-gray-500">
+                <div class="px-3 py-1.5 bg-[#0a0a0f]/50 border-t border-gray-700/50
+                            flex items-center gap-2 text-xs text-gray-500 flex-shrink-0">
                     <div class="w-4 h-4 border-2 border-gray-700 border-t-[#00d4ff] rounded-full animate-spin"></div>
                     <span>Loading model...</span>
                 </div>
@@ -286,10 +289,10 @@ export class TernaryLMDemo {
 
         return `
             <div class="border-t border-gray-700/50 bg-[#0a0a0f]/30">
-                <div class="p-4 grid grid-cols-2 gap-4 text-sm">
+                <div class="p-3 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                     <!-- Memory Savings -->
-                    <div class="bg-[#0a0a0f] rounded-lg p-4 border border-gray-700/30">
-                        <div class="text-gray-400 text-xs mb-3 font-medium uppercase tracking-wide">
+                    <div class="bg-[#0a0a0f] rounded-lg p-3 border border-gray-700/30">
+                        <div class="text-gray-400 text-xs mb-2 font-medium uppercase tracking-wide">
                             Memory Footprint
                         </div>
                         <div class="space-y-2">
@@ -322,8 +325,8 @@ export class TernaryLMDemo {
                     </div>
 
                     <!-- Architecture Info -->
-                    <div class="bg-[#0a0a0f] rounded-lg p-4 border border-gray-700/30">
-                        <div class="text-gray-400 text-xs mb-3 font-medium uppercase tracking-wide">
+                    <div class="bg-[#0a0a0f] rounded-lg p-3 border border-gray-700/30">
+                        <div class="text-gray-400 text-xs mb-2 font-medium uppercase tracking-wide">
                             ${this.isTransformer ? 'Transformer Architecture' : 'Model Architecture'}
                         </div>
                         <div class="space-y-2 text-xs">
@@ -360,7 +363,7 @@ export class TernaryLMDemo {
                 </div>
 
                 <!-- Technical Note -->
-                <div class="px-4 pb-4 text-xs text-gray-500">
+                <div class="px-3 pb-3 text-xs text-gray-500">
                     Running entirely in your browser using
                     ${this.usingCPU
                         ? '<span class="text-yellow-400">JavaScript (CPU fallback)</span>'

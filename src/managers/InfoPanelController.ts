@@ -241,66 +241,242 @@ export const INFO_PANEL_CONTENT: Record<DemoType, InfoPanelContent> = {
         `
     },
     'drone-racing': {
-        title: 'Drone Racing Demo',
+        title: 'Drone Racing MPC',
         content: `
             <!-- Overview -->
             <div class="info-section">
                 <h3 class="text-accent-purple font-medium mb-2">Overview</h3>
                 <p class="text-gray-400 leading-relaxed">
-                    This demo showcases <strong class="text-white">Model Predictive Control (MPC)</strong> for autonomous drone racing.
-                    A quadrotor follows a racing trajectory while an MPC controller computes optimal control inputs in real-time.
+                    This demo implements <strong class="text-white">Model Predictive Control (MPC)</strong> for autonomous drone racing
+                    using <strong class="text-white">Sequential Quadratic Programming (SQP)</strong>. The controller predicts 500ms into the future
+                    and optimizes thrust and angular rate commands in real-time.
+                </p>
+                <p class="text-gray-500 text-xs mt-2">
+                    Coordinate system: <strong class="text-gray-400">Y-up</strong> (Three.js convention)
                 </p>
             </div>
 
-            <!-- MPC Controller -->
+            <!-- System Model -->
             <div class="info-section">
-                <h3 class="text-accent-purple font-medium mb-2">MPC Controller</h3>
-                <p class="text-gray-400 mb-3">
-                    Model Predictive Control optimizes future control inputs by predicting system behavior:
-                </p>
-                <div class="bg-dark-bg rounded-lg p-3 font-mono text-xs space-y-2">
-                    <div class="text-gray-300">
-                        <span class="text-accent-cyan">min</span> Σ (x - x<sub>ref</sub>)ᵀQ(x - x<sub>ref</sub>) + uᵀRu
-                    </div>
-                    <div class="text-gray-500 text-xs mt-2">subject to: dynamics, input constraints</div>
-                </div>
-            </div>
-
-            <!-- Quadrotor Dynamics -->
-            <div class="info-section">
-                <h3 class="text-accent-purple font-medium mb-2">Quadrotor Dynamics</h3>
-                <p class="text-gray-400 mb-3">
-                    6-DOF rigid body model with rate control:
+                <h3 class="text-accent-purple font-medium mb-2">1. System Model</h3>
+                <p class="text-gray-400 mb-2">
+                    <strong class="text-white">State Vector</strong> (14-dimensional):
                 </p>
                 <div class="bg-dark-bg rounded-lg p-3 font-mono text-xs space-y-1">
                     <div class="text-gray-300">
-                        <span class="text-accent-purple">Inputs:</span> thrust, roll rate, pitch rate, yaw rate
+                        <span class="text-accent-cyan">x</span> = [p<sub>x</sub>, p<sub>y</sub>, p<sub>z</sub>, <span class="text-gray-500">// position</span>
                     </div>
+                    <div class="text-gray-300 pl-4">
+                        v<sub>x</sub>, v<sub>y</sub>, v<sub>z</sub>, <span class="text-gray-500">// velocity</span>
+                    </div>
+                    <div class="text-gray-300 pl-4">
+                        q<sub>w</sub>, q<sub>x</sub>, q<sub>y</sub>, q<sub>z</sub>, <span class="text-gray-500">// quaternion</span>
+                    </div>
+                    <div class="text-gray-300 pl-4">
+                        T, ω<sub>r</sub>, ω<sub>p</sub>, ω<sub>y</sub>] <span class="text-gray-500">// actuators</span>
+                    </div>
+                </div>
+                <p class="text-gray-400 mt-3 mb-2">
+                    <strong class="text-white">Input Vector</strong> (4-dimensional):
+                </p>
+                <div class="bg-dark-bg rounded-lg p-3 font-mono text-xs">
                     <div class="text-gray-300">
-                        <span class="text-accent-purple">State:</span> position (x,y,z), velocity, orientation
+                        <span class="text-yellow-400">u</span> = [T<sub>cmd</sub>, ω<sub>r,cmd</sub>, ω<sub>p,cmd</sub>, ω<sub>y,cmd</sub>]
                     </div>
                 </div>
             </div>
 
-            <!-- Track -->
+            <!-- Continuous Dynamics -->
             <div class="info-section">
-                <h3 class="text-accent-purple font-medium mb-2">Racing Track</h3>
-                <p class="text-gray-400 mb-3">
-                    The track features a power loop maneuver with stacked gates:
+                <h3 class="text-accent-purple font-medium mb-2">2. Continuous Dynamics</h3>
+                <p class="text-gray-400 mb-2">
+                    <strong class="text-white">Position:</strong> ṗ = v
+                </p>
+                <p class="text-gray-400 mb-2">
+                    <strong class="text-white">Velocity</strong> (with drag):
+                </p>
+                <div class="bg-dark-bg rounded-lg p-3 font-mono text-xs">
+                    <div class="text-gray-300">
+                        v̇ = (1/m)·<span class="text-accent-cyan">R(q)</span>·[0, T, 0]ᵀ - [0, g, 0]ᵀ - c<sub>d</sub>·v
+                    </div>
+                </div>
+                <p class="text-gray-400 mt-3 mb-2">
+                    <strong class="text-white">Quaternion kinematics:</strong>
+                </p>
+                <div class="bg-dark-bg rounded-lg p-3 font-mono text-xs space-y-1">
+                    <div class="text-gray-300">q̇ = ½ · q ⊗ [0, ω<sub>body</sub>]</div>
+                    <div class="text-gray-500 mt-2">// Full quaternion product expansion:</div>
+                    <div class="text-gray-300">q̇<sub>w</sub> = -½(q<sub>x</sub>ω<sub>x</sub> + q<sub>y</sub>ω<sub>y</sub> + q<sub>z</sub>ω<sub>z</sub>)</div>
+                    <div class="text-gray-300">q̇<sub>x</sub> = ½(q<sub>w</sub>ω<sub>x</sub> + q<sub>y</sub>ω<sub>z</sub> - q<sub>z</sub>ω<sub>y</sub>)</div>
+                    <div class="text-gray-300">q̇<sub>y</sub> = ½(q<sub>w</sub>ω<sub>y</sub> + q<sub>z</sub>ω<sub>x</sub> - q<sub>x</sub>ω<sub>z</sub>)</div>
+                    <div class="text-gray-300">q̇<sub>z</sub> = ½(q<sub>w</sub>ω<sub>z</sub> + q<sub>x</sub>ω<sub>y</sub> - q<sub>y</sub>ω<sub>x</sub>)</div>
+                </div>
+                <p class="text-gray-400 mt-3 mb-2">
+                    <strong class="text-white">Actuator dynamics</strong> (first-order):
+                </p>
+                <div class="bg-dark-bg rounded-lg p-3 font-mono text-xs">
+                    <div class="text-gray-300">Ṫ = (T<sub>cmd</sub> - T) / <span class="text-yellow-400">τ<sub>T</sub></span></div>
+                    <div class="text-gray-300">ω̇ = (ω<sub>cmd</sub> - ω) / <span class="text-yellow-400">τ<sub>ω</sub></span></div>
+                    <div class="text-gray-500 mt-1">τ<sub>T</sub> = 40ms, τ<sub>ω</sub> = 30ms</div>
+                </div>
+            </div>
+
+            <!-- MPC Formulation -->
+            <div class="info-section">
+                <h3 class="text-accent-purple font-medium mb-2">3. MPC Formulation</h3>
+                <p class="text-gray-400 mb-2">
+                    Optimal control problem solved at each timestep:
+                </p>
+                <div class="bg-dark-bg rounded-lg p-3 font-mono text-xs space-y-2">
+                    <div class="text-gray-300">
+                        <span class="text-accent-cyan">min</span> Σ<sub>k=0</sub><sup>N-1</sup> ‖x<sub>k</sub> - x<sub>k</sub><sup>ref</sup>‖<sub>Q</sub>² + ‖u<sub>k</sub> - u<sub>k</sub><sup>ref</sup>‖<sub>R</sub>²
+                    </div>
+                    <div class="text-gray-500 text-xs">+ terminal cost ‖x<sub>N</sub> - x<sub>N</sub><sup>ref</sup>‖<sub>Q<sub>f</sub></sub>²</div>
+                </div>
+                <p class="text-gray-500 text-xs mt-2">
+                    u<sup>ref</sup> from feedforward (hover thrust + trajectory acceleration)
+                </p>
+                <p class="text-gray-400 mt-3 mb-2">
+                    <strong class="text-white">Subject to:</strong>
+                </p>
+                <div class="bg-dark-bg rounded-lg p-3 text-xs space-y-1">
+                    <div class="text-gray-300">• x<sub>k+1</sub> = F(x<sub>k</sub>, u<sub>k</sub>, Δt) <span class="text-gray-500">// discrete dynamics</span></div>
+                    <div class="text-gray-300">• x<sub>0</sub> = x<sub>current</sub> <span class="text-gray-500">// initial condition</span></div>
+                    <div class="text-gray-300">• u<sub>min</sub> ≤ u<sub>k</sub> ≤ u<sub>max</sub> <span class="text-gray-500">// box constraints</span></div>
+                </div>
+            </div>
+
+            <!-- Configuration -->
+            <div class="info-section">
+                <h3 class="text-accent-purple font-medium mb-2">4. MPC Configuration</h3>
+                <div class="bg-dark-bg rounded-lg p-3 text-xs space-y-1">
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Horizon</span>
+                        <span class="text-white font-mono">N=10 × 50ms = 500ms</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Position weight Q<sub>p</sub></span>
+                        <span class="text-white font-mono">400</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Velocity weight Q<sub>v</sub></span>
+                        <span class="text-white font-mono">0.1</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Attitude weight Q<sub>θ</sub></span>
+                        <span class="text-white font-mono">5</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Input weight R</span>
+                        <span class="text-white font-mono">0.1 · I<sub>4</sub></span>
+                    </div>
+                </div>
+                <p class="text-gray-400 mt-3 mb-2">
+                    <strong class="text-white">Input Bounds:</strong>
                 </p>
                 <div class="bg-dark-bg rounded-lg p-3 text-xs space-y-1">
                     <div class="flex justify-between">
-                        <span class="text-gray-400">Track type</span>
-                        <span class="text-white font-mono">Power Loop</span>
+                        <span class="text-gray-400">Thrust</span>
+                        <span class="text-white font-mono">[0, 50] m/s² <span class="text-gray-500">(5:1 T/W)</span></span>
                     </div>
                     <div class="flex justify-between">
-                        <span class="text-gray-400">Gates</span>
-                        <span class="text-white font-mono">4 (2 stacked pairs)</span>
+                        <span class="text-gray-400">Roll/Pitch rate</span>
+                        <span class="text-white font-mono">±20 rad/s</span>
                     </div>
                     <div class="flex justify-between">
-                        <span class="text-gray-400">Target speed</span>
-                        <span class="text-white font-mono">18 m/s</span>
+                        <span class="text-gray-400">Yaw rate</span>
+                        <span class="text-white font-mono">±10 rad/s</span>
                     </div>
+                </div>
+            </div>
+
+            <!-- SQP -->
+            <div class="info-section">
+                <h3 class="text-accent-purple font-medium mb-2">5. Sequential Quadratic Programming</h3>
+                <p class="text-gray-400 mb-2">
+                    Linearize discrete dynamics at operating point (x̄<sub>k</sub>, ū<sub>k</sub>):
+                </p>
+                <div class="bg-dark-bg rounded-lg p-3 font-mono text-xs space-y-1">
+                    <div class="text-gray-300">x<sub>k+1</sub> ≈ <span class="text-accent-cyan">A</span><sub>k</sub>x<sub>k</sub> + <span class="text-yellow-400">B</span><sub>k</sub>u<sub>k</sub> + c<sub>k</sub></div>
+                    <div class="text-gray-500 mt-2">// Jacobians via finite differences (ε = 10⁻⁶)</div>
+                    <div class="text-gray-300 mt-1"><span class="text-accent-cyan">A</span> = ∂F/∂x <span class="text-gray-500">(14×14)</span></div>
+                    <div class="text-gray-300"><span class="text-yellow-400">B</span> = ∂F/∂u <span class="text-gray-500">(14×4)</span></div>
+                </div>
+                <p class="text-gray-400 mt-3 mb-2">
+                    <strong class="text-white">Condensed QP formulation</strong> eliminates states:
+                </p>
+                <div class="bg-dark-bg rounded-lg p-3 font-mono text-xs">
+                    <div class="text-gray-300">x<sub>k</sub> = Φ<sub>k</sub>x<sub>0</sub> + Ψ<sub>k</sub>ΔU + d<sub>k</sub></div>
+                    <div class="text-gray-500 mt-1">ΔU ∈ ℝ<sup>N·n<sub>u</sub></sup> = ℝ<sup>40</sup></div>
+                </div>
+            </div>
+
+            <!-- QP Solver -->
+            <div class="info-section">
+                <h3 class="text-accent-purple font-medium mb-2">6. QP Solver</h3>
+                <p class="text-gray-400 mb-2">
+                    <strong class="text-white">Projected Gradient with Nesterov Acceleration:</strong>
+                </p>
+                <div class="bg-dark-bg rounded-lg p-3 font-mono text-xs space-y-1">
+                    <div class="text-gray-300">
+                        <span class="text-accent-cyan">min</span> ½ΔUᵀHΔU + gᵀΔU
+                    </div>
+                    <div class="text-gray-300">s.t. lb ≤ ΔU ≤ ub</div>
+                </div>
+                <p class="text-gray-400 mt-3 mb-2">
+                    Algorithm per iteration:
+                </p>
+                <div class="bg-dark-bg rounded-lg p-3 font-mono text-xs space-y-1">
+                    <div class="text-gray-300">1. ∇f = H·y + g</div>
+                    <div class="text-gray-300">2. x̃ = y - α·∇f</div>
+                    <div class="text-gray-300">3. x<sup>k+1</sup> = Π<sub>[lb,ub]</sub>(x̃)</div>
+                    <div class="text-gray-300">4. β = (t<sub>k</sub>-1)/t<sub>k+1</sub> <span class="text-gray-500">// momentum</span></div>
+                    <div class="text-gray-300">5. y = x<sup>k+1</sup> + β(x<sup>k+1</sup> - x<sup>k</sup>)</div>
+                </div>
+                <p class="text-gray-500 text-xs mt-2">
+                    Step size α = 1/λ<sub>max</sub> via Gershgorin circles. QP dim: 40×40.
+                </p>
+            </div>
+
+            <!-- Pipeline -->
+            <div class="info-section">
+                <h3 class="text-accent-purple font-medium mb-2">7. Control Pipeline</h3>
+                <div class="bg-dark-bg rounded-lg p-3 font-mono text-xs space-y-2">
+                    <div class="text-accent-cyan">// ~60Hz control loop</div>
+                    <div class="text-gray-300">1. Sample trajectory waypoints</div>
+                    <div class="text-gray-300">2. Compute feedforward (accel → quat)</div>
+                    <div class="text-gray-300">3. Initialize trajectory rollout</div>
+                    <div class="text-gray-300">4. <span class="text-yellow-400">SQP iteration:</span></div>
+                    <div class="text-gray-300 pl-4">a. Linearize dynamics</div>
+                    <div class="text-gray-300 pl-4">b. Build condensed QP (Ψ matrices)</div>
+                    <div class="text-gray-300 pl-4">c. Solve via projected gradient</div>
+                    <div class="text-gray-300 pl-4">d. Update trajectory</div>
+                    <div class="text-gray-300">5. Extract u<sub>0</sub> = u<sub>nom</sub> + Δu<sub>0</sub></div>
+                    <div class="text-gray-300">6. Apply to drone dynamics</div>
+                </div>
+            </div>
+
+            <!-- Improvement Opportunities -->
+            <div class="info-section">
+                <h3 class="text-accent-purple font-medium mb-2">8. Potential Improvements</h3>
+                <div class="bg-dark-bg rounded-lg p-3 text-xs space-y-2">
+                    <div class="flex justify-between items-start">
+                        <span class="text-yellow-400">Numerical Jacobians</span>
+                        <span class="text-gray-400 text-right">56 evals/linearization</span>
+                    </div>
+                    <div class="text-gray-500 text-xs">→ Analytical Jacobians: 5-10× speedup</div>
+
+                    <div class="flex justify-between items-start mt-2">
+                        <span class="text-yellow-400">Projected Gradient</span>
+                        <span class="text-gray-400 text-right">~50 iterations</span>
+                    </div>
+                    <div class="text-gray-500 text-xs">→ OSQP/qpOASES: 5-20 iterations</div>
+
+                    <div class="flex justify-between items-start mt-2">
+                        <span class="text-yellow-400">Warm-start disabled</span>
+                        <span class="text-gray-400 text-right">circular issues</span>
+                    </div>
+                    <div class="text-gray-500 text-xs">→ Fix for faster convergence</div>
                 </div>
             </div>
 
@@ -323,12 +499,36 @@ export const INFO_PANEL_CONTENT: Record<DemoType, InfoPanelContent> = {
                 </div>
             </div>
 
+            <!-- Code References -->
+            <div class="info-section">
+                <h3 class="text-accent-purple font-medium mb-2">Code References</h3>
+                <div class="bg-dark-bg rounded-lg p-3 text-xs space-y-1">
+                    <div class="text-gray-300">
+                        <span class="text-accent-cyan">MPC.ts</span>
+                        <span class="text-gray-500"> - SQP solver, QP formulation</span>
+                    </div>
+                    <div class="text-gray-300">
+                        <span class="text-accent-cyan">MPCModel.ts</span>
+                        <span class="text-gray-500"> - dynamics, linearization</span>
+                    </div>
+                    <div class="text-gray-300">
+                        <span class="text-accent-cyan">QPSolver.ts</span>
+                        <span class="text-gray-500"> - projected gradient</span>
+                    </div>
+                    <div class="text-gray-300">
+                        <span class="text-accent-cyan">DroneDynamics.ts</span>
+                        <span class="text-gray-500"> - simulation model</span>
+                    </div>
+                </div>
+            </div>
+
             <!-- References -->
             <div class="info-section border-t border-dark-border pt-4">
                 <h3 class="text-accent-purple font-medium mb-2">References</h3>
                 <ul class="text-gray-500 text-xs space-y-1">
                     <li>Torrente et al., "Data-Driven MPC for Quadrotors" (2021)</li>
                     <li>Foehn et al., "Time-Optimal Planning for Quadrotor Waypoint Flight" (2021)</li>
+                    <li>Mellinger & Kumar, "Minimum Snap Trajectory Generation" (2011)</li>
                 </ul>
             </div>
         `
