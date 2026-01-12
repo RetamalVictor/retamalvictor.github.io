@@ -21,19 +21,22 @@ export type { Racing3DParams } from './Racing3DTrajectory';
 export { SplitSTrajectory, DEFAULT_SPLITS_PARAMS } from './SplitSTrajectory';
 export type { SplitSParams } from './SplitSTrajectory';
 
+// Gate-based trajectory generation
+export { GateTrajectoryGenerator, GeneratedTrajectory } from './GateTrajectoryGenerator';
+export type { GeneratorConfig } from './GateTrajectoryGenerator';
+export { SmoothLineSegment } from './segments/SmoothLineSegment';
+export { ArcSegment } from './segments/ArcSegment';
+export type { ArcParams } from './segments/ArcSegment';
+
+import { GateTrajectoryGenerator } from './GateTrajectoryGenerator';
+import { GateWaypoint } from '../types';
 import { Trajectory } from './Trajectory';
-import { CircleTrajectory } from './CircleTrajectory';
-import { Figure8Trajectory } from './Figure8Trajectory';
-import { HairpinTrajectory } from './HairpinTrajectory';
-import { SnakeTrajectory } from './SnakeTrajectory';
-import { RaceTrackTrajectory } from './RaceTrackTrajectory';
-import { Racing3DTrajectory } from './Racing3DTrajectory';
 import { SplitSTrajectory } from './SplitSTrajectory';
 
 /**
  * Available trajectory types
  */
-export type TrajectoryType = 'circle' | 'figure8' | 'hairpin' | 'snake' | 'racetrack' | 'racing3d' | 'splits';
+export type TrajectoryType = 'figure8' | 'splits' | 'splits-classic' | 'dive' | 'crazy';
 
 /**
  * Trajectory metadata for UI
@@ -46,70 +49,239 @@ export interface TrajectoryInfo {
 
 export const TRAJECTORY_INFO: TrajectoryInfo[] = [
     {
-        type: 'circle',
-        name: 'Circle',
-        description: 'Simple circular path - baseline trajectory',
-    },
-    {
         type: 'figure8',
         name: 'Figure-8',
-        description: 'Infinity-shaped curve with full heading range',
-    },
-    {
-        type: 'hairpin',
-        name: 'Hairpin',
-        description: 'Racing-style tight 180° turns',
-    },
-    {
-        type: 'snake',
-        name: 'Snake',
-        description: 'Serpentine weaving pattern',
-    },
-    {
-        type: 'racetrack',
-        name: 'Race Track',
-        description: 'Multi-gate racing course',
-    },
-    {
-        type: 'racing3d',
-        name: '3D Racing',
-        description: 'Full 3D with dives and climbs',
+        description: 'Infinity-shaped curve with gates',
     },
     {
         type: 'splits',
         name: 'Split-S',
-        description: 'Power loops through gates',
+        description: 'Stacked gates - dive through pairs',
+    },
+    {
+        type: 'splits-classic',
+        name: 'Split-S Classic',
+        description: 'Original power loop trajectory',
+    },
+    {
+        type: 'dive',
+        name: 'Dive',
+        description: 'Gates stacked vertically - power loops',
+    },
+    {
+        type: 'crazy',
+        name: 'Crazy',
+        description: 'Stacked gates, dives, and chaos',
     },
 ];
 
 /**
- * Factory function to create demo trajectories
+ * Factory function to create trajectories
  *
- * Note: These are pre-defined trajectories for demonstration.
- * The trajectory generator will compute optimal speeds based on
- * gate positions and path curvature at runtime.
+ * Gate-based trajectories use the generator with automatic speed computation.
+ * Classic trajectories use the original class-based approach.
  */
 export function createTrajectory(
     type: TrajectoryType,
-    speed: number = 18.0,
+    _speed: number = 18.0,
     height: number = 4.0
 ): Trajectory {
+    const generator = new GateTrajectoryGenerator();
+
     switch (type) {
-        case 'circle':
-            return new CircleTrajectory({ speed: 20.0, height, radius: 25.0 });
         case 'figure8':
-            return new Figure8Trajectory({ speed: 12.0, height, size: 25.0 });
-        case 'hairpin':
-            return new HairpinTrajectory({ speed: 16.0, height, turnRadius: 12.0, straightLength: 40.0 });
-        case 'snake':
-            return new SnakeTrajectory({ speed: 14.0, height });
-        case 'racetrack':
-            return new RaceTrackTrajectory({ speed: 18.0, height, gateSpacing: 30.0, turnRadius: 15.0 });
-        case 'racing3d':
-            return new Racing3DTrajectory({ speed: 18.0, height, trackLength: 100.0, minHeight: 2.0, maxHeight: 12.0 });
+            return generator.generate(createFigure8Gates(height));
         case 'splits':
+            return generator.generate(createSplitSGates(height));
+        case 'splits-classic':
+            // Original Split-S with predefined trajectory (no gates)
             return new SplitSTrajectory({ speed: 14.0, height, loopRadius: 8.0, gateSpacing: 35.0, numGates: 3 });
+        case 'dive':
+            return generator.generate(createDiveGates(height));
+        case 'crazy':
+            return generator.generate(createCrazyGates(height));
         default:
-            return new CircleTrajectory({ speed, height, radius: 25.0 });
+            return generator.generate(createFigure8Gates(height));
     }
+}
+
+// =====================================================
+// Gate Definitions for Each Trajectory Type
+// =====================================================
+
+/**
+ * Figure-8: Racing scale lemniscate with smooth curves
+ *
+ * For racing at ~70 km/h (20 m/s) with 15m turn radius,
+ * gates need to be spaced ~60m apart.
+ */
+function createFigure8Gates(height: number): GateWaypoint[] {
+    const size = 50;  // Half-width of figure-8 (100m total width)
+
+    return [
+        // Center crossing (going right) - slight forward angle for smooth entry
+        {
+            position: { x: 0, y: height, z: 0 },
+            entranceDir: { x: 0.866, y: 0, z: 0.5 },  // 30° off center
+        },
+        // Right loop - far right, going backward
+        {
+            position: { x: size, y: height, z: -20 },
+            entranceDir: { x: 0, y: 0, z: -1 },
+        },
+        // Center crossing (going left) - opposite direction
+        {
+            position: { x: 0, y: height, z: 0 },
+            entranceDir: { x: -0.866, y: 0, z: -0.5 },
+        },
+        // Left loop - far left, going forward
+        {
+            position: { x: -size, y: height, z: 20 },
+            entranceDir: { x: 0, y: 0, z: 1 },
+        },
+    ];
+}
+
+/**
+ * Split-S: Stacked gate pairs for power loop maneuvers
+ *
+ * Racing scale with larger spacing for high-speed flight.
+ * Each split has gates offset in Z to allow for the dive trajectory.
+ */
+function createSplitSGates(height: number): GateWaypoint[] {
+    const gateSpacing = 80;  // Large spacing for racing speeds
+    const numSplits = 3;
+    const highHeight = height + 12;  // High gate
+    const lowHeight = height;        // Low gate at base height
+
+    const gates: GateWaypoint[] = [];
+
+    for (let i = 0; i < numSplits; i++) {
+        const z = i * gateSpacing;
+
+        // High gate - drone climbs up, enters going forward
+        gates.push({
+            position: { x: 0, y: highHeight, z },
+            entranceDir: { x: 0, y: 0.3, z: 0.954 },  // Slight climb
+        });
+
+        // Low gate - offset forward for dive trajectory
+        gates.push({
+            position: { x: 0, y: lowHeight, z: z + 25 },
+            entranceDir: { x: 0, y: -0.3, z: 0.954 },  // Diving forward
+        });
+    }
+
+    return gates;
+}
+
+/**
+ * Dive: Gates stacked immediately on top of each other
+ *
+ * Each stack has two gates at the SAME X/Z position:
+ * - High gate: drone enters going forward
+ * - Low gate: directly below, drone dives down and forward
+ *
+ * The low gate has an angled entrance (down + forward) so the
+ * exit trajectory continues forward, not into the ground.
+ */
+function createDiveGates(height: number): GateWaypoint[] {
+    const numStacks = 3;
+    const stackSpacing = 50;  // Distance between stacks along Z
+    const highHeight = height + 10;  // Top gate (y = 14)
+    const lowHeight = height;        // Bottom gate at same height as base
+
+    const gates: GateWaypoint[] = [];
+
+    for (let i = 0; i < numStacks; i++) {
+        const z = i * stackSpacing;
+
+        // High gate - enter going forward
+        gates.push({
+            position: { x: 0, y: highHeight, z },
+            entranceDir: { x: 0, y: 0, z: 1 },
+        });
+
+        // Low gate - SAME X/Z, directly below!
+        // Enter diving down at 60° angle (mostly down, some forward)
+        // This ensures exit point stays above ground
+        gates.push({
+            position: { x: 0, y: lowHeight, z },
+            entranceDir: { x: 0, y: -0.866, z: 0.5 },  // 60° dive angle
+        });
+    }
+
+    return gates;
+}
+
+/**
+ * Crazy: Chaotic track with stacked gates, dives, and challenging maneuvers
+ *
+ * Features:
+ * - Stacked vertical gates
+ * - Sharp altitude changes
+ * - Gates at various angles
+ * - Tight turns
+ */
+function createCrazyGates(height: number): GateWaypoint[] {
+    const minHeight = 2;
+    const maxHeight = 14;
+
+    return [
+        // Start - low gate
+        {
+            position: { x: 0, y: minHeight, z: 0 },
+            entranceDir: { x: 0, y: 0.3, z: 1 },  // Climb out
+        },
+
+        // Stacked pair 1 - climb to high then dive to low
+        {
+            position: { x: 0, y: maxHeight, z: 20 },
+            entranceDir: { x: 0.5, y: 0, z: 0.866 },
+        },
+        {
+            position: { x: 5, y: minHeight, z: 30 },
+            entranceDir: { x: 0, y: -0.5, z: 0.866 },  // Steep dive
+        },
+
+        // Sharp turn at ground level
+        {
+            position: { x: 20, y: minHeight + 1, z: 40 },
+            entranceDir: { x: 1, y: 0.2, z: 0 },
+        },
+
+        // Climb while turning
+        {
+            position: { x: 35, y: height, z: 35 },
+            entranceDir: { x: 0.707, y: 0.3, z: -0.707 },
+        },
+
+        // High gate - inverted approach
+        {
+            position: { x: 40, y: maxHeight, z: 20 },
+            entranceDir: { x: 0, y: 0, z: -1 },
+        },
+
+        // Stacked pair 2 - two gates on top of each other
+        {
+            position: { x: 35, y: maxHeight - 2, z: 5 },
+            entranceDir: { x: -0.5, y: -0.2, z: -0.866 },
+        },
+        {
+            position: { x: 30, y: minHeight + 2, z: 0 },
+            entranceDir: { x: -0.866, y: 0, z: -0.5 },
+        },
+
+        // Low swooping turn back
+        {
+            position: { x: 15, y: minHeight, z: -5 },
+            entranceDir: { x: -1, y: 0.1, z: 0 },
+        },
+
+        // Final climb back to start
+        {
+            position: { x: 0, y: height, z: -5 },
+            entranceDir: { x: 0, y: 0.2, z: 1 },
+        },
+    ];
 }

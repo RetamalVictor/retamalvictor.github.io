@@ -47,32 +47,30 @@ export interface MPCConfig {
 }
 
 export const DEFAULT_MPC_CONFIG: MPCConfig = {
-    // 10 nodes * 0.05s = 0.5s horizon (optimized for speed)
+    // 10 nodes * 0.05s = 0.5s horizon
     horizonSteps: 10,
     dt: 0.05,
 
-    // Weights tuned for stable trajectory tracking
+    // Weights tuned for aggressive racing
     positionWeight: 400.0,   // High position tracking priority
-    velocityWeight: 1.0,     // Low velocity weight (allows movement)
-    attitudeWeight: 10.0,    // Quaternion attitude penalty
-    yawWeight: 10.0,         // Yaw component weight
-    thrustWeight: 0.5,       // Input cost for thrust
-    rateWeight: 1.0,         // Rate cost
+    velocityWeight: 0.1,     // Very low - let MPC choose speed
+    attitudeWeight: 5.0,     // Lower - allow aggressive tilts
+    yawWeight: 5.0,          // Lower - heading less critical
+    thrustWeight: 0.1,       // Very low - allow full thrust
+    rateWeight: 0.1,         // Very low - allow fast rotations
 
-    // Terminal cost - same weight as running cost
+    // Terminal cost
     terminalWeight: 1.0,
 
-    // Racing drone thrust limits (high power for agility)
-    minThrust: 2.0,
-    maxThrust: 30.0,         // Increased for racing speeds
-    // Racing drone rate limits (very agile)
-    maxRate: 15.0,           // Increased for faster maneuvers
-    maxYawRate: 5.0,         // Increased for racing
+    // RACING DRONE LIMITS (5:1 thrust-to-weight ratio)
+    minThrust: 0.0,          // Can cut throttle completely
+    maxThrust: 50.0,         // 5g acceleration capability
+    maxRate: 20.0,           // ~1150 deg/s roll/pitch rate
+    maxYawRate: 10.0,        // ~570 deg/s yaw rate
 
-    sqpIterations: 1,        // Single iteration for speed (warm start helps)
+    sqpIterations: 1,
     sqpTolerance: 1e-4,
 
-    // Minimal command delay for responsiveness
     commandDelay: 0.02,
 };
 
