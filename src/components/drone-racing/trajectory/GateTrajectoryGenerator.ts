@@ -79,12 +79,16 @@ export class GeneratedTrajectory extends Trajectory {
     }
 
     /**
-     * Override getWaypoint for direct segment access (more accurate)
+     * Override getWaypoint to use curvature-based variable speed
+     * - Position: from segment (smooth path)
+     * - Velocity: segment direction scaled to curvature-based speed
+     * - Acceleration/Jerk: from base class (consistent with variable speed)
      */
     public override getWaypoint(t: number): Waypoint {
         // Wrap time to trajectory period
         const period = this.getPeriod();
         const wrappedTime = ((t % period) + period) % period;
+        const phase = wrappedTime / period;
 
         const { segment, localT } = this.findSegment(wrappedTime);
 
@@ -100,35 +104,109 @@ export class GeneratedTrajectory extends Trajectory {
             };
         }
 
+        // Get position from segment (smooth path)
         const pos = segment.getPosition(localT);
-        const vel = segment.getVelocity(localT);
-        const acc = segment.getAcceleration(localT);
+
+        // Get velocity direction from segment, but scale to curvature-based speed
+        const segVel = segment.getVelocity(localT);
+        const segSpeed = Math.sqrt(segVel.x ** 2 + segVel.y ** 2 + segVel.z ** 2);
+        const targetSpeed = this.getSpeedAtPhase(phase);
+
+        let vel = segVel;
+        if (segSpeed > 1e-6) {
+            const scale = targetSpeed / segSpeed;
+            vel = {
+                x: segVel.x * scale,
+                y: segVel.y * scale,
+                z: segVel.z * scale,
+            };
+        }
+
+        // Compute acceleration using numerical differentiation on scaled velocity
+        const dt2 = 0.001;
+        const v1 = this.getScaledVelocityAtTime(wrappedTime - dt2);
+        const v2 = this.getScaledVelocityAtTime(wrappedTime + dt2);
+        const acc = {
+            x: (v2.x - v1.x) / (2 * dt2),
+            y: (v2.y - v1.y) / (2 * dt2),
+            z: (v2.z - v1.z) / (2 * dt2),
+        };
+
+        // Compute jerk using numerical differentiation on acceleration
+        const dt3 = 0.002;
+        let jerk = { x: 0, y: 0, z: 0 };
+        if (wrappedTime > dt3 && wrappedTime < period - dt3) {
+            const a1 = this.getScaledAccelerationAtTime(wrappedTime - dt3);
+            const a2 = this.getScaledAccelerationAtTime(wrappedTime + dt3);
+            jerk = {
+                x: (a2.x - a1.x) / (2 * dt3),
+                y: (a2.y - a1.y) / (2 * dt3),
+                z: (a2.z - a1.z) / (2 * dt3),
+            };
+        }
+
+        // Clamp jerk to reasonable bounds
+        const maxJerk = 100;
+        const jerkMag = Math.sqrt(jerk.x ** 2 + jerk.y ** 2 + jerk.z ** 2);
+        if (jerkMag > maxJerk) {
+            const scale = maxJerk / jerkMag;
+            jerk = { x: jerk.x * scale, y: jerk.y * scale, z: jerk.z * scale };
+        }
 
         // Compute heading from velocity
         const heading = Math.atan2(vel.x, vel.z);
 
-        // Compute heading rate using numerical differentiation
-        const dt = 0.001;
-        const { segment: seg2, localT: t2 } = this.findSegment(wrappedTime + dt);
-        let headingRate = 0;
-        if (seg2) {
-            const vel2 = seg2.getVelocity(t2);
-            const heading2 = Math.atan2(vel2.x, vel2.z);
-            headingRate = this.wrapAngle(heading2 - heading) / dt;
-
-            // Clamp heading rate
-            const maxHeadingRate = 5.0;
-            headingRate = Math.max(-maxHeadingRate, Math.min(maxHeadingRate, headingRate));
-        }
+        // Compute heading rate
+        const heading1 = Math.atan2(v1.x, v1.z);
+        const heading2 = Math.atan2(v2.x, v2.z);
+        let headingRate = this.wrapAngle(heading2 - heading1) / (2 * dt2);
+        const maxHeadingRate = 5.0;
+        headingRate = Math.max(-maxHeadingRate, Math.min(maxHeadingRate, headingRate));
 
         return {
             position: pos,
             velocity: vel,
             acceleration: acc,
-            jerk: { x: 0, y: 0, z: 0 },
+            jerk,
             heading,
             headingRate,
             time: t,
+        };
+    }
+
+    /**
+     * Helper: get velocity at time, scaled to curvature-based speed
+     */
+    private getScaledVelocityAtTime(t: number): Vector3 {
+        const period = this.getPeriod();
+        const wrappedTime = ((t % period) + period) % period;
+        const phase = wrappedTime / period;
+
+        const { segment, localT } = this.findSegment(wrappedTime);
+        if (!segment) return { x: 0, y: 0, z: 0 };
+
+        const segVel = segment.getVelocity(localT);
+        const segSpeed = Math.sqrt(segVel.x ** 2 + segVel.y ** 2 + segVel.z ** 2);
+        const targetSpeed = this.getSpeedAtPhase(phase);
+
+        if (segSpeed > 1e-6) {
+            const scale = targetSpeed / segSpeed;
+            return { x: segVel.x * scale, y: segVel.y * scale, z: segVel.z * scale };
+        }
+        return segVel;
+    }
+
+    /**
+     * Helper: get acceleration at time (from scaled velocity)
+     */
+    private getScaledAccelerationAtTime(t: number): Vector3 {
+        const dt = 0.001;
+        const v1 = this.getScaledVelocityAtTime(t - dt);
+        const v2 = this.getScaledVelocityAtTime(t + dt);
+        return {
+            x: (v2.x - v1.x) / (2 * dt),
+            y: (v2.y - v1.y) / (2 * dt),
+            z: (v2.z - v1.z) / (2 * dt),
         };
     }
 

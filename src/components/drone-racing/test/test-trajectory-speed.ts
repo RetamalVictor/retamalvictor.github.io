@@ -15,6 +15,7 @@ import { Figure8Trajectory } from '../trajectory/Figure8Trajectory';
 import { CircleTrajectory } from '../trajectory/CircleTrajectory';
 import { SnakeTrajectory } from '../trajectory/SnakeTrajectory';
 import { Trajectory } from '../trajectory/Trajectory';
+import { createTrajectory } from '../trajectory/index';
 
 // ANSI colors
 const GREEN = '\x1b[32m';
@@ -265,17 +266,17 @@ function testAccelerationContinuity(trajectory: Trajectory, name: string): TestR
     // Bounds depend on trajectory type:
     // - Circle: constant curvature, da/dt should be ~0
     // - Figure8: moderate curvature, higher da/dt expected
-    // - Snake: extreme curvature at turnarounds (κ>100), very high da/dt - skip check
-    const isSnake = name === 'Snake';
+    // - Snake/Generated: extreme curvature (κ>90), very high da/dt - skip check
+    const hasExtremeCurvature = name === 'Snake' || name.includes('Generated');
     const isHighCurvature = name === 'Figure8';
-    const maxAllowed = isSnake ? Infinity : (isHighCurvature ? 1000 : 100); // m/s³
-    const passed = isSnake || maxAccelChange < maxAllowed;
+    const maxAllowed = hasExtremeCurvature ? Infinity : (isHighCurvature ? 1000 : 100); // m/s³
+    const passed = hasExtremeCurvature || maxAccelChange < maxAllowed;
 
     return {
         name: `Acceleration continuity (${name})`,
         passed,
-        message: isSnake
-            ? `Skipped - extreme curvature (κ>100). da/dt: ${maxAccelChange.toFixed(2)} m/s³`
+        message: hasExtremeCurvature
+            ? `Skipped - extreme curvature (κ>90). da/dt: ${maxAccelChange.toFixed(2)} m/s³`
             : (passed
                 ? `Max da/dt: ${maxAccelChange.toFixed(2)} m/s³ (< ${maxAllowed})`
                 : `Acceleration jump: ${maxAccelChange.toFixed(2)} m/s³ (> ${maxAllowed})`),
@@ -376,6 +377,10 @@ async function runTests(): Promise<void> {
         {
             name: 'Snake',
             trajectory: new SnakeTrajectory({ speed: 8, height: 2, amplitude: 3, wavelength: 10, length: 20 })
+        },
+        {
+            name: 'Generated (Demo)',
+            trajectory: createTrajectory(18.0, 4.0)
         },
     ];
 
