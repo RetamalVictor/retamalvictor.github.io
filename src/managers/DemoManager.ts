@@ -136,7 +136,7 @@ export class DemoManager {
                 this.currentInstance = new TernaryLMDemo({
                     containerId: this.containerId,
                     modelPath: '/assets/models/transformer',
-                    defaultPrompt: 'ROMEO: ',
+                    defaultPrompt: 'The theory of relativity is ',
                     maxTokens: 100
                 });
                 break;
