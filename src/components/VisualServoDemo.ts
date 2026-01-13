@@ -332,8 +332,8 @@ export class VisualServoDemo {
         // Create IBVS controller
         this.controller = new IBVSController(
             this.droneCamera.focalLengthPx,
-            0.5,   // gain (low for smooth motion with dynamics)
-            0.3    // clip threshold
+            1.5,   // gain (aggressive with flatness-based dynamics)
+            2.0    // clip threshold (m/s) - faster movement allowed
         );
     }
 

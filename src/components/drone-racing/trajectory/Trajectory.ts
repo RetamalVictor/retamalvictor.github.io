@@ -33,6 +33,12 @@ export abstract class Trajectory {
     private _phaseToArcTable: { phase: number; arc: number }[] | null = null;
     private readonly ARC_TABLE_RESOLUTION = 500;  // Number of samples for arc-length table
 
+    // Variable speed profile (computed lazily)
+    private _speedTable: number[] | null = null;
+    private readonly SPEED_TABLE_RESOLUTION = 200;
+    private readonly speedSmoothingAlpha = 0.2;  // 0..1 (higher = less smoothing)
+    private readonly maxCentripetalAccel = 15;   // m/s² max centripetal acceleration
+
     constructor(params: TrajectoryParams) {
         this.speed = params.speed;
         this.height = params.height;

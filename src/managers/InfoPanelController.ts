@@ -67,27 +67,27 @@ export const INFO_PANEL_CONTENT: Record<DemoType, InfoPanelContent> = {
                 </p>
             </div>
 
-            <!-- Quadrotor Dynamics -->
+            <!-- Quadrotor Dynamics (Differential Flatness) -->
             <div class="info-section">
-                <h3 class="text-accent-purple font-medium mb-2">Quadrotor Dynamics</h3>
+                <h3 class="text-accent-purple font-medium mb-2">Differential Flatness Control</h3>
                 <p class="text-gray-400 mb-3">
-                    Underactuated model: lateral motion requires tilting.
+                    Direct computation of thrust & attitude from desired acceleration:
                 </p>
                 <div class="bg-dark-bg rounded-lg p-3 font-mono text-xs space-y-2">
-                    <div class="text-gray-500">// Velocity to tilt (feedforward + damping)</div>
+                    <div class="text-gray-500">// 1. Velocity tracking → acceleration</div>
                     <div class="text-gray-300">
-                        <span class="text-accent-cyan">θ</span><sub>des</sub> = <span class="text-yellow-400">k<sub>p</sub></span>·v<sub>des</sub> - <span class="text-yellow-400">k<sub>d</sub></span>·v
+                        <span class="text-accent-cyan">a</span><sub>des</sub> = k<sub>v</sub>·(v<sub>des</sub> - v)
                     </div>
-                    <div class="text-gray-500 mt-2">// Attitude controller (PD)</div>
+                    <div class="text-gray-500 mt-2">// 2. Flatness: thrust vector</div>
                     <div class="text-gray-300">
-                        <span class="text-accent-cyan">τ</span> = <span class="text-yellow-400">K<sub>p</sub></span>·(θ<sub>des</sub> - θ) - <span class="text-yellow-400">K<sub>d</sub></span>·ω
+                        <span class="text-yellow-400">F</span> = m·(a<sub>des</sub> + g)
                     </div>
-                    <div class="text-gray-500 mt-2">// Thrust produces acceleration</div>
+                    <div class="text-gray-500 mt-2">// 3. Attitude from thrust direction</div>
                     <div class="text-gray-300">
-                        <span class="text-accent-cyan">a</span><sub>x</sub> = -T·sin(θ<sub>roll</sub>)
+                        <span class="text-accent-cyan">θ</span><sub>pitch</sub> = atan2(F<sub>z</sub>, F<sub>y</sub>)
                     </div>
                     <div class="text-gray-300">
-                        <span class="text-accent-cyan">a</span><sub>z</sub> = T·sin(θ<sub>pitch</sub>)
+                        <span class="text-accent-cyan">θ</span><sub>roll</sub> = atan2(-F<sub>x</sub>, F<sub>y</sub>)
                     </div>
                 </div>
             </div>
@@ -118,19 +118,19 @@ export const INFO_PANEL_CONTENT: Record<DemoType, InfoPanelContent> = {
                 <div class="bg-dark-bg rounded-lg p-3 text-xs space-y-1">
                     <div class="flex justify-between">
                         <span class="text-gray-400">IBVS gain (λ)</span>
-                        <span class="text-white font-mono">0.5</span>
+                        <span class="text-white font-mono">1.5</span>
                     </div>
                     <div class="flex justify-between">
-                        <span class="text-gray-400">Velocity gain (k<sub>p</sub>)</span>
-                        <span class="text-white font-mono">0.5</span>
+                        <span class="text-gray-400">Velocity gain (k<sub>v</sub>)</span>
+                        <span class="text-white font-mono">2.0</span>
                     </div>
                     <div class="flex justify-between">
-                        <span class="text-gray-400">Velocity damping (k<sub>d</sub>)</span>
-                        <span class="text-white font-mono">0.3</span>
+                        <span class="text-gray-400">Attitude gain (k<sub>p</sub>)</span>
+                        <span class="text-white font-mono">25.0</span>
                     </div>
                     <div class="flex justify-between">
-                        <span class="text-gray-400">Focal length</span>
-                        <span class="text-white font-mono">50mm</span>
+                        <span class="text-gray-400">Max tilt</span>
+                        <span class="text-white font-mono">60°</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-gray-400">Desired distance</span>

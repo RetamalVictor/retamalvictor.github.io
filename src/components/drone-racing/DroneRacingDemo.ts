@@ -78,6 +78,8 @@ export class DroneRacingDemo {
     // UI elements
     private debugOverlay: HTMLElement | null = null;
     private cameraButtons: { overview: HTMLButtonElement | null; follow: HTMLButtonElement | null } = { overview: null, follow: null };
+    private startOverlay: HTMLElement | null = null;
+    private hasStarted: boolean = false;
 
     constructor(containerId: string) {
         // Bind event handlers for proper cleanup
@@ -140,8 +142,11 @@ export class DroneRacingDemo {
         // Setup visibility-based pausing
         this.setupVisibilityHandling();
 
-        // Start animation
-        this.animate();
+        // Show start overlay instead of auto-starting
+        this.showStartOverlay();
+
+        // Render one frame for preview
+        this.renderer.render(this.scene, this.camera);
     }
 
     /**
@@ -260,6 +265,61 @@ export class DroneRacingDemo {
                 btn.className = 'p-2 rounded-lg bg-dark-surface/80 border border-dark-border hover:border-accent-cyan hover:text-accent-cyan transition-colors text-gray-400';
             }
         }
+    }
+
+    /**
+     * Show start overlay with play button and CPU warning
+     */
+    private showStartOverlay(): void {
+        this.startOverlay = document.createElement('div');
+        this.startOverlay.className = 'absolute inset-0 flex flex-col items-center justify-center bg-dark-bg/80 backdrop-blur-sm z-20 cursor-pointer transition-opacity duration-300';
+
+        // Play button
+        const playButton = document.createElement('div');
+        playButton.className = 'w-20 h-20 rounded-full bg-accent-cyan/20 border-2 border-accent-cyan flex items-center justify-center mb-4 hover:bg-accent-cyan/30 transition-colors';
+        playButton.innerHTML = `
+            <svg class="w-10 h-10 text-accent-cyan ml-1" fill="currentColor" viewBox="0 0 24 24">
+                <polygon points="5,3 19,12 5,21"/>
+            </svg>
+        `;
+
+        // Warning text
+        const warning = document.createElement('div');
+        warning.className = 'text-center px-4';
+        warning.innerHTML = `
+            <p class="text-gray-300 text-sm mb-1">Click to start simulation</p>
+            <p class="text-gray-500 text-xs">This demo uses CPU for real-time MPC computation</p>
+        `;
+
+        this.startOverlay.appendChild(playButton);
+        this.startOverlay.appendChild(warning);
+        this.container.appendChild(this.startOverlay);
+
+        // Start on click
+        this.startOverlay.addEventListener('click', () => this.startSimulation());
+    }
+
+    /**
+     * Start the simulation after user confirms
+     */
+    private startSimulation(): void {
+        if (this.hasStarted) return;
+        this.hasStarted = true;
+
+        // Fade out and remove overlay
+        if (this.startOverlay) {
+            this.startOverlay.style.opacity = '0';
+            setTimeout(() => {
+                if (this.startOverlay) {
+                    this.startOverlay.remove();
+                    this.startOverlay = null;
+                }
+            }, 300);
+        }
+
+        // Start animation loop
+        this.lastFrameTime = performance.now() / 1000;
+        this.animate();
     }
 
     /**
@@ -437,8 +497,11 @@ export class DroneRacingDemo {
                     }
                 } else {
                     this.isPaused = false;
-                    this.lastFrameTime = performance.now() / 1000;
-                    this.animate();
+                    // Only resume if simulation has been started by user
+                    if (this.hasStarted) {
+                        this.lastFrameTime = performance.now() / 1000;
+                        this.animate();
+                    }
                 }
             }
         );
@@ -642,6 +705,12 @@ export class DroneRacingDemo {
         if (this.animationFrameId) {
             cancelAnimationFrame(this.animationFrameId);
             this.animationFrameId = 0;
+        }
+
+        // Clean up start overlay
+        if (this.startOverlay) {
+            this.startOverlay.remove();
+            this.startOverlay = null;
         }
 
         // Clean up visibility manager and resize listener

@@ -6,8 +6,6 @@ import { ProjectDetailPage } from './pages/ProjectDetail.js';
 import { CVPage } from './pages/CV.js';
 import { BlogListPage } from './pages/BlogList.js';
 import { BlogPostPage } from './pages/BlogPost.js';
-import { DemoListPage } from './pages/DemoList.js';
-import { DemoPage } from './pages/DemoPage.js';
 import { addIntersectionObserver } from './utils/dom.js';
 import { config } from './utils/config.js';
 import { templateManager } from './utils/template.js';
@@ -27,8 +25,6 @@ class Portfolio {
     private cvPage: CVPage | null = null;
     private blogListPage: BlogListPage | null = null;
     private blogPostPage: BlogPostPage | null = null;
-    private demoListPage: DemoListPage | null = null;
-    private demoPage: DemoPage | null = null;
 
     // Demo managers
     private demoManager: DemoManager | null = null;
@@ -69,8 +65,6 @@ class Portfolio {
         this.router.addRoute('/cv', this.renderCVPage.bind(this), pages.cv);
         this.router.addRoute('/blog', this.renderBlogPage.bind(this), pages.blog);
         this.router.addRoute('/blog/:slug', this.renderBlogPostPage.bind(this), pages.blog_post);
-        this.router.addRoute('/demos', this.renderDemosPage.bind(this), 'Demos');
-        this.router.addRoute('/demos/:id', this.renderDemoPage.bind(this), 'Demo');
 
         // Initialize navigation module
         initializeNavigation(this.router, environment as 'development' | 'production');
@@ -162,30 +156,6 @@ class Portfolio {
         // Create blog post page
         this.blogPostPage = new BlogPostPage(app);
         await this.blogPostPage.render(postSlug);
-    }
-
-    private async renderDemosPage(): Promise<void> {
-        const app = document.getElementById('app')!;
-        this.clearMainLayout();
-
-        // Create demos list page
-        this.demoListPage = new DemoListPage(app);
-        await this.demoListPage.render();
-    }
-
-    private async renderDemoPage(): Promise<void> {
-        const path = window.location.pathname;
-        const demoId = this.router.getRouteParams('/demos/:id', path).id;
-
-        const app = document.getElementById('app')!;
-        this.clearMainLayout();
-
-        // Create demo page
-        if (this.demoPage) {
-            this.demoPage.destroy();
-        }
-        this.demoPage = new DemoPage(app);
-        await this.demoPage.render(demoId);
     }
 
     private async initializeLayout(): Promise<void> {
