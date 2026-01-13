@@ -522,15 +522,6 @@ export const INFO_PANEL_CONTENT: Record<DemoType, InfoPanelContent> = {
                 </div>
             </div>
 
-            <!-- References -->
-            <div class="info-section border-t border-dark-border pt-4">
-                <h3 class="text-accent-purple font-medium mb-2">References</h3>
-                <ul class="text-gray-500 text-xs space-y-1">
-                    <li>Torrente et al., "Data-Driven MPC for Quadrotors" (2021)</li>
-                    <li>Foehn et al., "Time-Optimal Planning for Quadrotor Waypoint Flight" (2021)</li>
-                    <li>Mellinger & Kumar, "Minimum Snap Trajectory Generation" (2011)</li>
-                </ul>
-            </div>
         `
     }
 };
