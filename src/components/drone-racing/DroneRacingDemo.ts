@@ -61,6 +61,7 @@ export class DroneRacingDemo {
     private currentLapStartTime: number = 0;
     private bestLapTime: number = Infinity;
     private nextGateIndex: number = 0;
+    private lastDroneX: number = 0;
     private lastDroneZ: number = 0;
 
     // Visibility-based pausing
@@ -462,6 +463,7 @@ export class DroneRacingDemo {
         // Reset lap timing and gate tracking (keep best lap time)
         this.currentLapStartTime = 0;
         this.nextGateIndex = 0;
+        this.lastDroneX = 0;
         this.lastDroneZ = 0;
 
         // Reset gate visualization
@@ -621,46 +623,90 @@ export class DroneRacingDemo {
         const nextGate = gatePositions[this.nextGateIndex];
         if (!nextGate) return;
 
-        const gateZ = nextGate.position.z;
         const gateX = nextGate.position.x;
         const gateY = nextGate.position.y;
+        const gateZ = nextGate.position.z;
 
-        // Check if drone crossed the gate plane
-        const crossedZ = (this.lastDroneZ < gateZ && dronePos.z >= gateZ) ||
-                         (this.lastDroneZ > gateZ && dronePos.z <= gateZ);
+        // Determine gate orientation from heading
+        // heading = 0 means gate faces +Z, π/2 means faces +X
+        const heading = nextGate.heading;
+        const facesX = Math.abs(Math.sin(heading)) > 0.7; // Gate faces mostly in X direction
 
-        if (crossedZ) {
+        // Check plane crossing based on gate orientation
+        let crossed = false;
+        let withinBounds = false;
+
+        const gateHalfWidth = 2.0;
+        const gateHalfHeight = 2.0;
+
+        // Determine expected crossing direction from heading
+        // heading=0 → enters +Z, heading=π/2 → enters +X, heading=π → enters -Z, heading=-π/2 → enters -X
+        const cosH = Math.cos(heading);
+        const sinH = Math.sin(heading);
+
+        if (facesX) {
+            // Gate faces X - check X-plane crossing in correct direction
+            const expectPlusX = sinH > 0.5;  // heading ~90° means enter +X
+
+            const crossedX = expectPlusX
+                ? (this.lastDroneX < gateX && dronePos.x >= gateX)  // crossing +X
+                : (this.lastDroneX > gateX && dronePos.x <= gateX); // crossing -X
+
+            const dz = Math.abs(dronePos.z - gateZ);
+            const dy = Math.abs(dronePos.y - gateY);
+            crossed = crossedX;
+            withinBounds = dz < gateHalfWidth && dy < gateHalfHeight;
+        } else {
+            // Gate faces Z - check Z-plane crossing in correct direction
+            const expectPlusZ = cosH > 0.5;  // heading ~0° means enter +Z
+
+            const crossedZ = expectPlusZ
+                ? (this.lastDroneZ < gateZ && dronePos.z >= gateZ)  // crossing +Z
+                : (this.lastDroneZ > gateZ && dronePos.z <= gateZ); // crossing -Z
+
             const dx = Math.abs(dronePos.x - gateX);
             const dy = Math.abs(dronePos.y - gateY);
-            const gateHalfWidth = 2.0;
-            const gateHalfHeight = 2.0;
+            crossed = crossedZ;
+            withinBounds = dx < gateHalfWidth && dy < gateHalfHeight;
+        }
 
-            if (dx < gateHalfWidth && dy < gateHalfHeight) {
-                // Reset gates when starting new lap (crossing gate 0), not when finishing
-                if (this.nextGateIndex === 0) {
-                    this.gateManager.resetGates();
+        // Debug: log when near gate
+        const distToGate = Math.sqrt(
+            (dronePos.x - gateX) ** 2 +
+            (dronePos.y - gateY) ** 2 +
+            (dronePos.z - gateZ) ** 2
+        );
+        if (distToGate < 5 && this.nextGateIndex >= 2) {
+            console.log(`Gate ${this.nextGateIndex + 1}: dist=${distToGate.toFixed(1)}m, crossed=${crossed}, withinBounds=${withinBounds}, facesX=${facesX}, pos=(${dronePos.x.toFixed(1)},${dronePos.y.toFixed(1)},${dronePos.z.toFixed(1)})`);
+        }
+
+        if (crossed && withinBounds) {
+            console.log(`>>> PASSED Gate ${this.nextGateIndex + 1}!`);
+            // Reset gates when starting new lap (crossing gate 0), not when finishing
+            if (this.nextGateIndex === 0) {
+                this.gateManager.resetGates();
+            }
+
+            this.gateManager.markGatePassed(this.nextGateIndex);
+            this.nextGateIndex++;
+
+            if (this.nextGateIndex >= gatePositions.length) {
+                // Lap completed - measure from last gate to last gate
+                const lapTime = this.simulationTime - this.currentLapStartTime;
+
+                // Record if valid (skip first lap where currentLapStartTime was 0)
+                if (this.currentLapStartTime > 0 && lapTime > 1.0 && lapTime < this.bestLapTime) {
+                    this.bestLapTime = lapTime;
                 }
 
-                this.gateManager.markGatePassed(this.nextGateIndex);
-                this.nextGateIndex++;
-
-                if (this.nextGateIndex >= gatePositions.length) {
-                    // Lap completed - measure from last gate to last gate
-                    const lapTime = this.simulationTime - this.currentLapStartTime;
-
-                    // Record if valid (skip first lap where currentLapStartTime was 0)
-                    if (this.currentLapStartTime > 0 && lapTime > 1.0 && lapTime < this.bestLapTime) {
-                        this.bestLapTime = lapTime;
-                    }
-
-                    // Start timer for next lap from this moment
-                    this.currentLapStartTime = this.simulationTime;
-                    this.nextGateIndex = 0;
-                    // Don't reset gates here - they stay green until next lap starts
-                }
+                // Start timer for next lap from this moment
+                this.currentLapStartTime = this.simulationTime;
+                this.nextGateIndex = 0;
+                // Don't reset gates here - they stay green until next lap starts
             }
         }
 
+        this.lastDroneX = dronePos.x;
         this.lastDroneZ = dronePos.z;
     }
 

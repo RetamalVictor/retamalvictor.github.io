@@ -110,7 +110,7 @@ export class MPC {
     private prevProgressUnwrapped: number | null = null;
     private readonly progressSearchWindow: number = 20.0;  // meters
     private readonly vAlongMin: number = 0.5;   // minimum along-track speed (m/s)
-    private readonly vAlongMax: number = 30.0;  // maximum along-track speed (m/s)
+    private readonly vAlongMax: number = 35.0;  // maximum along-track speed (m/s) - 126 km/h
 
     // Track whether we're using progress-based reference (enables warm-start)
     private usingProgressBasedReference: boolean = false;

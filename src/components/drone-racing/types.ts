@@ -114,7 +114,7 @@ export interface DroneRacingDemoConfig {
 
 export const DEFAULT_DEMO_CONFIG: DroneRacingDemoConfig = {
     simulation: {
-        defaultSpeed: 18.0,     // 18 m/s (~65 km/h)
+        defaultSpeed: 25.0,     // 25 m/s (90 km/h)
         defaultHeight: 4.0,     // 4 meters
     },
     trail: {
