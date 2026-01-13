@@ -45,6 +45,9 @@ export interface MPCConfig {
 
     // Command delay compensation
     commandDelay: number;      // Delay to compensate for (s)
+
+    // Performance options
+    useAnalyticalJacobians: boolean;  // Use analytical Jacobians (faster, Stage A: A_vq is numerical)
 }
 
 export const DEFAULT_MPC_CONFIG: MPCConfig = {
@@ -73,6 +76,8 @@ export const DEFAULT_MPC_CONFIG: MPCConfig = {
     sqpTolerance: 1e-4,
 
     commandDelay: 0.02,
+
+    useAnalyticalJacobians: true,   // Analytical Jacobians validated (B matrix fixed)
 };
 
 /**
@@ -614,7 +619,9 @@ export class MPC {
         const linearizations: { A: number[][]; B: number[][]; c: number[] }[] = [];
 
         for (let k = 0; k < this.N; k++) {
-            const lin = this.model.linearize(states[k], inputs[k], this.config.dt);
+            const lin = this.config.useAnalyticalJacobians
+                ? this.model.linearizeAnalytical(states[k], inputs[k], this.config.dt)
+                : this.model.linearize(states[k], inputs[k], this.config.dt);
             linearizations.push(lin);
         }
 
