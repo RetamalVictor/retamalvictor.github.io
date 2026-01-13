@@ -72,7 +72,7 @@ export const DEFAULT_MPC_CONFIG: MPCConfig = {
     maxRate: 20.0,           // ~1150 deg/s roll/pitch rate
     maxYawRate: 10.0,        // ~570 deg/s yaw rate
 
-    sqpIterations: 1,
+    sqpIterations: 1,        // Single iteration for speed
     sqpTolerance: 1e-4,
 
     commandDelay: 0.02,

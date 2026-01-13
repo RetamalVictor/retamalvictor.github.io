@@ -25,10 +25,10 @@ export interface GeneratorConfig {
 }
 
 const DEFAULT_CONFIG: GeneratorConfig = {
-    maxAccel: 20.0,     // 20 m/s² centripetal limit (~2g) - conservative for MPC tracking
-    maxSpeed: 22.0,     // 22 m/s max (~79 km/h)
-    minSpeed: 6.0,      // 6 m/s for tight turns (~22 km/h)
-    defaultSpeed: 18.0, // 18 m/s default (~65 km/h)
+    maxAccel: 30.0,     // 30 m/s² centripetal limit (~3g)
+    maxSpeed: 32.0,     // 32 m/s max (~115 km/h)
+    minSpeed: 7.0,      // 7 m/s for tight turns (~25 km/h)
+    defaultSpeed: 26.0, // 26 m/s default (~94 km/h)
 };
 
 /**
@@ -292,11 +292,12 @@ export class GateTrajectoryGenerator {
         }
 
         const minHeight = 1.5;
-        const approachDist = 5.0;
+        const maxApproachDist = 5.0;
+        const minApproachDist = 2.0;
         const maxSpeed = this.config.maxSpeed;
         const minSpeed = this.config.minSpeed;
 
-        // Generate waypoints
+        // Generate waypoints with adaptive approach distances
         interface WaypointInfo {
             pos: Vector3;
             gateIndex: number;
@@ -307,7 +308,19 @@ export class GateTrajectoryGenerator {
 
         for (let i = 0; i < gates.length; i++) {
             const gate = gates[i];
+            const prevGate = gates[(i - 1 + gates.length) % gates.length];
+            const nextGate = gates[(i + 1) % gates.length];
             const dir = this.normalize(gate.entranceDir);
+
+            // Adaptive approach distance based on distance to prev/next gate
+            const distToPrev = this.distance(gate.position, prevGate.position);
+            const distToNext = this.distance(gate.position, nextGate.position);
+
+            // Scale approach dist: use smaller dist when gates are close
+            const approachScale = Math.min(1.0, distToPrev / 30);
+            const exitScale = Math.min(1.0, distToNext / 30);
+            const approachDist = minApproachDist + (maxApproachDist - minApproachDist) * approachScale;
+            const exitDist = minApproachDist + (maxApproachDist - minApproachDist) * exitScale;
 
             const approach: Vector3 = {
                 x: gate.position.x - dir.x * approachDist,
@@ -316,9 +329,9 @@ export class GateTrajectoryGenerator {
             };
 
             const exit: Vector3 = {
-                x: gate.position.x + dir.x * approachDist,
-                y: Math.max(minHeight, gate.position.y + dir.y * approachDist),
-                z: gate.position.z + dir.z * approachDist,
+                x: gate.position.x + dir.x * exitDist,
+                y: Math.max(minHeight, gate.position.y + dir.y * exitDist),
+                z: gate.position.z + dir.z * exitDist,
             };
 
             waypoints.push({ pos: approach, gateIndex: i, type: 'approach' });
@@ -326,31 +339,36 @@ export class GateTrajectoryGenerator {
             waypoints.push({ pos: exit, gateIndex: i, type: 'exit' });
         }
 
-        // Compute speeds based on PHYSICS: centripetal acceleration limit
-        // v_max = sqrt(a_max * R) where R is turn radius
+        // Compute speeds based on direction change
         const waypointSpeeds: number[] = [];
-        const maxCentripetalAccel = this.config.maxAccel;
 
         for (let i = 0; i < waypoints.length; i++) {
             const prev = waypoints[(i - 1 + waypoints.length) % waypoints.length];
             const curr = waypoints[i];
             const next = waypoints[(i + 1) % waypoints.length];
 
-            // Compute turn radius using Menger curvature (3-point circle)
-            const turnRadius = this.computeTurnRadius(prev.pos, curr.pos, next.pos);
+            const dirIn = this.normalize(this.sub(curr.pos, prev.pos));
+            const dirOut = this.normalize(this.sub(next.pos, curr.pos));
+            const dot = dirIn.x * dirOut.x + dirIn.y * dirOut.y + dirIn.z * dirOut.z;
+            const angle = Math.acos(Math.max(-1, Math.min(1, dot)));
 
-            // Physics-based speed limit: v = sqrt(a_centripetal * R)
-            const speedFromRadius = Math.sqrt(maxCentripetalAccel * turnRadius);
-
-            // Clamp to [minSpeed, maxSpeed]
-            const speed = Math.max(minSpeed, Math.min(maxSpeed, speedFromRadius));
+            // Speed based on angle - threshold + sqrt for aggressive slowdown
+            const threshold = Math.PI / 9; // 20 degrees - no slowdown below this
+            let speed: number;
+            if (angle < threshold) {
+                speed = maxSpeed; // Full speed for gentle turns
+            } else {
+                // Sqrt slowdown - aggressive for moderate angles, ensures safe power loop
+                const sharpness = (angle - threshold) / (Math.PI - threshold);
+                speed = maxSpeed - (maxSpeed - minSpeed) * Math.sqrt(sharpness);
+            }
 
             waypointSpeeds.push(speed);
         }
 
         // Smooth speeds with acceleration limits (forward + backward pass)
         // This ensures speed changes are physically achievable
-        const maxTangentialAccel = this.config.maxAccel * 0.8; // 80% for snappy response
+        const maxTangentialAccel = this.config.maxAccel * 0.7; // 70% for safe deceleration
 
         // Forward pass: limit acceleration
         for (let i = 0; i < waypoints.length; i++) {
