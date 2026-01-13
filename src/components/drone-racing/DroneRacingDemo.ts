@@ -41,7 +41,7 @@ export class DroneRacingDemo {
     private trajectory: Trajectory;
 
     // Configuration
-    private readonly defaultSpeed = 18.0;
+    private readonly defaultSpeed = 25.0;  // 90 km/h - testing
     private readonly defaultHeight = 4.0;
     private readonly showTrajectoryLine = false;  // Set to true for debugging
 
@@ -636,6 +636,11 @@ export class DroneRacingDemo {
             const gateHalfHeight = 2.0;
 
             if (dx < gateHalfWidth && dy < gateHalfHeight) {
+                // Reset gates when starting new lap (crossing gate 0), not when finishing
+                if (this.nextGateIndex === 0) {
+                    this.gateManager.resetGates();
+                }
+
                 this.gateManager.markGatePassed(this.nextGateIndex);
                 this.nextGateIndex++;
 
@@ -651,7 +656,7 @@ export class DroneRacingDemo {
                     // Start timer for next lap from this moment
                     this.currentLapStartTime = this.simulationTime;
                     this.nextGateIndex = 0;
-                    this.gateManager.resetGates();
+                    // Don't reset gates here - they stay green until next lap starts
                 }
             }
         }

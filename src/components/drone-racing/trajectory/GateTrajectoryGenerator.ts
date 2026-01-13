@@ -20,15 +20,15 @@ import { SmoothLineSegment } from './segments/SmoothLineSegment';
 export interface GeneratorConfig {
     maxAccel: number;       // Max centripetal acceleration (m/s²)
     maxSpeed: number;       // Max allowed speed (m/s)
-    minSpeed: number;       // Min speed (m/s)
+    minSpeed: number;       // Min speed (m/s) - for tight corners
     defaultSpeed: number;   // Speed when no constraints
 }
 
 const DEFAULT_CONFIG: GeneratorConfig = {
-    maxAccel: 25.0,     // 25 m/s² centripetal limit (aggressive racing)
-    maxSpeed: 22.0,     // 22 m/s max (~80 km/h)
-    minSpeed: 8.0,      // 8 m/s min (~30 km/h)
-    defaultSpeed: 18.0, // 18 m/s default (~65 km/h)
+    maxAccel: 30.0,     // 30 m/s² centripetal limit (~3g)
+    maxSpeed: 32.0,     // 32 m/s max (~115 km/h)
+    minSpeed: 7.0,      // 7 m/s for tight turns (~25 km/h)
+    defaultSpeed: 26.0, // 26 m/s default (~94 km/h)
 };
 
 /**
@@ -79,7 +79,24 @@ export class GeneratedTrajectory extends Trajectory {
     }
 
     /**
-     * Override getWaypoint to use curvature-based variable speed
+     * Override getSpeedAtPhase to use segment-based speeds
+     * This replaces the base class curvature-based speed with direction-change based speed
+     */
+    protected override getSpeedAtPhase(phase: number): number {
+        const time = phase * this.totalDuration;
+        const { segment, localT } = this.findSegment(time);
+
+        if (!segment) {
+            return this.speed;
+        }
+
+        // Get velocity magnitude from segment (which interpolates entry/exit speeds)
+        const vel = segment.getVelocity(localT);
+        return Math.sqrt(vel.x ** 2 + vel.y ** 2 + vel.z ** 2);
+    }
+
+    /**
+     * Override getWaypoint to use segment-based variable speed
      * - Position: from segment (smooth path)
      * - Velocity: segment direction scaled to curvature-based speed
      * - Acceleration/Jerk: from base class (consistent with variable speed)
@@ -267,8 +284,7 @@ export class GateTrajectoryGenerator {
     /**
      * Generate closed-loop trajectory through gates
      *
-     * Simple approach: straight segments through gates at constant speed.
-     * The MPC will handle speed adaptation at corners.
+     * Simple approach: straight segments with direction-based speeds.
      */
     generate(gates: GateWaypoint[]): GeneratedTrajectory {
         if (gates.length < 2) {
@@ -277,44 +293,118 @@ export class GateTrajectoryGenerator {
 
         const minHeight = 1.5;
         const approachDist = 5.0;
-        const speed = this.config.defaultSpeed;  // MPC will adapt
+        const maxSpeed = this.config.maxSpeed;
+        const minSpeed = this.config.minSpeed;
 
-        const segments: TrajectorySegment[] = [];
+        // Generate waypoints
+        interface WaypointInfo {
+            pos: Vector3;
+            gateIndex: number;
+            type: 'approach' | 'gate' | 'exit';
+        }
+
+        const waypoints: WaypointInfo[] = [];
 
         for (let i = 0; i < gates.length; i++) {
             const gate = gates[i];
-            const nextGate = gates[(i + 1) % gates.length];
             const dir = this.normalize(gate.entranceDir);
 
-            // Approach point
             const approach: Vector3 = {
                 x: gate.position.x - dir.x * approachDist,
                 y: Math.max(minHeight, gate.position.y - dir.y * approachDist),
                 z: gate.position.z - dir.z * approachDist,
             };
 
-            // Exit point
             const exit: Vector3 = {
                 x: gate.position.x + dir.x * approachDist,
                 y: Math.max(minHeight, gate.position.y + dir.y * approachDist),
                 z: gate.position.z + dir.z * approachDist,
             };
 
-            // Next approach point
-            const nextDir = this.normalize(nextGate.entranceDir);
-            const nextApproach: Vector3 = {
-                x: nextGate.position.x - nextDir.x * approachDist,
-                y: Math.max(minHeight, nextGate.position.y - nextDir.y * approachDist),
-                z: nextGate.position.z - nextDir.z * approachDist,
-            };
+            waypoints.push({ pos: approach, gateIndex: i, type: 'approach' });
+            waypoints.push({ pos: gate.position, gateIndex: i, type: 'gate' });
+            waypoints.push({ pos: exit, gateIndex: i, type: 'exit' });
+        }
 
-            // Segments: approach → gate → exit → next approach
-            segments.push(new SmoothLineSegment(approach, gate.position, speed, speed));
-            segments.push(new SmoothLineSegment(gate.position, exit, speed, speed));
-            segments.push(new SmoothLineSegment(exit, nextApproach, speed, speed));
+        // Compute speeds based on direction change
+        const waypointSpeeds: number[] = [];
+
+        for (let i = 0; i < waypoints.length; i++) {
+            const prev = waypoints[(i - 1 + waypoints.length) % waypoints.length];
+            const curr = waypoints[i];
+            const next = waypoints[(i + 1) % waypoints.length];
+
+            const dirIn = this.normalize(this.sub(curr.pos, prev.pos));
+            const dirOut = this.normalize(this.sub(next.pos, curr.pos));
+            const dot = dirIn.x * dirOut.x + dirIn.y * dirOut.y + dirIn.z * dirOut.z;
+            const angle = Math.acos(Math.max(-1, Math.min(1, dot)));
+
+            // Speed based on angle - threshold + sqrt for aggressive slowdown
+            const threshold = Math.PI / 9; // 20 degrees - no slowdown below this
+            let speed: number;
+            if (angle < threshold) {
+                speed = maxSpeed; // Full speed for gentle turns
+            } else {
+                // Sqrt slowdown - aggressive for moderate angles, ensures safe power loop
+                const sharpness = (angle - threshold) / (Math.PI - threshold);
+                speed = maxSpeed - (maxSpeed - minSpeed) * Math.sqrt(sharpness);
+            }
+
+            waypointSpeeds.push(speed);
+        }
+
+        // Smooth speeds with acceleration limits (forward + backward pass)
+        // This ensures speed changes are physically achievable
+        const maxTangentialAccel = this.config.maxAccel * 0.7; // 70% for safe deceleration
+
+        // Forward pass: limit acceleration
+        for (let i = 0; i < waypoints.length; i++) {
+            const next = (i + 1) % waypoints.length;
+            const dist = this.distance(waypoints[i].pos, waypoints[next].pos);
+            // v_next² ≤ v_curr² + 2*a*d  →  v_next ≤ √(v_curr² + 2*a*d)
+            const maxNextSpeed = Math.sqrt(waypointSpeeds[i] ** 2 + 2 * maxTangentialAccel * dist);
+            waypointSpeeds[next] = Math.min(waypointSpeeds[next], maxNextSpeed);
+        }
+
+        // Backward pass: limit braking (iterate multiple times for closed loop)
+        for (let pass = 0; pass < 5; pass++) {
+            for (let i = waypoints.length - 1; i >= 0; i--) {
+                const next = (i + 1) % waypoints.length;
+                const dist = this.distance(waypoints[i].pos, waypoints[next].pos);
+                // v_curr² ≤ v_next² + 2*a*d  →  v_curr ≤ √(v_next² + 2*a*d)
+                const maxCurrSpeed = Math.sqrt(waypointSpeeds[next] ** 2 + 2 * maxTangentialAccel * dist);
+                waypointSpeeds[i] = Math.min(waypointSpeeds[i], maxCurrSpeed);
+            }
+        }
+
+        // Create segments
+        const segments: TrajectorySegment[] = [];
+
+        for (let i = 0; i < waypoints.length; i++) {
+            const curr = waypoints[i];
+            const next = waypoints[(i + 1) % waypoints.length];
+            const currSpeed = waypointSpeeds[i];
+            const nextSpeed = waypointSpeeds[(i + 1) % waypoints.length];
+
+            segments.push(new SmoothLineSegment(curr.pos, next.pos, currSpeed, nextSpeed));
         }
 
         return new GeneratedTrajectory(segments, gates);
+    }
+
+    // ============================================
+    // Vector utilities
+    // ============================================
+
+    private sub(a: Vector3, b: Vector3): Vector3 {
+        return { x: a.x - b.x, y: a.y - b.y, z: a.z - b.z };
+    }
+
+    private distance(a: Vector3, b: Vector3): number {
+        const dx = a.x - b.x;
+        const dy = a.y - b.y;
+        const dz = a.z - b.z;
+        return Math.sqrt(dx * dx + dy * dy + dz * dz);
     }
 
     /**
