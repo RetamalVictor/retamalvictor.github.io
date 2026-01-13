@@ -40,7 +40,7 @@ export class SnakeTrajectory extends Trajectory {
     private numWaves: number;
     private turnRadius: number;
     private pathLength: number;
-    private arcLength: number;
+    private sineArcLength: number;
     private turnArc: number;
     private totalLength: number;
 
@@ -57,13 +57,13 @@ export class SnakeTrajectory extends Trajectory {
 
         // Arc length of sine wave portion
         const k = 2 * Math.PI / this.wavelength;
-        this.arcLength = this.pathLength * Math.sqrt(1 + 0.5 * Math.pow(k * this.amplitude, 2));
+        this.sineArcLength = this.pathLength * Math.sqrt(1 + 0.5 * Math.pow(k * this.amplitude, 2));
 
         // Semicircle turnaround arc
         this.turnArc = Math.PI * this.turnRadius;
 
         // Total: forward snake + turn + backward snake + turn
-        this.totalLength = 2 * this.arcLength + 2 * this.turnArc;
+        this.totalLength = 2 * this.sineArcLength + 2 * this.turnArc;
     }
 
     public getName(): string {
@@ -76,9 +76,9 @@ export class SnakeTrajectory extends Trajectory {
 
     protected getPositionAtPhase(phase: number): { x: number; z: number } {
         // Segment boundaries (as fractions of total length)
-        const seg1 = this.arcLength / this.totalLength;              // End of forward snake
-        const seg2 = (this.arcLength + this.turnArc) / this.totalLength;  // End of first turn
-        const seg3 = (2 * this.arcLength + this.turnArc) / this.totalLength;  // End of backward snake
+        const seg1 = this.sineArcLength / this.totalLength;              // End of forward snake
+        const seg2 = (this.sineArcLength + this.turnArc) / this.totalLength;  // End of first turn
+        const seg3 = (2 * this.sineArcLength + this.turnArc) / this.totalLength;  // End of backward snake
         // seg4 = 1.0 (end of second turn)
 
         const halfPath = this.pathLength / 2;

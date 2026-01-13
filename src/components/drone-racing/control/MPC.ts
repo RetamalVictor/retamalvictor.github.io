@@ -2,6 +2,7 @@ import { DroneState, ControlCommand, Waypoint } from '../types';
 import { MPCModel, MPCState, MPCInput } from './MPCModel';
 import { QPSolver, MatrixUtils } from './QPSolver';
 import { DynamicsParams } from '../core/DroneDynamics';
+import { Trajectory } from '../trajectory/Trajectory';
 
 /**
  * Model Predictive Controller using Sequential Quadratic Programming
@@ -100,6 +101,15 @@ export class MPC {
     private prevInputs: MPCInput[] | null = null;
     private prevStates: MPCState[] | null = null;
 
+    // Progress-based reference tracking (for arc-length parameterization)
+    private prevProgressUnwrapped: number | null = null;
+    private readonly progressSearchWindow: number = 20.0;  // meters
+    private readonly vAlongMin: number = 0.5;   // minimum along-track speed (m/s)
+    private readonly vAlongMax: number = 30.0;  // maximum along-track speed (m/s)
+
+    // Track whether we're using progress-based reference (enables warm-start)
+    private usingProgressBasedReference: boolean = false;
+
     // Last computed trajectory for visualization
     private lastPredictedStates: MPCState[] = [];
 
@@ -186,6 +196,9 @@ export class MPC {
         getReference: (t: number) => Waypoint,
         currentTime: number
     ): ControlCommand {
+        // Time-based reference - warm-start disabled (causes phase drift on circles)
+        this.usingProgressBasedReference = false;
+
         // Convert drone state to MPC state
         const x0 = this.droneStateToMPCState(currentState);
 
@@ -301,6 +314,164 @@ export class MPC {
     }
 
     /**
+     * Sample reference trajectory using arc-length progress parameterization
+     *
+     * This is the key fix for circular/periodic trajectory tracking.
+     * Instead of sampling by time (which drifts on circles), we:
+     * 1. Project current position onto trajectory to get progress s₀
+     * 2. Compute along-track velocity from current state
+     * 3. Sample reference at s₀ + k·Δs using along-track velocity
+     *
+     * @param trajectory - The trajectory object with progress-based API
+     * @param currentState - Current drone state (for position and velocity)
+     * @returns Reference states and inputs for the horizon
+     */
+    private sampleReferenceByProgress(
+        trajectory: Trajectory,
+        currentState: DroneState
+    ): MPCReference {
+        const states: MPCState[] = [];
+        const inputs: MPCInput[] = [];
+        const { dt } = this.config;
+        const gravity = this.model.params.gravity;
+
+        // 1. Project current position onto trajectory to get progress s₀
+        //    CRITICAL: constrain search to window near previous s to avoid jumps!
+        const s0 = trajectory.findClosestProgress(
+            currentState.position,
+            this.prevProgressUnwrapped ?? undefined,
+            this.progressSearchWindow
+        );
+
+        // 2. Compute along-track speed from current velocity
+        const tangent0 = trajectory.getTangentAtProgress(s0);
+        let vAlong = currentState.velocity.x * tangent0.x +
+                     currentState.velocity.y * tangent0.y +
+                     currentState.velocity.z * tangent0.z;
+
+        // Clamp vAlong to prevent reference freeze or runaway
+        vAlong = Math.max(this.vAlongMin, Math.min(this.vAlongMax, vAlong));
+
+        // 3. Sample along the horizon iteratively (update tangent as s changes)
+        let s = s0;
+
+        for (let k = 0; k <= this.N; k++) {
+            const wp = trajectory.getWaypointAtProgress(s);
+
+            // Wrap heading to ±π
+            let heading = wp.heading;
+            while (heading > Math.PI) heading -= 2 * Math.PI;
+            while (heading < -Math.PI) heading += 2 * Math.PI;
+
+            // Compute desired quaternion from acceleration and heading
+            const q = this.accelerationToQuaternion(wp.acceleration, heading, gravity);
+
+            states.push({
+                px: wp.position.x,
+                py: wp.position.y,
+                pz: wp.position.z,
+                vx: wp.velocity.x,
+                vy: wp.velocity.y,
+                vz: wp.velocity.z,
+                qw: q.w,
+                qx: q.x,
+                qy: q.y,
+                qz: q.z,
+                thrust: gravity,
+                rollRate: 0,
+                pitchRate: 0,
+                yawRate: wp.headingRate,
+            });
+
+            if (k < this.N) {
+                // Compute feedforward input from reference
+                const thrust = this.computeFeedforwardThrust(wp, gravity);
+                inputs.push({
+                    thrust,
+                    rollRate: 0,
+                    pitchRate: 0,
+                    yawRate: wp.headingRate,
+                });
+            }
+
+            // Advance s for next step using tangent at current s
+            const tangent = trajectory.getTangentAtProgress(s);
+            const vAlongK = Math.max(this.vAlongMin, Math.min(this.vAlongMax,
+                currentState.velocity.x * tangent.x +
+                currentState.velocity.y * tangent.y +
+                currentState.velocity.z * tangent.z
+            ));
+            s = s + dt * vAlongK;
+        }
+
+        // 4. Store progress for next iteration (smooth tracking)
+        this.prevProgressUnwrapped = s0;
+
+        return { states, inputs };
+    }
+
+    /**
+     * Compute optimal control using progress-based trajectory tracking
+     *
+     * This is the preferred method for periodic trajectories (circles, figure-8).
+     * It uses arc-length progress instead of time for reference sampling,
+     * which prevents phase drift on circular tracks.
+     *
+     * @param currentState - Current drone state
+     * @param trajectory - Trajectory object with progress-based API
+     * @returns Optimal control command
+     */
+    public computeControlWithTrajectory(
+        currentState: DroneState,
+        trajectory: Trajectory
+    ): ControlCommand {
+        // Progress-based reference - warm-start is safe
+        this.usingProgressBasedReference = true;
+
+        // Convert drone state to MPC state
+        const x0 = this.droneStateToMPCState(currentState);
+
+        // Sample reference trajectory using progress-based parameterization
+        const reference = this.sampleReferenceByProgress(trajectory, currentState);
+
+        // Initialize trajectory guess (warm start or reference)
+        const { states: initStates, inputs: initInputs } = this.initializeTrajectory(x0, reference);
+
+        // Run SQP iterations
+        let states = initStates;
+        let inputs = initInputs;
+
+        for (let sqpIter = 0; sqpIter < this.config.sqpIterations; sqpIter++) {
+            // Linearize dynamics along current trajectory
+            const linearizations = this.linearizeAlongTrajectory(states, inputs);
+
+            // Build and solve QP
+            const solution = this.solveQPSubproblem(x0, states, inputs, reference, linearizations);
+
+            // Update trajectory
+            const { newStates, newInputs, improvement } = this.updateTrajectory(
+                x0, states, inputs, solution, linearizations
+            );
+
+            states = newStates;
+            inputs = newInputs;
+
+            // Check convergence
+            if (improvement < this.config.sqpTolerance) {
+                break;
+            }
+        }
+
+        // Store for warm start and visualization
+        this.prevStates = states;
+        this.prevInputs = inputs;
+        this.lastPredictedStates = states;
+
+        // Return first control action
+        return this.model.inputToCommand(inputs[0], currentState.timestamp);
+    }
+
+    /**
      * Compute desired quaternion from desired acceleration and heading
      *
      * The quaternion represents the orientation needed to produce
@@ -371,35 +542,44 @@ export class MPC {
     }
 
     /**
-     * Initialize trajectory for SQP (warm start or from reference)
+     * Initialize trajectory for SQP (warm start or cold start from reference)
+     *
+     * Warm-start is only safe with progress-based reference sampling.
+     * Time-based reference + warm-start causes phase drift on circles.
      */
     private initializeTrajectory(
         x0: MPCState,
         reference: MPCReference
     ): { states: MPCState[]; inputs: MPCInput[] } {
-        // Disabled warm-start - it hurts circular trajectory tracking without speed benefit
-        const useWarmStart = false;
+        // Warm-start only safe with progress-based reference (avoids phase drift on circles)
+        const useWarmStart = this.usingProgressBasedReference;
 
         if (useWarmStart && this.prevInputs && this.prevStates) {
             // Warm start: shift previous solution
-            const states: MPCState[] = [x0];
-            const inputs: MPCInput[] = [];
+            const shiftedInputs: MPCInput[] = [];
 
-            // Shift inputs by one
+            // Shift inputs by one timestep
             for (let k = 1; k < this.N; k++) {
-                inputs.push(this.prevInputs[k]);
-            }
-            // Append last input or reference
-            inputs.push(reference.inputs[this.N - 1] ?? this.model.createHoverInput());
-
-            // Rollout states
-            let state = x0;
-            for (let k = 0; k < this.N; k++) {
-                state = this.model.dynamics(state, inputs[k], this.config.dt);
-                states.push(state);
+                shiftedInputs.push(this.prevInputs[k]);
             }
 
-            return { states, inputs };
+            // Tail fill: prefer continuity over hover
+            // Priority: reference endpoint > last shifted input > hover
+            const tail =
+                reference.inputs[this.N - 1] ??
+                shiftedInputs[shiftedInputs.length - 1] ??
+                this.model.createHoverInput();
+            shiftedInputs.push(tail);
+
+            // Re-rollout from ACTUAL x0 (not shifted state!)
+            const states = this.model.rollout(x0, shiftedInputs, this.config.dt);
+
+            // Quaternion hemisphere alignment
+            for (let k = 0; k <= this.N; k++) {
+                this.alignQuaternionHemisphere(states[k], reference.states[k]);
+            }
+
+            return { states, inputs: shiftedInputs };
         }
 
         // Cold start: rollout from x0 using reference inputs
@@ -407,6 +587,21 @@ export class MPC {
         const coldInputs = [...reference.inputs];
         const coldStates = this.model.rollout(x0, coldInputs, this.config.dt);
         return { states: coldStates, inputs: coldInputs };
+    }
+
+    /**
+     * Align quaternion to be in same hemisphere as reference (for shortest path)
+     */
+    private alignQuaternionHemisphere(state: MPCState, ref: MPCState): void {
+        const dot = state.qw * ref.qw + state.qx * ref.qx +
+                    state.qy * ref.qy + state.qz * ref.qz;
+        if (dot < 0) {
+            // Negate quaternion to get shortest path
+            state.qw = -state.qw;
+            state.qx = -state.qx;
+            state.qy = -state.qy;
+            state.qz = -state.qz;
+        }
     }
 
     /**
@@ -728,6 +923,8 @@ export class MPC {
     public reset(): void {
         this.prevInputs = null;
         this.prevStates = null;
+        this.prevProgressUnwrapped = null;
+        this.usingProgressBasedReference = false;
         this.lastPredictedStates = [];
     }
 }
