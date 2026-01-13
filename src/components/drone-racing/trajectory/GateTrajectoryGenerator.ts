@@ -421,43 +421,6 @@ export class GateTrajectoryGenerator {
     }
 
     /**
-     * Compute turn radius at point B given points A, B, C
-     * Uses Menger curvature: κ = 4*Area / (|AB|*|BC|*|CA|)
-     * Turn radius R = 1/κ
-     */
-    private computeTurnRadius(a: Vector3, b: Vector3, c: Vector3): number {
-        const ab = this.distance(a, b);
-        const bc = this.distance(b, c);
-        const ca = this.distance(c, a);
-
-        // Cross product for area: AB × AC
-        const abVec = this.sub(b, a);
-        const acVec = this.sub(c, a);
-        const cross = {
-            x: abVec.y * acVec.z - abVec.z * acVec.y,
-            y: abVec.z * acVec.x - abVec.x * acVec.z,
-            z: abVec.x * acVec.y - abVec.y * acVec.x,
-        };
-        const crossMag = Math.sqrt(cross.x ** 2 + cross.y ** 2 + cross.z ** 2);
-
-        // Area of triangle = |AB × AC| / 2
-        const area = crossMag / 2;
-
-        // Menger curvature: κ = 4 * Area / (|AB| * |BC| * |CA|)
-        const denom = ab * bc * ca;
-        if (denom < 1e-6 || area < 1e-6) {
-            // Nearly collinear points = large radius (straight line)
-            return 1000.0;
-        }
-
-        const curvature = (4 * area) / denom;
-        const radius = 1 / curvature;
-
-        // Clamp to reasonable range
-        return Math.max(0.5, Math.min(1000.0, radius));
-    }
-
-    /**
      * Normalize a vector
      */
     private normalize(v: Vector3): Vector3 {
