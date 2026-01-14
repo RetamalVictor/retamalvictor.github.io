@@ -3,7 +3,7 @@ import { VisualServoDemo } from '../components/VisualServoDemo.js';
 /**
  * Types for the home page demo tabs
  */
-export type DemoType = 'ibvs' | 'ternary' | 'drone-racing';
+export type DemoType = 'ibvs' | 'ternary' | 'drone-racing' | 'depth';
 
 /**
  * Interface for demo instances
@@ -21,6 +21,7 @@ export const DEMO_HINTS: Record<DemoType, string> = {
     'ibvs': 'Drag the target',
     'ternary': 'Enter a prompt',
     'drone-racing': 'Use mouse to orbit',
+    'depth': 'Allow camera access',
 };
 
 /**
@@ -145,6 +146,15 @@ export class DemoManager {
                 // Lazy load DroneRacingDemo
                 const { DroneRacingDemo } = await import('../components/drone-racing/DroneRacingDemo.js');
                 this.currentInstance = new DroneRacingDemo(this.containerId);
+                break;
+
+            case 'depth':
+                // Lazy load DepthDemo
+                const { DepthDemo } = await import('../components/depth/DepthDemo.js');
+                this.currentInstance = new DepthDemo({
+                    containerId: this.containerId,
+                    modelPath: '/assets/models/depth'
+                });
                 break;
         }
     }

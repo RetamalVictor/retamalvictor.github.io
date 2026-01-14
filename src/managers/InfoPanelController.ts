@@ -523,6 +523,107 @@ export const INFO_PANEL_CONTENT: Record<DemoType, InfoPanelContent> = {
             </div>
 
         `
+    },
+    'depth': {
+        title: 'Real-time Depth Estimation',
+        content: `
+            <!-- Overview -->
+            <div class="info-section">
+                <h3 class="text-accent-purple font-medium mb-2">Overview</h3>
+                <p class="text-gray-400 leading-relaxed">
+                    This demo shows <strong class="text-white">real-time monocular depth estimation</strong>
+                    using Depth Anything V2 running entirely in the browser via ONNX Runtime Web.
+                    The model predicts <strong class="text-white">relative depth</strong> from a single RGB image.
+                </p>
+                <p class="text-gray-500 text-xs mt-2">
+                    Note: Depth values are relative (ordinal), not metric distances.
+                </p>
+            </div>
+
+            <!-- Model -->
+            <div class="info-section">
+                <h3 class="text-accent-purple font-medium mb-2">Model Architecture</h3>
+                <p class="text-gray-400 mb-3">
+                    Depth Anything V2 uses a Vision Transformer (ViT) backbone:
+                </p>
+                <div class="bg-dark-bg rounded-lg p-3 text-xs space-y-1">
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Backbone</span>
+                        <span class="text-white font-mono">ViT-S (Small)</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Input resolution</span>
+                        <span class="text-white font-mono">384 × 384</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Output</span>
+                        <span class="text-white font-mono">Relative depth map</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Inference Pipeline -->
+            <div class="info-section">
+                <h3 class="text-accent-purple font-medium mb-2">Inference Pipeline</h3>
+                <div class="bg-dark-bg rounded-lg p-3 font-mono text-xs space-y-2">
+                    <div class="text-gray-500">// Preprocessing</div>
+                    <div class="text-gray-300">1. Resize to 384×384</div>
+                    <div class="text-gray-300">2. Normalize: (x - μ) / σ</div>
+                    <div class="text-gray-300">3. Convert HWC → CHW</div>
+                    <div class="text-gray-500 mt-2">// Inference</div>
+                    <div class="text-gray-300">4. ONNX Runtime (WebGPU/WASM)</div>
+                    <div class="text-gray-500 mt-2">// Postprocessing</div>
+                    <div class="text-gray-300">5. Normalize depth to [0, 1]</div>
+                    <div class="text-gray-300">6. Apply colormap</div>
+                </div>
+            </div>
+
+            <!-- Browser Deployment -->
+            <div class="info-section">
+                <h3 class="text-accent-purple font-medium mb-2">Browser Deployment</h3>
+                <p class="text-gray-400 mb-3">
+                    ONNX Runtime Web with backend selection:
+                </p>
+                <div class="bg-dark-bg rounded-lg p-3 text-xs space-y-1">
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Primary</span>
+                        <span class="text-green-400 font-mono">WebGPU</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Fallback</span>
+                        <span class="text-yellow-400 font-mono">WASM</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Model format</span>
+                        <span class="text-white font-mono">ONNX</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Limitations -->
+            <div class="info-section">
+                <h3 class="text-accent-purple font-medium mb-2">Limitations</h3>
+                <div class="bg-dark-bg rounded-lg p-3 text-xs space-y-2">
+                    <div class="text-gray-400">
+                        <strong class="text-white">Scale ambiguity:</strong> Monocular depth is inherently ambiguous.
+                        The model predicts relative ordering, not absolute distances.
+                    </div>
+                    <div class="text-gray-400 mt-2">
+                        <strong class="text-white">Domain shift:</strong> Performance varies with scene type
+                        (indoor, outdoor, aerial).
+                    </div>
+                </div>
+            </div>
+
+            <!-- References -->
+            <div class="info-section border-t border-dark-border pt-4">
+                <h3 class="text-accent-purple font-medium mb-2">References</h3>
+                <ul class="text-gray-500 text-xs space-y-1">
+                    <li>Yang et al., "Depth Anything V2" (2024)</li>
+                    <li>Ranftl et al., "Towards Robust Monocular Depth Estimation" (2020)</li>
+                </ul>
+            </div>
+        `
     }
 };
 
