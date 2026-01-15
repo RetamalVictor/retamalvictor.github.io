@@ -45,6 +45,14 @@ export class DepthDemo {
     private frameCount = 0;
     private fpsUpdateTime = 0;
 
+    // Async inference state
+    private isInferenceRunning = false;
+    private latestDepthMap: Float32Array | null = null;
+
+    // Reusable canvas for rendering (avoid per-frame allocation)
+    private tempRenderCanvas: HTMLCanvasElement | null = null;
+    private tempRenderCtx: CanvasRenderingContext2D | null = null;
+
     constructor(config: DepthDemoConfig) {
         const container = document.getElementById(config.containerId);
         if (!container) {
@@ -145,7 +153,7 @@ export class DepthDemo {
 
         // Capture frame from video
         if (this.video && this.videoCanvas && this.videoCtx && this.engine) {
-            // Draw video to canvas
+            // Draw video to canvas (always, for smooth video display)
             this.videoCtx.drawImage(
                 this.video,
                 0, 0,
@@ -153,26 +161,35 @@ export class DepthDemo {
                 this.videoCanvas.height
             );
 
-            // Get image data
-            const imageData = this.videoCtx.getImageData(
-                0, 0,
-                this.videoCanvas.width,
-                this.videoCanvas.height
-            );
+            // Start new inference if none is running
+            if (!this.isInferenceRunning) {
+                this.isInferenceRunning = true;
 
-            try {
-                // Run depth inference
-                const depthMap = await this.engine.predict(imageData);
+                // Get image data for inference
+                const imageData = this.videoCtx.getImageData(
+                    0, 0,
+                    this.videoCanvas.width,
+                    this.videoCanvas.height
+                );
 
-                // Render depth visualization
-                this.renderDepth(depthMap);
+                // Run inference asynchronously (non-blocking)
+                this.engine.predict(imageData).then((depthMap) => {
+                    this.latestDepthMap = depthMap;
 
-                // Update metrics
-                const stats = this.engine.getStats();
-                this.state.latencyMs = stats.lastLatencyMs;
+                    // Update metrics
+                    const stats = this.engine!.getStats();
+                    this.state.latencyMs = stats.lastLatencyMs;
 
-            } catch (e) {
-                console.error('[DepthDemo] Inference error:', e);
+                    this.isInferenceRunning = false;
+                }).catch((e) => {
+                    console.error('[DepthDemo] Inference error:', e);
+                    this.isInferenceRunning = false;
+                });
+            }
+
+            // Render latest depth map (if available)
+            if (this.latestDepthMap) {
+                this.renderDepth(this.latestDepthMap);
             }
         }
 
@@ -197,6 +214,14 @@ export class DepthDemo {
         const width = this.depthCanvas.width;
         const height = this.depthCanvas.height;
 
+        // Initialize reusable temp canvas if needed
+        if (!this.tempRenderCanvas || this.tempRenderCanvas.width !== outputSize) {
+            this.tempRenderCanvas = document.createElement('canvas');
+            this.tempRenderCanvas.width = outputSize;
+            this.tempRenderCanvas.height = outputSize;
+            this.tempRenderCtx = this.tempRenderCanvas.getContext('2d')!;
+        }
+
         // Normalize depth for visualization
         let minDepth = Infinity;
         let maxDepth = -Infinity;
@@ -207,11 +232,11 @@ export class DepthDemo {
         const range = maxDepth - minDepth || 1;
 
         // Create output image with grayscale colormap
-        const imageData = this.depthCtx.createImageData(outputSize, outputSize);
+        const imageData = this.tempRenderCtx!.createImageData(outputSize, outputSize);
 
         for (let i = 0; i < depthMap.length; i++) {
-            // Normalize to 0-1, invert so close = bright
-            const normalized = 1 - (depthMap[i] - minDepth) / range;
+            // Normalize to 0-1 (model outputs disparity: close = high values = bright)
+            const normalized = (depthMap[i] - minDepth) / range;
             const value = Math.floor(normalized * 255);
 
             imageData.data[i * 4] = value;
@@ -220,15 +245,9 @@ export class DepthDemo {
             imageData.data[i * 4 + 3] = 255;
         }
 
-        // Draw at output size first, then scale to canvas
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = outputSize;
-        tempCanvas.height = outputSize;
-        const tempCtx = tempCanvas.getContext('2d')!;
-        tempCtx.putImageData(imageData, 0, 0);
-
-        // Draw scaled to output canvas
-        this.depthCtx.drawImage(tempCanvas, 0, 0, width, height);
+        // Draw to reusable temp canvas, then scale to output
+        this.tempRenderCtx!.putImageData(imageData, 0, 0);
+        this.depthCtx.drawImage(this.tempRenderCanvas, 0, 0, width, height);
     }
 
     private updateMetricsDisplay(): void {

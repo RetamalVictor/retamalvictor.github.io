@@ -31,6 +31,8 @@ export class DepthEngine {
     private inputBuffer: Float32Array | null = null;
     private resizeCanvas: HTMLCanvasElement;
     private resizeCtx: CanvasRenderingContext2D;
+    private sourceCanvas: HTMLCanvasElement | null = null;
+    private sourceCtx: CanvasRenderingContext2D | null = null;
 
     private constructor(config: DepthEngineConfig) {
         this.config = config;
@@ -60,11 +62,11 @@ export class DepthEngine {
 
         const engine = new DepthEngine(config);
 
-        // Disable multi-threading to avoid SharedArrayBuffer/COOP/COEP complexity
-        ort.env.wasm.numThreads = 1;
+        // Enable multi-threading (COOP/COEP headers already set in vite.config.ts)
+        ort.env.wasm.numThreads = navigator.hardwareConcurrency || 4;
 
         // Try to load model and determine backend
-        const modelUrl = `${modelPath}/depth_pretrained.onnx`;
+        const modelUrl = `${modelPath}/midas_v21_small_256.onnx`;
 
         // First, get model size
         try {
@@ -151,16 +153,17 @@ export class DepthEngine {
     private preprocess(imageData: ImageData): ort.Tensor {
         const { inputSize, normalizeMean, normalizeStd } = this.config;
 
-        // Draw source image to resize canvas
-        // First put imageData to a temp canvas, then draw scaled
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = imageData.width;
-        tempCanvas.height = imageData.height;
-        const tempCtx = tempCanvas.getContext('2d')!;
-        tempCtx.putImageData(imageData, 0, 0);
+        // Reuse source canvas (resize if needed)
+        if (!this.sourceCanvas || this.sourceCanvas.width !== imageData.width || this.sourceCanvas.height !== imageData.height) {
+            this.sourceCanvas = document.createElement('canvas');
+            this.sourceCanvas.width = imageData.width;
+            this.sourceCanvas.height = imageData.height;
+            this.sourceCtx = this.sourceCanvas.getContext('2d')!;
+        }
+        this.sourceCtx!.putImageData(imageData, 0, 0);
 
         // Draw resized
-        this.resizeCtx.drawImage(tempCanvas, 0, 0, inputSize, inputSize);
+        this.resizeCtx.drawImage(this.sourceCanvas, 0, 0, inputSize, inputSize);
 
         // Get resized pixel data
         const resizedData = this.resizeCtx.getImageData(0, 0, inputSize, inputSize);
