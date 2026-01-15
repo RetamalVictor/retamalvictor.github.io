@@ -532,8 +532,9 @@ export const INFO_PANEL_CONTENT: Record<DemoType, InfoPanelContent> = {
                 <h3 class="text-accent-purple font-medium mb-2">Overview</h3>
                 <p class="text-gray-400 leading-relaxed">
                     This demo shows <strong class="text-white">real-time monocular depth estimation</strong>
-                    using Depth Anything V2 running entirely in the browser via ONNX Runtime Web.
-                    The model predicts <strong class="text-white">relative depth</strong> from a single RGB image.
+                    using MiDaS v2.1 running entirely in the browser via ONNX Runtime Web.
+                    The model predicts <strong class="text-white">relative depth</strong> from a single RGB image,
+                    with optional <strong class="text-white">3D point cloud visualization</strong>.
                 </p>
                 <p class="text-gray-500 text-xs mt-2">
                     Note: Depth values are relative (ordinal), not metric distances.
@@ -544,16 +545,20 @@ export const INFO_PANEL_CONTENT: Record<DemoType, InfoPanelContent> = {
             <div class="info-section">
                 <h3 class="text-accent-purple font-medium mb-2">Model Architecture</h3>
                 <p class="text-gray-400 mb-3">
-                    Depth Anything V2 uses a Vision Transformer (ViT) backbone:
+                    MiDaS v2.1 small uses an EfficientNet-Lite backbone:
                 </p>
                 <div class="bg-dark-bg rounded-lg p-3 text-xs space-y-1">
                     <div class="flex justify-between">
                         <span class="text-gray-400">Backbone</span>
-                        <span class="text-white font-mono">ViT-S (Small)</span>
+                        <span class="text-white font-mono">EfficientNet-Lite</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-gray-400">Input resolution</span>
-                        <span class="text-white font-mono">384 × 384</span>
+                        <span class="text-white font-mono">256 × 256</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Model size</span>
+                        <span class="text-white font-mono">~64 MB</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-gray-400">Output</span>
@@ -562,40 +567,43 @@ export const INFO_PANEL_CONTENT: Record<DemoType, InfoPanelContent> = {
                 </div>
             </div>
 
-            <!-- Inference Pipeline -->
+            <!-- 3D Point Cloud -->
             <div class="info-section">
-                <h3 class="text-accent-purple font-medium mb-2">Inference Pipeline</h3>
+                <h3 class="text-accent-purple font-medium mb-2">3D Point Cloud</h3>
+                <p class="text-gray-400 mb-3">
+                    Back-projects depth to 3D using approximate camera intrinsics:
+                </p>
                 <div class="bg-dark-bg rounded-lg p-3 font-mono text-xs space-y-2">
-                    <div class="text-gray-500">// Preprocessing</div>
-                    <div class="text-gray-300">1. Resize to 384×384</div>
-                    <div class="text-gray-300">2. Normalize: (x - μ) / σ</div>
-                    <div class="text-gray-300">3. Convert HWC → CHW</div>
-                    <div class="text-gray-500 mt-2">// Inference</div>
-                    <div class="text-gray-300">4. ONNX Runtime (WebGPU/WASM)</div>
-                    <div class="text-gray-500 mt-2">// Postprocessing</div>
-                    <div class="text-gray-300">5. Normalize depth to [0, 1]</div>
-                    <div class="text-gray-300">6. Apply colormap</div>
+                    <div class="text-gray-500">// Back-projection</div>
+                    <div class="text-gray-300">X = (u - cx) × Z / fx</div>
+                    <div class="text-gray-300">Y = (v - cy) × Z / fy</div>
+                    <div class="text-gray-500 mt-2">// Temporal smoothing (EMA)</div>
+                    <div class="text-gray-300">depth' = α × depth_prev + (1-α) × depth</div>
                 </div>
+                <p class="text-gray-500 text-xs mt-2">
+                    Uses <strong class="text-gray-400">turbo colormap</strong> for depth visualization
+                    and <strong class="text-gray-400">background removal</strong> via depth thresholding.
+                </p>
             </div>
 
             <!-- Browser Deployment -->
             <div class="info-section">
                 <h3 class="text-accent-purple font-medium mb-2">Browser Deployment</h3>
                 <p class="text-gray-400 mb-3">
-                    ONNX Runtime Web with backend selection:
+                    ONNX Runtime Web with multi-threaded WASM:
                 </p>
                 <div class="bg-dark-bg rounded-lg p-3 text-xs space-y-1">
                     <div class="flex justify-between">
-                        <span class="text-gray-400">Primary</span>
-                        <span class="text-green-400 font-mono">WebGPU</span>
+                        <span class="text-gray-400">Backend</span>
+                        <span class="text-yellow-400 font-mono">WASM (multi-threaded)</span>
                     </div>
                     <div class="flex justify-between">
-                        <span class="text-gray-400">Fallback</span>
-                        <span class="text-yellow-400 font-mono">WASM</span>
+                        <span class="text-gray-400">3D Renderer</span>
+                        <span class="text-white font-mono">Three.js</span>
                     </div>
                     <div class="flex justify-between">
-                        <span class="text-gray-400">Model format</span>
-                        <span class="text-white font-mono">ONNX</span>
+                        <span class="text-gray-400">Target FPS</span>
+                        <span class="text-white font-mono">~14 FPS</span>
                     </div>
                 </div>
             </div>
@@ -609,20 +617,12 @@ export const INFO_PANEL_CONTENT: Record<DemoType, InfoPanelContent> = {
                         The model predicts relative ordering, not absolute distances.
                     </div>
                     <div class="text-gray-400 mt-2">
-                        <strong class="text-white">Domain shift:</strong> Performance varies with scene type
-                        (indoor, outdoor, aerial).
+                        <strong class="text-white">Point cloud:</strong> Visualization only, not suitable for
+                        mapping or metric reconstruction.
                     </div>
                 </div>
             </div>
 
-            <!-- References -->
-            <div class="info-section border-t border-dark-border pt-4">
-                <h3 class="text-accent-purple font-medium mb-2">References</h3>
-                <ul class="text-gray-500 text-xs space-y-1">
-                    <li>Yang et al., "Depth Anything V2" (2024)</li>
-                    <li>Ranftl et al., "Towards Robust Monocular Depth Estimation" (2020)</li>
-                </ul>
-            </div>
         `
     }
 };
