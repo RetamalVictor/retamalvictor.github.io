@@ -3,10 +3,10 @@
  *
  * This module provides an interactive demo for running ternary transformer
  * models (1.58 bits per weight) directly in the browser.
+ *
+ * Inference is powered by @bittorch/js - a standalone ternary inference library
+ * with WebGPU acceleration.
  */
 
 export { TernaryLMDemo } from './TernaryLMDemo';
-export { TransformerCPUEngine } from './TransformerCPUEngine';
-export { SafeTensorsLoader } from './SafeTensorsLoader';
-export { BPETokenizer } from './BPETokenizer';
-export { GPUMatmul } from './gpu/GPUMatmul';
+export { BitTorchAdapter } from './BitTorchAdapter';

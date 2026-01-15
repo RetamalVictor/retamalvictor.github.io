@@ -156,9 +156,15 @@ export const INFO_PANEL_CONTENT: Record<DemoType, InfoPanelContent> = {
             <div class="info-section">
                 <h3 class="text-accent-purple font-medium mb-2">Overview</h3>
                 <p class="text-gray-400 leading-relaxed">
-                    This demo shows a <strong class="text-white">Ternary Quantized Language Model</strong>
-                    running entirely in the browser. Weights are compressed to {-1, 0, +1}, enabling
-                    efficient inference with minimal memory footprint.
+                    A <strong class="text-white">LLaMA-style transformer</strong> with ternary-quantized weights
+                    running entirely in your browser. Inspired by <strong class="text-white">BitNet b1.58</strong>,
+                    linear layer weights are constrained to <strong class="text-white">{-1, 0, +1}</strong>
+                    and packed at 2 bits per weight, achieving <strong class="text-accent-cyan">~8× compression
+                    relative to FP16</strong> (excluding per-channel scale overhead).
+                </p>
+                <p class="text-gray-500 text-xs mt-2">
+                    This implementation targets inference efficiency under browser constraints,
+                    prioritizing memory bandwidth reduction over raw arithmetic throughput.
                 </p>
             </div>
 
@@ -166,41 +172,141 @@ export const INFO_PANEL_CONTENT: Record<DemoType, InfoPanelContent> = {
             <div class="info-section">
                 <h3 class="text-accent-purple font-medium mb-2">Architecture</h3>
                 <p class="text-gray-400 mb-3">
-                    Transformer-based model with ternary weights:
-                </p>
-                <div class="bg-dark-bg rounded-lg p-3 font-mono text-xs space-y-2">
-                    <div class="text-gray-300">
-                        <span class="text-accent-cyan">W</span> ∈ {-1, 0, +1}<sup>d×d</sup>
-                    </div>
-                    <div class="text-gray-300">
-                        <span class="text-accent-cyan">y</span> = W · x <span class="text-gray-500">// No multiplications!</span>
-                    </div>
-                </div>
-                <p class="text-gray-500 text-xs mt-2">
-                    Multiplications become additions/subtractions, enabling fast CPU inference.
-                </p>
-            </div>
-
-            <!-- Quantization -->
-            <div class="info-section">
-                <h3 class="text-accent-purple font-medium mb-2">Quantization</h3>
-                <p class="text-gray-400 mb-3">
-                    Ternary quantization reduces memory by ~16x:
+                    Modern transformer with LLaMA-style components:
                 </p>
                 <div class="bg-dark-bg rounded-lg p-3 text-xs space-y-1">
                     <div class="flex justify-between">
-                        <span class="text-gray-400">FP32 weights</span>
-                        <span class="text-white font-mono">32 bits/param</span>
+                        <span class="text-gray-400">Normalization</span>
+                        <span class="text-white font-mono">RMSNorm (pre-norm)</span>
                     </div>
                     <div class="flex justify-between">
-                        <span class="text-gray-400">Ternary weights</span>
-                        <span class="text-white font-mono">2 bits/param</span>
+                        <span class="text-gray-400">Positional encoding</span>
+                        <span class="text-white font-mono">RoPE</span>
                     </div>
                     <div class="flex justify-between">
-                        <span class="text-gray-400">Compression</span>
-                        <span class="text-accent-cyan font-mono">16x</span>
+                        <span class="text-gray-400">Attention</span>
+                        <span class="text-white font-mono">GQA (4 KV heads)</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">FFN</span>
+                        <span class="text-white font-mono">SwiGLU</span>
                     </div>
                 </div>
+                <p class="text-gray-500 text-xs mt-2">
+                    The architecture is conventional; the novelty lies in the weight representation
+                    and execution strategy rather than the model design itself.
+                </p>
+            </div>
+
+            <!-- Weight Encoding -->
+            <div class="info-section">
+                <h3 class="text-accent-purple font-medium mb-2">Weight Encoding</h3>
+                <p class="text-gray-400 mb-3">
+                    2-bit ternary packing (4 weights per byte) with per-channel FP16 scales:
+                </p>
+                <div class="bg-dark-bg rounded-lg p-3 font-mono text-xs space-y-1">
+                    <div class="text-gray-300"><span class="text-accent-cyan">00</span> →  0</div>
+                    <div class="text-gray-300"><span class="text-accent-cyan">01</span> → +1</div>
+                    <div class="text-gray-300"><span class="text-accent-cyan">10</span> → −1</div>
+                </div>
+                <p class="text-gray-500 text-xs mt-2">
+                    Output: <strong class="text-gray-400">y = scale ⊙ (W<sub>ternary</sub> · x)</strong>.
+                    Weights remain packed end-to-end: on disk, in memory, and in GPU buffers.
+                </p>
+            </div>
+
+            <!-- On-Demand Decoding -->
+            <div class="info-section">
+                <h3 class="text-accent-purple font-medium mb-2">On-Demand Decoding</h3>
+                <p class="text-gray-400 mb-3">
+                    Weights are <strong class="text-white">never pre-expanded</strong> to INT8 or FP16.
+                    Decoding occurs per-weight inside the matrix multiply using branch-free arithmetic:
+                </p>
+                <div class="bg-dark-bg rounded-lg p-3 font-mono text-xs space-y-1">
+                    <div class="text-gray-300"><span class="text-accent-purple">code</span> = (packed >> shift) & <span class="text-yellow-400">0x3</span></div>
+                    <div class="text-gray-300"><span class="text-accent-purple">w</span> = (code & 1) - (code >> 1) <span class="text-gray-500">// −1, 0, +1</span></div>
+                </div>
+                <p class="text-gray-500 text-xs mt-2">
+                    Avoids control-flow divergence. Memory traffic stays proportional to packed size.
+                </p>
+            </div>
+
+            <!-- WebGPU Execution -->
+            <div class="info-section">
+                <h3 class="text-accent-purple font-medium mb-2">WebGPU Execution</h3>
+                <p class="text-gray-400 mb-3">
+                    Inference runs entirely on GPU via <strong class="text-accent-cyan">compute shaders</strong>:
+                </p>
+                <div class="bg-dark-bg rounded-lg p-3 text-xs space-y-1">
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Ternary matmul</span>
+                        <span class="text-accent-cyan font-mono">WGSL compute</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">RMSNorm</span>
+                        <span class="text-accent-cyan font-mono">WGSL compute</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">RoPE</span>
+                        <span class="text-accent-cyan font-mono">WGSL compute</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Softmax/SwiGLU</span>
+                        <span class="text-accent-cyan font-mono">WGSL compute</span>
+                    </div>
+                </div>
+                <p class="text-gray-500 text-xs mt-2">
+                    Weights remain resident in GPU buffers. No per-token weight transfers between CPU and GPU.
+                </p>
+            </div>
+
+            <!-- CPU Fallback -->
+            <div class="info-section">
+                <h3 class="text-accent-purple font-medium mb-2">CPU Fallback</h3>
+                <p class="text-gray-400 mb-3">
+                    Browsers without WebGPU use a <strong class="text-yellow-400">JavaScript</strong> fallback
+                    with the same packed format:
+                </p>
+                <div class="bg-dark-bg rounded-lg p-3 text-xs space-y-1">
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">No format conversion</span>
+                        <span class="text-white font-mono">Same packed weights</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Branch-free decode</span>
+                        <span class="text-white font-mono">Optimized inner loop</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Manual unrolling</span>
+                        <span class="text-white font-mono">4 weights/iteration</span>
+                    </div>
+                </div>
+                <p class="text-gray-500 text-xs mt-2">
+                    Single-threaded JS. Significantly slower than WebGPU but functionally equivalent.
+                </p>
+            </div>
+
+            <!-- Why It's Efficient -->
+            <div class="info-section">
+                <h3 class="text-accent-purple font-medium mb-2">Why This Is Efficient</h3>
+                <div class="bg-dark-bg rounded-lg p-3 text-xs space-y-2">
+                    <div class="text-gray-400">
+                        <strong class="text-white">1. Bandwidth-bound execution.</strong>
+                        Transformer inference is typically limited by memory bandwidth, not arithmetic.
+                        Smaller weights reduce traffic and improve cache residency.
+                    </div>
+                    <div class="text-gray-400">
+                        <strong class="text-white">2. Low decode overhead.</strong>
+                        Bitwise decode operations are inexpensive compared to fetching wider formats from memory.
+                    </div>
+                    <div class="text-gray-400">
+                        <strong class="text-white">3. Browser-specific wins.</strong>
+                        Packed weights reduce download size, parsing overhead, peak memory, and GPU upload cost.
+                    </div>
+                </div>
+                <p class="text-gray-500 text-xs mt-2">
+                    Performance gains come from reduced data movement, not from eliminating multiplications.
+                </p>
             </div>
 
             <!-- Model Details -->
@@ -209,34 +315,52 @@ export const INFO_PANEL_CONTENT: Record<DemoType, InfoPanelContent> = {
                 <div class="bg-dark-bg rounded-lg p-3 text-xs space-y-1">
                     <div class="flex justify-between">
                         <span class="text-gray-400">Parameters</span>
-                        <span class="text-white font-mono">~1M</span>
+                        <span class="text-white font-mono">~44M (weights)</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-gray-400">Layers</span>
-                        <span class="text-white font-mono">4</span>
+                        <span class="text-white font-mono">8</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-gray-400">Hidden dim</span>
-                        <span class="text-white font-mono">256</span>
+                        <span class="text-white font-mono">512</span>
                     </div>
                     <div class="flex justify-between">
-                        <span class="text-gray-400">Vocab size</span>
-                        <span class="text-white font-mono">65</span>
+                        <span class="text-gray-400">Heads</span>
+                        <span class="text-white font-mono">8 (4 KV)</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Context</span>
+                        <span class="text-white font-mono">512 tokens</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Tokenizer</span>
+                        <span class="text-white font-mono">GPT-2 BPE (50K)</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-gray-400">Training data</span>
-                        <span class="text-white font-mono">Shakespeare</span>
+                        <span class="text-white font-mono">WikiText (demo-scale)</span>
                     </div>
                 </div>
             </div>
 
-            <!-- References -->
-            <div class="info-section border-t border-dark-border pt-4">
-                <h3 class="text-accent-purple font-medium mb-2">References</h3>
-                <ul class="text-gray-500 text-xs space-y-1">
-                    <li>Ma et al., "The Era of 1-bit LLMs" (2024)</li>
-                    <li>Karpathy, "nanoGPT" (2023)</li>
-                </ul>
+            <!-- Data Flow -->
+            <div class="info-section">
+                <h3 class="text-accent-purple font-medium mb-2">Data Flow</h3>
+                <p class="text-gray-500 text-xs mb-2">
+                    No expanded weight representations at any stage:
+                </p>
+                <div class="bg-dark-bg rounded-lg p-3 font-mono text-xs space-y-1">
+                    <div class="text-accent-cyan">SafeTensors <span class="text-gray-500">(packed)</span></div>
+                    <div class="text-gray-600 pl-4">↓</div>
+                    <div class="text-white">Uint8Array</div>
+                    <div class="text-gray-600 pl-4">↓</div>
+                    <div class="text-yellow-400">GPU Buffer</div>
+                    <div class="text-gray-600 pl-4">↓ <span class="text-accent-purple">on-the-fly decode</span></div>
+                    <div class="text-yellow-400">Compute Shader</div>
+                    <div class="text-gray-600 pl-4">↓</div>
+                    <div class="text-white">Output <span class="text-gray-500">(Float32)</span></div>
+                </div>
             </div>
         `
     },

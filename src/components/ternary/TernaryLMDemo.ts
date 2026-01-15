@@ -5,7 +5,7 @@
  * panel showing memory savings and performance metrics.
  */
 
-import { TransformerCPUEngine } from './TransformerCPUEngine';
+import { BitTorchAdapter } from './BitTorchAdapter';
 
 /** Demo component configuration */
 interface TernaryLMDemoConfig {
@@ -85,14 +85,14 @@ export class TernaryLMDemo {
 
         try {
             console.log('Loading transformer model...');
-            this.engine = await TransformerCPUEngine.create(this.config.modelPath);
+            this.engine = await BitTorchAdapter.create(this.config.modelPath);
 
             // Check actual GPU status from engine
-            const engineCPU = this.engine as TransformerCPUEngine;
-            this.usingCPU = !engineCPU.isGPUEnabled();
+            const adapter = this.engine as BitTorchAdapter;
+            this.usingCPU = !adapter.isGPUEnabled();
             this.isTransformer = true;
 
-            console.log('Transformer engine initialized, GPU:', engineCPU.isGPUEnabled());
+            console.log('Transformer engine initialized, GPU:', adapter.isGPUEnabled());
         } catch (error) {
             console.error('Transformer engine failed:', error);
             this.state.status = 'error';
@@ -406,8 +406,11 @@ export class TernaryLMDemo {
                     <h3 class="font-medium mb-2 text-white">Overview</h3>
                     <p class="text-gray-400 leading-relaxed">
                         This demo runs a ternary-quantized transformer entirely in the browser.
-                        Model weights are restricted to <strong class="text-white">{-1, 0, +1}</strong> and stored using 2-bit packing,
-                        achieving <strong class="text-white">~8x compression vs FP16</strong> (~16x vs FP32), with small per-channel scale overhead.
+                        Model weights are restricted to <strong class="text-white">{-1, 0, +1}</strong> and stored using 2-bit packing.
+                        ${this.engine ? `
+                        Overall <strong style="color: ${cyan};">${this.engine.getMemoryStats().compressionRatio.toFixed(1)}x compression</strong> vs FP16
+                        (ternary layers achieve 8x, but embedding/head remain FP16).
+                        ` : 'Ternary layers achieve 8x compression vs FP16, with FP16 embedding/head.'}
                     </p>
                     <p class="text-gray-500 text-sm mt-2">
                         Inference-only. Optimized for bandwidth efficiency rather than raw arithmetic throughput.
