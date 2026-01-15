@@ -2,10 +2,11 @@
  * DepthEngine - ONNX Runtime Web inference for depth estimation
  *
  * Supports WebGPU backend with WASM fallback.
- * Input: 384x384 RGB image (committed resolution)
+ * Input: 256x256 RGB image
  */
 
-import * as ort from 'onnxruntime-web/wasm';
+// Import WebGPU build which includes both WebGPU and WASM backends
+import * as ort from 'onnxruntime-web/webgpu';
 
 export interface DepthEngineConfig {
     inputSize: number;
@@ -20,6 +21,9 @@ export interface DepthEngineStats {
     backend: 'webgpu' | 'wasm';
     lastLatencyMs: number;
 }
+
+/** Callback for backend status updates */
+export type BackendCallback = (backend: 'webgpu' | 'wasm', warning?: string) => void;
 
 export class DepthEngine {
     private session: ort.InferenceSession | null = null;
@@ -54,18 +58,16 @@ export class DepthEngine {
 
     /**
      * Create and initialize the depth engine
+     * @param modelPath - Path to model directory
+     * @param onBackend - Callback when backend is determined (for UI warnings)
      */
-    static async create(modelPath: string): Promise<DepthEngine> {
+    static async create(modelPath: string, onBackend?: BackendCallback): Promise<DepthEngine> {
         // Load config
         const configResponse = await fetch(`${modelPath}/config.json`);
         const config: DepthEngineConfig = await configResponse.json();
 
         const engine = new DepthEngine(config);
 
-        // Enable multi-threading (COOP/COEP headers already set in vite.config.ts)
-        ort.env.wasm.numThreads = navigator.hardwareConcurrency || 4;
-
-        // Try to load model and determine backend
         const modelUrl = `${modelPath}/midas_v21_small_256.onnx`;
 
         // First, get model size
@@ -81,29 +83,58 @@ export class DepthEngine {
         let session: ort.InferenceSession | null = null;
         let backend: 'webgpu' | 'wasm' = 'wasm';
 
-        if (typeof navigator !== 'undefined' && 'gpu' in navigator) {
+        // Check for WebGPU support
+        const hasWebGPU = typeof navigator !== 'undefined' && 'gpu' in navigator;
+
+        if (hasWebGPU) {
             try {
-                console.log('[DepthEngine] Attempting WebGPU backend...');
-                session = await ort.InferenceSession.create(modelUrl, {
-                    executionProviders: ['webgpu'],
-                    graphOptimizationLevel: 'all'
-                });
-                backend = 'webgpu';
-                console.log('[DepthEngine] WebGPU backend initialized');
+                // Request adapter to verify WebGPU actually works
+                const adapter = await (navigator as any).gpu.requestAdapter();
+                if (adapter) {
+                    console.log('[DepthEngine] Attempting WebGPU backend...');
+                    session = await ort.InferenceSession.create(modelUrl, {
+                        executionProviders: ['webgpu'],
+                        graphOptimizationLevel: 'all'
+                    });
+                    backend = 'webgpu';
+                    console.log('[DepthEngine] WebGPU backend initialized');
+                    onBackend?.('webgpu');
+                }
             } catch (e) {
-                console.warn('[DepthEngine] WebGPU failed, falling back to WASM:', e);
+                console.warn('[DepthEngine] WebGPU failed:', e);
                 session = null;
             }
         }
 
         // Fallback to WASM
         if (!session) {
-            console.log('[DepthEngine] Using WASM backend');
+            // Check if multi-threading is available (requires COOP/COEP headers)
+            const canUseThreads = typeof crossOriginIsolated !== 'undefined' && crossOriginIsolated;
+
+            if (canUseThreads) {
+                ort.env.wasm.numThreads = navigator.hardwareConcurrency || 4;
+                console.log(`[DepthEngine] Using WASM backend (${ort.env.wasm.numThreads} threads)`);
+            } else {
+                ort.env.wasm.numThreads = 1;
+                console.log('[DepthEngine] Using WASM backend (single-threaded, no COOP/COEP)');
+            }
+
             session = await ort.InferenceSession.create(modelUrl, {
                 executionProviders: ['wasm'],
                 graphOptimizationLevel: 'all'
             });
             backend = 'wasm';
+
+            // Notify UI about fallback
+            if (!canUseThreads) {
+                const warning = hasWebGPU
+                    ? 'WebGPU failed. Using single-threaded CPU (slower).'
+                    : 'WebGPU not supported. Using single-threaded CPU (slower).';
+                onBackend?.('wasm', warning);
+            } else {
+                // Multi-threaded WASM, no warning needed but still not as fast as WebGPU
+                onBackend?.('wasm');
+            }
         }
 
         engine.session = session;

@@ -27,6 +27,7 @@ interface DemoState {
     backend: 'webgpu' | 'wasm';
     viewMode: ViewMode;
     errorMessage?: string;
+    backendWarning?: string;
 }
 
 export class DepthDemo {
@@ -86,7 +87,12 @@ export class DepthDemo {
         try {
             // Initialize depth engine first
             this.updateStatus('loading', 'Loading depth model...');
-            this.engine = await DepthEngine.create(this.config.modelPath);
+            this.engine = await DepthEngine.create(this.config.modelPath, (backend, warning) => {
+                this.state.backend = backend;
+                if (warning) {
+                    this.state.backendWarning = warning;
+                }
+            });
 
             const stats = this.engine.getStats();
             this.state.modelSizeMB = stats.modelSizeMB;
@@ -304,11 +310,21 @@ export class DepthDemo {
             return;
         }
 
-        const { viewMode } = this.state;
+        const { viewMode, backendWarning } = this.state;
 
         // Ready/running state - show view based on mode
         this.container.innerHTML = `
             <div class="h-full flex flex-col">
+                ${backendWarning ? `
+                <!-- CPU fallback warning -->
+                <div class="mb-2 px-3 py-2 bg-yellow-900/30 border border-yellow-600/50 rounded text-xs text-yellow-400 flex items-center gap-2">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                    <span>${backendWarning}</span>
+                </div>
+                ` : ''}
+
                 <!-- View toggle -->
                 <div class="flex items-center gap-2 mb-2">
                     <button id="view-2d-btn" class="px-2 py-1 text-xs rounded ${viewMode === '2d' ? 'bg-accent-cyan text-dark-bg' : 'bg-dark-bg text-gray-400 hover:text-white'}">
