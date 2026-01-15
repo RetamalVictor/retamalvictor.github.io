@@ -136,7 +136,7 @@ export class DemoManager {
                 const { TernaryLMDemo } = await import('../components/ternary/TernaryLMDemo.js');
                 this.currentInstance = new TernaryLMDemo({
                     containerId: this.containerId,
-                    modelPath: '/assets/models/transformer',
+                    modelPath: '/assets/models/transformer_new',
                     defaultPrompt: 'The theory of relativity is ',
                     maxTokens: 100
                 });

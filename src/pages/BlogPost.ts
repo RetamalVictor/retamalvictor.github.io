@@ -380,7 +380,7 @@ export class BlogPostPage {
                 try {
                     const demo = new TernaryLMDemo({
                         containerId: 'ternary-lm-demo',
-                        modelPath: '/assets/models/transformer',
+                        modelPath: '/assets/models/transformer_new',
                         maxTokens: 50,  // Reduced for CPU inference speed
                         defaultPrompt: 'The meaning of life is',
                     });
