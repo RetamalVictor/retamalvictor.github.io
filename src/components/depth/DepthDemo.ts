@@ -4,11 +4,12 @@
  * Features:
  * - Live webcam feed with depth estimation
  * - Side-by-side RGB/depth visualization
+ * - 3D point cloud visualization
  * - Performance metrics (FPS, latency, backend)
- * - Temporal smoothing for point cloud (coming Day 3)
  */
 
 import { DepthEngine } from './DepthEngine.js';
+import { PointCloudViewer } from './PointCloudViewer.js';
 
 export interface DepthDemoConfig {
     containerId: string;
@@ -16,6 +17,7 @@ export interface DepthDemoConfig {
 }
 
 type DemoStatus = 'loading' | 'ready' | 'running' | 'error' | 'no-camera' | 'requesting-camera';
+type ViewMode = '2d' | '3d';
 
 interface DemoState {
     status: DemoStatus;
@@ -23,6 +25,7 @@ interface DemoState {
     latencyMs: number;
     modelSizeMB: number;
     backend: 'webgpu' | 'wasm';
+    viewMode: ViewMode;
     errorMessage?: string;
 }
 
@@ -53,6 +56,10 @@ export class DepthDemo {
     private tempRenderCanvas: HTMLCanvasElement | null = null;
     private tempRenderCtx: CanvasRenderingContext2D | null = null;
 
+    // Point cloud viewer
+    private pointCloudViewer: PointCloudViewer | null = null;
+    private depthOutputSize = 256;
+
     constructor(config: DepthDemoConfig) {
         const container = document.getElementById(config.containerId);
         if (!container) {
@@ -66,7 +73,8 @@ export class DepthDemo {
             fps: 0,
             latencyMs: 0,
             modelSizeMB: 0,
-            backend: 'wasm'
+            backend: 'wasm',
+            viewMode: '2d'
         };
 
         this.init();
@@ -189,7 +197,11 @@ export class DepthDemo {
 
             // Render latest depth map (if available)
             if (this.latestDepthMap) {
-                this.renderDepth(this.latestDepthMap);
+                if (this.state.viewMode === '2d') {
+                    this.renderDepth(this.latestDepthMap);
+                } else if (this.pointCloudViewer) {
+                    this.pointCloudViewer.update(this.latestDepthMap, this.depthOutputSize, this.depthOutputSize);
+                }
             }
         }
 
@@ -292,26 +304,56 @@ export class DepthDemo {
             return;
         }
 
-        // Ready/running state - show dual canvas view
+        const { viewMode } = this.state;
+
+        // Ready/running state - show view based on mode
         this.container.innerHTML = `
             <div class="h-full flex flex-col">
-                <!-- Video feeds -->
-                <div class="flex-1 flex gap-2 min-h-0">
-                    <!-- RGB feed -->
-                    <div class="flex-1 flex flex-col min-w-0">
-                        <div class="text-xs text-gray-500 mb-1 px-1">RGB</div>
-                        <div class="flex-1 bg-dark-bg rounded overflow-hidden relative">
-                            <canvas id="depth-video-canvas" class="w-full h-full object-contain"></canvas>
-                        </div>
-                    </div>
-                    <!-- Depth feed -->
-                    <div class="flex-1 flex flex-col min-w-0">
-                        <div class="text-xs text-gray-500 mb-1 px-1">Depth (relative)</div>
-                        <div class="flex-1 bg-dark-bg rounded overflow-hidden relative">
-                            <canvas id="depth-depth-canvas" class="w-full h-full object-contain"></canvas>
-                        </div>
-                    </div>
+                <!-- View toggle -->
+                <div class="flex items-center gap-2 mb-2">
+                    <button id="view-2d-btn" class="px-2 py-1 text-xs rounded ${viewMode === '2d' ? 'bg-accent-cyan text-dark-bg' : 'bg-dark-bg text-gray-400 hover:text-white'}">
+                        2D View
+                    </button>
+                    <button id="view-3d-btn" class="px-2 py-1 text-xs rounded ${viewMode === '3d' ? 'bg-accent-cyan text-dark-bg' : 'bg-dark-bg text-gray-400 hover:text-white'}">
+                        3D Point Cloud
+                    </button>
+                    ${viewMode === '3d' ? '<span class="text-xs text-gray-500 ml-2">Drag to rotate, scroll to zoom</span>' : ''}
                 </div>
+
+                <!-- Content area -->
+                ${viewMode === '2d' ? `
+                    <div class="flex-1 flex gap-2 min-h-0">
+                        <!-- RGB feed -->
+                        <div class="flex-1 flex flex-col min-w-0">
+                            <div class="text-xs text-gray-500 mb-1 px-1">RGB</div>
+                            <div class="flex-1 bg-dark-bg rounded overflow-hidden relative">
+                                <canvas id="depth-video-canvas" class="w-full h-full object-contain"></canvas>
+                            </div>
+                        </div>
+                        <!-- Depth feed -->
+                        <div class="flex-1 flex flex-col min-w-0">
+                            <div class="text-xs text-gray-500 mb-1 px-1">Depth (relative)</div>
+                            <div class="flex-1 bg-dark-bg rounded overflow-hidden relative">
+                                <canvas id="depth-depth-canvas" class="w-full h-full object-contain"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                ` : `
+                    <div class="flex-1 flex gap-2 min-h-0">
+                        <!-- RGB feed (smaller) -->
+                        <div class="w-1/4 flex flex-col min-w-0">
+                            <div class="text-xs text-gray-500 mb-1 px-1">RGB</div>
+                            <div class="flex-1 bg-dark-bg rounded overflow-hidden relative">
+                                <canvas id="depth-video-canvas" class="w-full h-full object-contain"></canvas>
+                            </div>
+                        </div>
+                        <!-- Point cloud -->
+                        <div class="flex-1 flex flex-col min-w-0">
+                            <div class="text-xs text-gray-500 mb-1 px-1">Point Cloud (relative depth)</div>
+                            <div id="pointcloud-container" class="flex-1 bg-dark-bg rounded overflow-hidden relative"></div>
+                        </div>
+                    </div>
+                `}
 
                 <!-- Metrics bar -->
                 <div class="mt-2 flex items-center justify-between text-xs bg-dark-bg/50 rounded px-2 py-1">
@@ -327,12 +369,18 @@ export class DepthDemo {
             </div>
         `;
 
-        // Setup canvases
+        // Setup canvases and point cloud
         this.setupCanvases();
+        this.setupViewToggle();
+
+        if (viewMode === '3d') {
+            this.setupPointCloud();
+        }
     }
 
     private setupCanvases(): void {
-        const inputSize = this.engine?.getInputSize() || 384;
+        const inputSize = this.engine?.getInputSize() || 256;
+        this.depthOutputSize = inputSize;
 
         this.videoCanvas = this.container.querySelector('#depth-video-canvas') as HTMLCanvasElement;
         this.depthCanvas = this.container.querySelector('#depth-depth-canvas') as HTMLCanvasElement;
@@ -350,6 +398,48 @@ export class DepthDemo {
             this.depthCanvas.width = inputSize;
             this.depthCanvas.height = inputSize;
             this.depthCtx = this.depthCanvas.getContext('2d');
+        }
+    }
+
+    private setupViewToggle(): void {
+        const btn2d = this.container.querySelector('#view-2d-btn');
+        const btn3d = this.container.querySelector('#view-3d-btn');
+
+        btn2d?.addEventListener('click', () => {
+            if (this.state.viewMode !== '2d') {
+                this.state.viewMode = '2d';
+                this.destroyPointCloud();
+                this.render();
+            }
+        });
+
+        btn3d?.addEventListener('click', () => {
+            if (this.state.viewMode !== '3d') {
+                this.state.viewMode = '3d';
+                this.render();
+            }
+        });
+    }
+
+    private setupPointCloud(): void {
+        const container = this.container.querySelector('#pointcloud-container') as HTMLElement;
+        if (!container) return;
+
+        // Destroy existing point cloud if any
+        this.destroyPointCloud();
+
+        // Create new point cloud viewer
+        this.pointCloudViewer = new PointCloudViewer(container, {
+            subsample: 2,
+            depthScale: 0.5,
+            smoothingFactor: 0.3
+        });
+    }
+
+    private destroyPointCloud(): void {
+        if (this.pointCloudViewer) {
+            this.pointCloudViewer.destroy();
+            this.pointCloudViewer = null;
         }
     }
 
@@ -378,6 +468,9 @@ export class DepthDemo {
             stream.getTracks().forEach(track => track.stop());
             this.video.srcObject = null;
         }
+
+        // Cleanup point cloud
+        this.destroyPointCloud();
 
         // Cleanup engine
         if (this.engine) {
