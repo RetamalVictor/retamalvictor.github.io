@@ -192,7 +192,8 @@ export class DepthDemo {
     private renderDepth(depthMap: Float32Array): void {
         if (!this.depthCanvas || !this.depthCtx) return;
 
-        const inputSize = this.engine!.getInputSize();
+        // Derive output dimensions from depth array (model outputs 378x378, not 384x384)
+        const outputSize = Math.round(Math.sqrt(depthMap.length));
         const width = this.depthCanvas.width;
         const height = this.depthCanvas.height;
 
@@ -206,8 +207,7 @@ export class DepthDemo {
         const range = maxDepth - minDepth || 1;
 
         // Create output image with grayscale colormap
-        // (Turbo colormap is nice-to-have, grayscale works for Day 1-2)
-        const imageData = this.depthCtx.createImageData(inputSize, inputSize);
+        const imageData = this.depthCtx.createImageData(outputSize, outputSize);
 
         for (let i = 0; i < depthMap.length; i++) {
             // Normalize to 0-1, invert so close = bright
@@ -220,10 +220,10 @@ export class DepthDemo {
             imageData.data[i * 4 + 3] = 255;
         }
 
-        // Draw at input size first, then scale if needed
+        // Draw at output size first, then scale to canvas
         const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = inputSize;
-        tempCanvas.height = inputSize;
+        tempCanvas.width = outputSize;
+        tempCanvas.height = outputSize;
         const tempCtx = tempCanvas.getContext('2d')!;
         tempCtx.putImageData(imageData, 0, 0);
 

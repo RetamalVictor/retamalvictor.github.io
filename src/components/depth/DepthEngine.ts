@@ -5,7 +5,7 @@
  * Input: 384x384 RGB image (committed resolution)
  */
 
-import * as ort from 'onnxruntime-web';
+import * as ort from 'onnxruntime-web/wasm';
 
 export interface DepthEngineConfig {
     inputSize: number;
@@ -60,8 +60,8 @@ export class DepthEngine {
 
         const engine = new DepthEngine(config);
 
-        // Configure ONNX Runtime paths
-        ort.env.wasm.wasmPaths = '/assets/';
+        // Disable multi-threading to avoid SharedArrayBuffer/COOP/COEP complexity
+        ort.env.wasm.numThreads = 1;
 
         // Try to load model and determine backend
         const modelUrl = `${modelPath}/depth_pretrained.onnx`;

@@ -5,7 +5,12 @@ export default defineConfig(({ mode }) => ({
   // Use root base for custom domain deployment
   base: '/',
   // Include binary model files as assets
-  assetsInclude: ['**/*.tbin', '**/*.onnx'],
+  assetsInclude: ['**/*.tbin', '**/*.onnx', '**/*.wasm'],
+
+  // Exclude onnxruntime-web from optimization - let it handle its own WASM loading
+  optimizeDeps: {
+    exclude: ['onnxruntime-web']
+  },
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
@@ -29,7 +34,7 @@ export default defineConfig(({ mode }) => ({
       'Referrer-Policy': 'strict-origin-when-cross-origin',
       'Cross-Origin-Opener-Policy': 'same-origin',
       'Cross-Origin-Embedder-Policy': 'require-corp',
-      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' blob:; worker-src 'self' blob:;"
+      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' blob: https://cdn.jsdelivr.net; worker-src 'self' blob: https://cdn.jsdelivr.net;"
     }
   },
   preview: {
@@ -43,7 +48,7 @@ export default defineConfig(({ mode }) => ({
       'Referrer-Policy': 'strict-origin-when-cross-origin',
       'Cross-Origin-Opener-Policy': 'same-origin',
       'Cross-Origin-Embedder-Policy': 'require-corp',
-      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' blob:; worker-src 'self' blob:;"
+      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' blob: https://cdn.jsdelivr.net; worker-src 'self' blob: https://cdn.jsdelivr.net;"
     }
   },
   appType: 'spa',

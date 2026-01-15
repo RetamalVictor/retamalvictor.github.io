@@ -1,7 +1,15 @@
 {
-  "inputSize": 384,
-  "inputName": "input",
-  "outputName": "depth",
-  "normalizeMean": [0.485, 0.456, 0.406],
-  "normalizeStd": [0.229, 0.224, 0.225]
+  "input_size": 384,
+  "input_name": "input",
+  "output_name": "depth",
+  "normalize_mean": [
+    0.485,
+    0.456,
+    0.406
+  ],
+  "normalize_std": [
+    0.229,
+    0.224,
+    0.225
+  ]
 }
