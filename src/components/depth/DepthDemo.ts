@@ -94,6 +94,13 @@ export class DepthDemo {
                 }
             });
 
+            // Check if destroyed during model loading
+            if (this.isDestroyed) {
+                this.engine?.destroy();
+                this.engine = null;
+                return;
+            }
+
             const stats = this.engine.getStats();
             this.state.modelSizeMB = stats.modelSizeMB;
             this.state.backend = stats.backend;
@@ -102,6 +109,17 @@ export class DepthDemo {
             this.updateStatus('requesting-camera', 'Requesting camera access...');
             await this.setupCamera();
 
+            // Check if destroyed during camera setup
+            if (this.isDestroyed) {
+                // Clean up camera stream if it was acquired
+                if (this.video && this.video.srcObject) {
+                    const stream = this.video.srcObject as MediaStream;
+                    stream.getTracks().forEach(track => track.stop());
+                    this.video.srcObject = null;
+                }
+                return;
+            }
+
             this.state.status = 'ready';
             this.render();
 
@@ -109,6 +127,9 @@ export class DepthDemo {
             this.startLoop();
 
         } catch (error) {
+            // Ignore errors if destroyed during init
+            if (this.isDestroyed) return;
+
             console.error('[DepthDemo] Initialization failed:', error);
             const message = error instanceof Error ? error.message : 'Unknown error';
 
