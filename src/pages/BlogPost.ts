@@ -7,6 +7,7 @@ import 'highlight.js/styles/github-dark.css';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { parseFrontmatter, extractSlugFromPath, type BlogPostMeta } from '../utils/frontmatter.js';
+import { seo } from '../utils/seo.js';
 
 // Auto-import all markdown files from content/markdown/
 // This eliminates the need for manual imports when adding new posts
@@ -157,7 +158,13 @@ export class BlogPostPage {
             return;
         }
 
-        document.title = `${this.blogPost.title} - Victor Retamal`;
+        seo.blogPost({
+            title: this.blogPost.title,
+            summary: this.blogPost.summary,
+            slug: this.blogPost.slug,
+            date: this.blogPost.date,
+            tags: this.blogPost.tags,
+        });
 
         this.container.innerHTML = `
             <div class="min-h-screen bg-dark-bg">
@@ -252,7 +259,11 @@ export class BlogPostPage {
     }
 
     private renderNotFound(): void {
-        document.title = 'Post Not Found - Victor Retamal';
+        seo.blogPost({
+            title: 'Post Not Found',
+            summary: 'The blog post you are looking for does not exist.',
+            slug: 'not-found',
+        });
 
         this.container.innerHTML = `
             <div class="min-h-screen bg-dark-bg flex items-center justify-center">

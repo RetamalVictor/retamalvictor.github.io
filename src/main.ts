@@ -10,6 +10,7 @@ import { addIntersectionObserver } from './utils/dom.js';
 import { config } from './utils/config.js';
 import { templateManager } from './utils/template.js';
 import type { Project } from './types/index.js';
+import { seo } from './utils/seo.js';
 
 // Manager imports
 import { DemoManager } from './managers/DemoManager.js';
@@ -74,6 +75,9 @@ class Portfolio {
     }
 
     private async renderHomePage(): Promise<void> {
+        // Update SEO for home page
+        seo.home();
+
         // Check if we need to restore the layout
         if (!document.getElementById('main-content')) {
             await this.initializeLayout();

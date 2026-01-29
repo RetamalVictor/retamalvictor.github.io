@@ -1,5 +1,6 @@
 import { loadTemplate, createElement } from '../utils/dom.js';
 import type { Project } from '../types/index.js';
+import { seo } from '../utils/seo.js';
 
 export class ProjectDetailPage {
     private container: HTMLElement;
@@ -57,8 +58,12 @@ export class ProjectDetailPage {
     private populateContent(): void {
         if (!this.project) return;
 
-        // Update title and meta
-        document.title = `${this.project.title} - Victor Retamal`;
+        // Update SEO meta tags
+        seo.project({
+            title: this.project.title,
+            description: this.project.description,
+            id: this.project.id,
+        });
 
         // Hero section
         this.updateElement('project-title', this.project.title);

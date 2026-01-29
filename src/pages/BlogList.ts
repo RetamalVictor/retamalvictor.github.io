@@ -1,6 +1,7 @@
 import { createElement } from '../utils/dom.js';
 import { Navigation } from '../utils/navigation.js';
 import { parseFrontmatter, extractSlugFromPath, type BlogPostMeta } from '../utils/frontmatter.js';
+import { seo } from '../utils/seo.js';
 
 // Auto-import all markdown files from content/markdown/
 const markdownModules = import.meta.glob('../content/markdown/*.md', {
@@ -52,7 +53,7 @@ export class BlogListPage {
     }
 
     private async renderBlogList(): Promise<void> {
-        document.title = 'Blog - Victor Retamal';
+        seo.blogList();
 
         if (this.posts.length === 0) {
             this.renderError();
