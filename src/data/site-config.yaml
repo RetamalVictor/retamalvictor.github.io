@@ -3,14 +3,14 @@
 
 site:
   title: "Victor Retamal"
-  description: "ML & Robotics Engineer - Building autonomous systems and writing about the journey"
+  description: "Machine Learning Engineer - Building autonomous systems and writing about the journey"
   url: "https://victor-retamal.com"
   language: "en"
   copyright: "© 2025 Victor Retamal"
 
 personal:
   name: "Victor Retamal"
-  title: "ML & Robotics Engineer"
+  title: "Machine Learning Engineer"
   subtitle: "I build autonomous systems and write about my work."
   label: "ML Engineer"
   location: ""
