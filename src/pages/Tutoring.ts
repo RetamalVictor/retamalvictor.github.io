@@ -115,7 +115,7 @@ export class TutoringPage {
                     </div>
                 </header>
 
-                <main class="max-w-4xl mx-auto px-6 pt-16 pb-16 space-y-16">
+                <main class="max-w-4xl mx-auto px-6 pt-12 pb-12 space-y-10">
 
                     <!-- Hero -->
                     <section class="relative tut-animate">
@@ -183,12 +183,11 @@ export class TutoringPage {
                     </section>
 
                     <!-- Why me — full-width strip via negative margins -->
-                    <section class="tut-animate -mx-6 px-6 py-16 relative">
+                    <section class="tut-animate -mx-6 px-6 py-10 relative">
                         <!-- Full-width background -->
-                        <div class="absolute inset-0 bg-dark-surface/40 -z-10" style="left: calc(-50vw + 50%); right: calc(-50vw + 50%)"></div>
                         <div class="absolute inset-0 -z-10 overflow-hidden" style="left: calc(-50vw + 50%); right: calc(-50vw + 50%)">
-                            <div class="absolute -top-20 -left-20 w-72 h-72 bg-accent-purple/[0.04] rounded-full blur-3xl"></div>
-                            <div class="absolute -bottom-20 right-0 w-56 h-56 bg-accent-cyan/[0.03] rounded-full blur-3xl"></div>
+                            <div class="absolute inset-0" style="background: radial-gradient(ellipse 80% 60% at 30% 50%, rgba(168,85,247,0.04) 0%, transparent 70%)"></div>
+                            <div class="absolute inset-0" style="background: radial-gradient(ellipse 60% 50% at 70% 50%, rgba(0,212,255,0.03) 0%, transparent 70%)"></div>
                         </div>
 
                         <div>
