@@ -1,9 +1,12 @@
-<section id="hero" class="bg-dark-bg text-white relative">
-    <div class="max-w-6xl mx-auto px-6 py-12 w-full">
+<section id="hero" class="bg-dark-bg text-white relative overflow-hidden">
+    <!-- Ambient corner glow: purple top-left -->
+    <div class="absolute top-0 left-0 w-full h-full pointer-events-none" style="background: radial-gradient(ellipse 55% 50% at 0% 0%, rgba(168,85,247,0.10) 0%, transparent 55%)"></div>
+
+    <div class="max-w-6xl mx-auto px-6 py-12 w-full relative">
         <div class="grid lg:grid-cols-2 gap-12 items-center">
             <!-- Intro -->
             <div class="fade-in-up">
-                <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
+                <h1 class="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">
                     I'm <span class="text-accent-cyan">Victor</span>,<br>
                     Machine Learning Engineer
                 </h1>
@@ -81,8 +84,6 @@
                     <div id="demo-hint" class="absolute top-3 right-3 text-xs text-accent-cyan font-semibold bg-dark-surface/90 px-2 py-1 rounded border border-accent-cyan/30">
                         Drag the target
                     </div>
-                    <!-- Subtle glow effect behind the 3D container -->
-                    <div class="absolute -inset-4 bg-accent-cyan/5 rounded-2xl blur-2xl -z-10"></div>
                 </div>
                 <!-- Info panel toggle button (below the 3D container) -->
                 <div class="mt-3 flex justify-end">

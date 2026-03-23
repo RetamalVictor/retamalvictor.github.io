@@ -115,7 +115,7 @@ export class TutoringEsPage {
                     </div>
                 </header>
 
-                <main class="max-w-4xl mx-auto px-6 py-16 space-y-20">
+                <main class="max-w-4xl mx-auto px-6 pt-12 pb-12 space-y-10">
 
                     <!-- Hero -->
                     <section class="relative tut-animate">
@@ -126,28 +126,28 @@ export class TutoringEsPage {
                         <div class="text-center max-w-2xl mx-auto relative">
                             <div class="absolute -inset-16 bg-accent-cyan/[0.03] rounded-full blur-3xl -z-10"></div>
                             <h2 class="text-3xl md:text-5xl font-bold text-white mb-6 leading-tight tracking-tight">
-                                Aprende de alguien que<br><span class="text-accent-cyan">lo construye</span> para vivir
+                                Aprende con alguien que<br><span class="text-accent-cyan">se dedica</span> a esto
                             </h2>
                             <p class="text-gray-300 text-lg leading-relaxed mb-10 max-w-xl mx-auto">
-                                Más de 8 años en tecnología y ML, 3 de ellos dando clases en la universidad.
-                                He publicado investigación, desplegado modelos en robots reales y guiado a estudiantes
-                                en exámenes, tesis y cambios de carrera. Si quieres aprender de alguien
-                                que ha construido y enseñado, hablemos.
+                                Llevo más de 8 años en tecnología y ML. Di clases en la universidad 3 años como asistente docente,
+                                tengo publicaciones científicas y he puesto modelos en producción sobre robots reales.
+                                He acompañado a alumnos en exámenes, tesis y cambios de carrera.
+                                Si buscas a alguien que entienda los dos lados, hablemos.
                             </p>
 
                             <!-- Credentials -->
                             <div class="flex flex-wrap justify-center gap-2.5 mb-10">
-                                <span class="px-3.5 py-1.5 text-xs font-medium rounded-full border border-accent-cyan/20 text-accent-cyan/90 bg-accent-cyan/[0.05] backdrop-blur-sm">8+ Años en Tech y ML</span>
-                                <span class="px-3.5 py-1.5 text-xs font-medium rounded-full border border-amber-400/20 text-amber-400/90 bg-amber-400/[0.05] backdrop-blur-sm">3 Años de Docencia Universitaria</span>
+                                <span class="px-3.5 py-1.5 text-xs font-medium rounded-full border border-accent-cyan/20 text-accent-cyan/90 bg-accent-cyan/[0.05] backdrop-blur-sm">+8 años en Tech y ML</span>
+                                <span class="px-3.5 py-1.5 text-xs font-medium rounded-full border border-amber-400/20 text-amber-400/90 bg-amber-400/[0.05] backdrop-blur-sm">3 años de asistente docente</span>
                                 <span class="px-3.5 py-1.5 text-xs font-medium rounded-full border border-accent-cyan/20 text-accent-cyan/90 bg-accent-cyan/[0.05] backdrop-blur-sm">Máster en IA</span>
-                                <span class="px-3.5 py-1.5 text-xs font-medium rounded-full border border-accent-cyan/20 text-accent-cyan/90 bg-accent-cyan/[0.05] backdrop-blur-sm">Investigador Publicado</span>
+                                <span class="px-3.5 py-1.5 text-xs font-medium rounded-full border border-accent-cyan/20 text-accent-cyan/90 bg-accent-cyan/[0.05] backdrop-blur-sm">Publicaciones científicas</span>
                             </div>
 
                             <a href="#contact" class="btn-primary inline-flex items-center gap-2.5 text-base px-8 py-3.5 rounded-xl shadow-lg shadow-accent-cyan/20 hover:shadow-accent-cyan/30 transition-all duration-300">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
                                 </svg>
-                                Contáctame
+                                Escríbeme
                             </a>
                         </div>
                     </section>
@@ -182,73 +182,114 @@ export class TutoringEsPage {
                         </div>
                     </section>
 
-                    <!-- Why me -->
-                    <section class="relative tut-animate">
-                        <div class="absolute -top-8 -left-16 w-52 h-52 opacity-[0.04] -z-10 hidden md:block text-accent-purple transform -scale-x-100">
-                            ${NEURAL_NET_SVG}
+                    <!-- Why me — full-width strip via negative margins -->
+                    <section class="tut-animate -mx-6 px-6 py-10 relative">
+                        <!-- Full-width background -->
+                        <div class="absolute inset-0 -z-10 overflow-hidden" style="left: calc(-50vw + 50%); right: calc(-50vw + 50%)">
+                            <div class="absolute inset-0" style="background: radial-gradient(ellipse 80% 60% at 30% 50%, rgba(168,85,247,0.04) 0%, transparent 70%)"></div>
+                            <div class="absolute inset-0" style="background: radial-gradient(ellipse 60% 50% at 70% 50%, rgba(0,212,255,0.03) 0%, transparent 70%)"></div>
                         </div>
-                        <h2 class="text-2xl font-bold text-white mb-8 tracking-tight">
-                            Por qué aprender <span class="text-accent-purple">conmigo</span>
-                        </h2>
-                        <div class="grid md:grid-cols-2 gap-4">
-                            ${this.renderWhyMeCard(
-                                'Construyo y enseño',
-                                'Las demos de este sitio ejecutan ML en tu navegador. No solo conozco la teoría, la llevo a producción. <a href="/" class="text-accent-cyan hover:text-white transition-all duration-300 underline underline-offset-2 decoration-accent-cyan/30 hover:decoration-white/50">Ver mis demos</a>',
-                            )}
-                            ${this.renderWhyMeCard(
-                                'Docencia universitaria',
-                                '3 años como profesor en VU Amsterdam. Diseñé tareas, redacté exámenes y corregí a cientos de estudiantes en dos asignaturas.',
-                            )}
-                            ${this.renderWhyMeCard(
-                                '8+ años de experiencia',
-                                'De laboratorios de investigación a la industria. Publicaciones en RL multi-agente, despliegue de ML en robots reales en TII Abu Dhabi.',
-                            )}
-                            ${this.renderWhyMeCard(
-                                'Adaptado a ti',
-                                'Sin currículum genérico. Creamos un plan basado en tus objetivos y tu nivel actual.',
-                            )}
-                        </div>
-                        <div class="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-xs text-gray-500/80 pl-1">
-                            <span>Computational Intelligence (ML I) · BSc AI, VU Amsterdam</span>
-                            <span>Collective Intelligence (Multi-Agent Systems) · VU Amsterdam</span>
+
+                        <div>
+                            <h2 class="text-2xl font-bold text-white mb-8 tracking-tight">
+                                Por qué aprender <span class="text-accent-purple">conmigo</span>
+                            </h2>
+
+                            <div class="grid md:grid-cols-[1.2fr,1fr] gap-8 md:gap-12 items-start">
+                                <!-- Featured point (left) -->
+                                <div class="relative group">
+                                    <div class="absolute -inset-4 bg-accent-cyan/[0.04] rounded-2xl blur-xl -z-10 group-hover:bg-accent-cyan/[0.07] transition-all duration-500"></div>
+                                    <div class="bg-dark-surface/60 backdrop-blur-sm border border-accent-cyan/15 rounded-2xl p-7 group-hover:border-accent-cyan/30 transition-all duration-300">
+                                        <h3 class="text-xl font-bold text-white mb-2 tracking-tight">No solo explico, también construyo.</h3>
+                                        <p class="text-gray-400 text-sm leading-relaxed mb-4">
+                                            Las demos de este sitio corren modelos de ML directamente en tu navegador.
+                                            Esto no es solo teoría: lo llevo a producción.
+                                        </p>
+                                        <a href="/" class="text-accent-cyan hover:text-white transition-all duration-300 text-sm font-medium inline-flex items-center gap-1.5 group/link">
+                                            Ver las demos
+                                            <svg class="w-4 h-4 group-hover/link:translate-x-0.5 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                                            </svg>
+                                        </a>
+                                    </div>
+                                </div>
+
+                                <!-- Stacked points (right) -->
+                                <div class="space-y-5 md:pt-1">
+                                    <div class="flex items-start gap-3.5">
+                                        <span class="text-accent-cyan font-bold text-lg leading-none mt-0.5 flex-shrink-0 w-7">3a</span>
+                                        <div>
+                                            <span class="text-white font-medium text-sm">Docencia universitaria</span>
+                                            <p class="text-gray-500 text-xs mt-0.5 leading-relaxed">Asistente docente en VU Amsterdam. Preparé exámenes, diseñé prácticas y evalué a cientos de alumnos en dos asignaturas.</p>
+                                        </div>
+                                    </div>
+                                    <div class="w-full h-px bg-gradient-to-r from-dark-border via-dark-border/50 to-transparent"></div>
+                                    <div class="flex items-start gap-3.5">
+                                        <span class="text-accent-cyan font-bold text-lg leading-none mt-0.5 flex-shrink-0 w-7">8+</span>
+                                        <div>
+                                            <span class="text-white font-medium text-sm">Años en el sector</span>
+                                            <p class="text-gray-500 text-xs mt-0.5 leading-relaxed">Del laboratorio a la industria. Artículos en RL multi-agente, ML en robots reales en Abu Dhabi.</p>
+                                        </div>
+                                    </div>
+                                    <div class="w-full h-px bg-gradient-to-r from-dark-border via-dark-border/50 to-transparent"></div>
+                                    <div class="flex items-start gap-3.5">
+                                        <span class="text-accent-purple font-bold text-lg leading-none mt-0.5 flex-shrink-0 w-7">1:1</span>
+                                        <div>
+                                            <span class="text-white font-medium text-sm">A tu medida</span>
+                                            <p class="text-gray-500 text-xs mt-0.5 leading-relaxed">Nada de temarios cerrados. Montamos un plan según lo que necesitas y desde donde partes.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </section>
 
                     <!-- How it works + Contact -->
                     <section id="contact" class="tut-animate relative rounded-2xl p-[1px]" style="background: linear-gradient(135deg, rgba(0,212,255,0.4), rgba(168,85,247,0.3), rgba(251,191,36,0.2), rgba(0,212,255,0.4))">
-                        <div class="bg-dark-surface rounded-2xl p-10 md:p-12 relative overflow-hidden">
-                            <div class="absolute top-0 left-1/2 -translate-x-1/2 w-80 h-40 bg-accent-cyan/[0.07] rounded-full blur-3xl"></div>
+                        <div class="bg-dark-surface rounded-2xl p-8 md:p-10 relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-72 h-72 bg-accent-cyan/[0.04] rounded-full blur-3xl"></div>
+                            <div class="absolute bottom-0 left-0 w-56 h-56 bg-accent-purple/[0.03] rounded-full blur-3xl"></div>
 
-                            <h2 class="text-2xl font-bold text-white mb-10 text-center relative tracking-tight">
-                                Cómo <span class="text-accent-cyan">empezar</span>
-                            </h2>
+                            <div class="grid md:grid-cols-[1fr,auto,1fr] gap-8 md:gap-0 items-center relative">
+                                <!-- Left: Steps -->
+                                <div class="md:pr-10">
+                                    <h2 class="text-2xl font-bold text-white mb-6 tracking-tight">
+                                        Cómo <span class="text-accent-cyan">empezar</span>
+                                    </h2>
+                                    <div class="space-y-5">
+                                        ${this.renderStep('1', 'Escríbeme', 'Cuéntame qué te interesa.')}
+                                        ${this.renderStep('2', 'Hablamos', 'Una llamada corta para ver si encajamos. Gratis.')}
+                                        ${this.renderStep('3', 'Empezamos', 'Clases 1 a 1 por vídeo, a tu ritmo.')}
+                                    </div>
+                                </div>
 
-                            <!-- Steps -->
-                            <div class="grid md:grid-cols-3 gap-8 mb-12 relative">
-                                ${this.renderStep('1', 'Escríbeme', 'Cuéntame qué quieres aprender.')}
-                                ${this.renderStep('2', 'Llamada gratuita', 'Vemos si encajamos.')}
-                                ${this.renderStep('3', 'Empieza a aprender', 'Sesiones 1 a 1 por video, a tu ritmo.')}
-                            </div>
+                                <!-- Divider -->
+                                <div class="hidden md:block w-px h-48 bg-gradient-to-b from-transparent via-dark-border to-transparent"></div>
+                                <div class="md:hidden h-px w-full bg-gradient-to-r from-transparent via-dark-border to-transparent"></div>
 
-                            <!-- CTA -->
-                            <div class="text-center relative">
-                                <p class="text-gray-400 mb-8 text-sm">
-                                    Mándame un mensaje. La primera llamada introductoria es gratis.
-                                </p>
-                                <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-                                    <a href="mailto:retamal1.victor@gmail.com?subject=Consulta%20Clases%20Particulares" class="btn-primary inline-flex items-center gap-2.5 text-base px-8 py-3.5 rounded-xl shadow-lg shadow-accent-cyan/20 hover:shadow-accent-cyan/30 transition-all duration-300">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-                                        </svg>
-                                        Enviar email
-                                    </a>
-                                    <!-- Superprof booking link placeholder -->
-                                    <a id="superprof-link" href="#" class="btn-secondary inline-flex items-center gap-2.5 text-base px-8 py-3.5 rounded-xl transition-all duration-300" style="display: none;">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
-                                        </svg>
-                                        Reservar sesión
-                                    </a>
+                                <!-- Right: CTA -->
+                                <div class="md:pl-10 text-center md:text-left">
+                                    <h3 class="text-2xl font-bold text-white mb-3 tracking-tight">
+                                        ¿Te animas a <span class="text-accent-cyan">probar</span>?
+                                    </h3>
+                                    <p class="text-gray-400 text-sm mb-6 leading-relaxed">
+                                        La primera llamada corre de mi cuenta. Cuéntame un poco sobre ti y qué te gustaría trabajar.
+                                    </p>
+                                    <div class="flex flex-col gap-3 items-center md:items-start">
+                                        <a href="mailto:retamal1.victor@gmail.com?subject=Consulta%20Clases%20Particulares" class="btn-primary inline-flex items-center gap-2.5 text-base px-8 py-3.5 rounded-xl shadow-lg shadow-accent-cyan/20 hover:shadow-accent-cyan/30 transition-all duration-300">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                                            </svg>
+                                            Enviar email
+                                        </a>
+                                        <!-- Superprof booking link placeholder -->
+                                        <a id="superprof-link" href="#" class="btn-secondary inline-flex items-center gap-2.5 text-base px-8 py-3.5 rounded-xl transition-all duration-300" style="display: none;">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+                                            </svg>
+                                            Reservar sesión
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -273,23 +314,16 @@ export class TutoringEsPage {
         `;
     }
 
-    private renderWhyMeCard(title: string, description: string): string {
-        return `
-            <div class="group bg-dark-surface border border-dark-border rounded-xl p-6 transition-all duration-300 hover:border-accent-purple/30 hover:shadow-lg hover:shadow-accent-purple/[0.04] hover:-translate-y-0.5">
-                <h3 class="text-accent-purple font-semibold mb-2 text-sm tracking-wide">${title}</h3>
-                <p class="text-gray-400 group-hover:text-gray-300 text-sm leading-relaxed transition-colors duration-300">${description}</p>
-            </div>
-        `;
-    }
-
     private renderStep(number: string, title: string, description: string): string {
         return `
-            <div class="text-center group">
-                <div class="w-11 h-11 rounded-full bg-accent-cyan/10 border border-accent-cyan/30 flex items-center justify-center mx-auto mb-4 group-hover:bg-accent-cyan/20 group-hover:border-accent-cyan/50 transition-all duration-300">
-                    <span class="text-accent-cyan font-semibold">${number}</span>
+            <div class="flex items-start gap-4 group">
+                <div class="w-9 h-9 rounded-full bg-accent-cyan/10 border border-accent-cyan/30 flex items-center justify-center flex-shrink-0 group-hover:bg-accent-cyan/20 group-hover:border-accent-cyan/50 transition-all duration-300">
+                    <span class="text-accent-cyan font-semibold text-sm">${number}</span>
                 </div>
-                <h3 class="text-white font-semibold mb-1.5">${title}</h3>
-                <p class="text-gray-500 text-sm">${description}</p>
+                <div>
+                    <h3 class="text-white font-semibold text-sm mb-0.5">${title}</h3>
+                    <p class="text-gray-500 text-sm">${description}</p>
+                </div>
             </div>
         `;
     }
