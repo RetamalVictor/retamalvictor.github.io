@@ -57,6 +57,8 @@ pages:
   cv: "CV"
   blog: "Blog"
   blog_post: "Blog"
+  tutoring: "Tutoring"
+  tutoring_es: "Clases Particulares"
 
 # File paths and URLs
 assets:

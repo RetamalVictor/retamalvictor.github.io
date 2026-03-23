@@ -85,6 +85,13 @@ export class Navigation {
     }
 
     /**
+     * Navigate to tutoring page
+     */
+    public static toTutoring(): void {
+        Navigation.to('/tutoring');
+    }
+
+    /**
      * Navigate to demos list page
      */
     public static toDemos(): void {
