@@ -514,7 +514,7 @@ export class DepthDemo {
 
         // Cleanup engine
         if (this.engine) {
-            this.engine.destroy();
+            this.engine.destroy().catch(() => {});
             this.engine = null;
         }
 

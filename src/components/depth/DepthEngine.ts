@@ -237,9 +237,13 @@ export class DepthEngine {
     /**
      * Cleanup resources
      */
-    destroy(): void {
+    async destroy(): Promise<void> {
         if (this.session) {
-            // Session cleanup - ORT handles this
+            try {
+                await this.session.release();
+            } catch {
+                // Best-effort release
+            }
             this.session = null;
         }
         this.inputBuffer = null;
