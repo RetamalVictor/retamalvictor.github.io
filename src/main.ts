@@ -309,10 +309,6 @@ class Portfolio {
         }, { threshold: 0.1 });
 
         animatedElements.forEach(el => animationObserver.observe(el));
-
-        // Setup button click handlers with a delay to ensure DOM is ready
-        setTimeout(() => {
-        }, 100);
     }
 
     public destroy(): void {
