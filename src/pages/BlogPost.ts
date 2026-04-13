@@ -35,13 +35,9 @@ export class BlogPostPage {
 
     public async render(slug: string): Promise<void> {
         try {
-            console.log('Blog Post Page: Starting render for', slug);
             await this.loadBlogPost(slug);
-            console.log('Blog Post Page: Post loaded', this.blogPost?.title);
             await this.renderBlogPost();
-            console.log('Blog Post Page: Post rendered');
             this.setupEventListeners();
-            console.log('Blog Post Page: Event listeners setup - COMPLETE');
         } catch (error) {
             console.error('Blog Post Page: Error during render:', error);
             throw error; // Re-throw to let router handle it
@@ -83,7 +79,6 @@ export class BlogPostPage {
                 this.nextPost = null;
             }
 
-            console.log('Blog post loaded successfully:', this.blogPost);
         } catch (error) {
             console.error('Failed to load blog post:', error);
             this.blogPost = null;
@@ -350,7 +345,6 @@ export class BlogPostPage {
                 content.innerHTML = html;
             }
 
-            console.log('Math rendering with KaTeX completed');
         } catch (error) {
             console.error('Error initializing math rendering:', error);
         }
@@ -376,7 +370,6 @@ export class BlogPostPage {
                 }
             });
 
-            console.log('Syntax highlighting with highlight.js completed');
         } catch (error) {
             console.error('Error initializing syntax highlighting:', error);
         }
@@ -396,7 +389,6 @@ export class BlogPostPage {
                         defaultPrompt: 'The meaning of life is',
                     });
                     this.ternaryDemos.push(demo);
-                    console.log('Ternary LM demo initialized');
                 } catch (error) {
                     console.error('Failed to initialize ternary demo:', error);
                 }
@@ -413,7 +405,6 @@ export class BlogPostPage {
                     new TrainingComparisonDemo({
                         containerId: 'training-comparison-demo',
                     });
-                    console.log('Training comparison demo initialized');
                 } catch (error) {
                     console.error('Failed to initialize training comparison demo:', error);
                 }

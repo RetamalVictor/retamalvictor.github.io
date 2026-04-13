@@ -84,7 +84,6 @@ export class TernaryLMDemo {
         this.render();
 
         try {
-            console.log('Loading transformer model...');
             this.engine = await BitTorchAdapter.create(this.config.modelPath);
 
             // Check actual GPU status from engine
@@ -92,7 +91,6 @@ export class TernaryLMDemo {
             this.usingCPU = !adapter.isGPUEnabled();
             this.isTransformer = true;
 
-            console.log('Transformer engine initialized, GPU:', adapter.isGPUEnabled());
         } catch (error) {
             console.error('Transformer engine failed:', error);
             this.state.status = 'error';

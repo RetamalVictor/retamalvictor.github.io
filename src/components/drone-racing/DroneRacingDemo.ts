@@ -677,11 +677,9 @@ export class DroneRacingDemo {
             (dronePos.z - gateZ) ** 2
         );
         if (distToGate < 5 && this.nextGateIndex >= 2) {
-            console.log(`Gate ${this.nextGateIndex + 1}: dist=${distToGate.toFixed(1)}m, crossed=${crossed}, withinBounds=${withinBounds}, facesX=${facesX}, pos=(${dronePos.x.toFixed(1)},${dronePos.y.toFixed(1)},${dronePos.z.toFixed(1)})`);
         }
 
         if (crossed && withinBounds) {
-            console.log(`>>> PASSED Gate ${this.nextGateIndex + 1}!`);
             // Reset gates when starting new lap (crossing gate 0), not when finishing
             if (this.nextGateIndex === 0) {
                 this.gateManager.resetGates();

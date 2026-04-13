@@ -195,7 +195,6 @@ export class ConfigManager {
                 blog_config: blogConfig.blog_config,
             };
 
-            console.log('Configuration loaded successfully');
         } catch (error) {
             console.error('Failed to load configuration:', error);
             throw error;

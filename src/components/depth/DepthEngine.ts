@@ -91,13 +91,11 @@ export class DepthEngine {
                 // Request adapter to verify WebGPU actually works
                 const adapter = await (navigator as any).gpu.requestAdapter();
                 if (adapter) {
-                    console.log('[DepthEngine] Attempting WebGPU backend...');
                     session = await ort.InferenceSession.create(modelUrl, {
                         executionProviders: ['webgpu'],
                         graphOptimizationLevel: 'all'
                     });
                     backend = 'webgpu';
-                    console.log('[DepthEngine] WebGPU backend initialized');
                     onBackend?.('webgpu');
                 }
             } catch (e) {
@@ -113,10 +111,8 @@ export class DepthEngine {
 
             if (canUseThreads) {
                 ort.env.wasm.numThreads = navigator.hardwareConcurrency || 4;
-                console.log(`[DepthEngine] Using WASM backend (${ort.env.wasm.numThreads} threads)`);
             } else {
                 ort.env.wasm.numThreads = 1;
-                console.log('[DepthEngine] Using WASM backend (single-threaded, no COOP/COEP)');
             }
 
             session = await ort.InferenceSession.create(modelUrl, {
