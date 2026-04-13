@@ -8,7 +8,6 @@ navigation:
     projects: "Projects"
     research: "Research"
     blog: "Blog"
-    resume: "Resume"
 
   mobile:
     menu_icon_aria: "Mobile menu"
@@ -19,8 +18,6 @@ buttons:
   view_details: "View Details"
   view_projects: "View Projects"
   research_focus: "Core Expertise"
-  view_online_cv: "View Resume"
-  download_cv: "Download Resume (PDF)"
   download_pdf: "Download PDF"
   read_more: "Read Full Post"
   read_full_post: "Read Full Post"
@@ -36,7 +33,6 @@ sections:
   about: "About"
   research_focus: "Core Expertise"
   featured_projects: "Featured Projects"
-  academic_cv: "Professional Experience"
   research_blog: "Technical Blog"
   blog_posts: "Blog Posts"
   education: "Education"
@@ -60,10 +56,6 @@ content:
     in visual SLAM, learned navigation policies, and multi-agent coordination. My work combines cutting-edge ML research
     with practical robotics applications, bridging the gap between state-of-the-art algorithms and physical systems.
 
-  cv_description: |
-    Download my resume to learn more about my technical background, projects,
-    and professional experience in ML engineering, computer vision, and autonomous robotics.
-
   blog_subtitle: "Machine Learning & Mathematics"
   blog_description: "Jupyter notebooks, technical insights, and implementation deep-dives"
 
@@ -79,8 +71,6 @@ status:
 errors:
   blog_unavailable: "Blog Unavailable"
   blog_load_failed: "Failed to load blog posts. Please try again later."
-  cv_unavailable: "Resume Unavailable"
-  cv_load_failed: "Failed to load resume data. Please try again later."
   project_load_failed: "Failed to load project template."
   post_not_found: "Post Not Found"
   template_load_failed: "Failed to load template"

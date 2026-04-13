@@ -71,20 +71,6 @@ export class Navigation {
     }
 
     /**
-     * Navigate to CV page
-     */
-    public static toCV(): void {
-        Navigation.to('/cv');
-    }
-
-    /**
-     * Navigate to project detail page
-     */
-    public static toProject(id: string): void {
-        Navigation.to(`/project/${id}`);
-    }
-
-    /**
      * Navigate to tutoring page
      */
     public static toTutoring(): void {

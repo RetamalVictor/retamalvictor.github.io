@@ -46,6 +46,6 @@ Will there be a Part 3 with hardware photos and skid-marks on the parking lot?  
 
 ---
 
-*© 2025 Victor Retamal - Project Notes.*
+*© 2026 Victor Retamal - Project Notes.*
 
 **Connect with me:** [![Goodreads](https://img.shields.io/badge/-Goodreads-brown)](https://www.goodreads.com/user/show/72885820-victor-retamal) [![Twitter](https://img.shields.io/badge/-Twitter-blue)](https://twitter.com/Victor_Retamal_) [![LinkedIn](https://img.shields.io/badge/-LinkedIn-blue)](https://www.linkedin.com/in/victor-retamal/) [![GitHub](https://img.shields.io/badge/-GitHub-gray)](https://github.com/RetamalVictor)

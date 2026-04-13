@@ -62,30 +62,12 @@ export class TemplateManager {
         return researchData.areas.map(area => {
             // Get related items for this area
             const relatedItems = config.getRelatedItems(area.id);
-            const hasRelatedItems = relatedItems.projects.length > 0 ||
-                                   relatedItems.blogs.length > 0 ||
+            const hasRelatedItems = relatedItems.blogs.length > 0 ||
                                    relatedItems.publications.length > 0;
 
             // Create related items HTML
             const relatedItemsHTML = hasRelatedItems ? `
                 <div class="related-items mt-4 pt-4 border-t border-gray-100 hidden" data-area-id="${area.id}">
-                    ${relatedItems.projects.length > 0 ? `
-                        <div class="mb-3">
-                            <h5 class="text-sm font-semibold text-gray-700 mb-2">Projects</h5>
-                            <ul class="space-y-2">
-                                ${relatedItems.projects.map(project => `
-                                    <li>
-                                        <a href="/blog/project/${project.id}" class="text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-start">
-                                            <svg class="w-4 h-4 mr-1 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                                            </svg>
-                                            <span>${project.title}</span>
-                                        </a>
-                                    </li>
-                                `).join('')}
-                            </ul>
-                        </div>
-                    ` : ''}
                     ${relatedItems.blogs.length > 0 ? `
                         <div class="mb-3">
                             <h5 class="text-sm font-semibold text-gray-700 mb-2">Blog Posts</h5>

@@ -2,8 +2,6 @@ import './styles/main.css';
 import { Header } from './components/Header.js';
 import { Router } from './utils/router.js';
 import { Navigation, initializeNavigation } from './utils/navigation.js';
-import { ProjectDetailPage } from './pages/ProjectDetail.js';
-import { CVPage } from './pages/CV.js';
 import { BlogListPage } from './pages/BlogList.js';
 import { BlogPostPage } from './pages/BlogPost.js';
 import { TutoringPage } from './pages/Tutoring.js';
@@ -11,7 +9,6 @@ import { TutoringEsPage } from './pages/TutoringEs.js';
 import { addIntersectionObserver } from './utils/dom.js';
 import { config } from './utils/config.js';
 import { templateManager } from './utils/template.js';
-import type { Project } from './types/index.js';
 import { seo } from './utils/seo.js';
 
 // Manager imports
@@ -21,11 +18,8 @@ import { ExpandableDemo } from './managers/ExpandableDemo.js';
 
 class Portfolio {
     private header!: Header;
-    private projects: Project[] = [];
     private observer: IntersectionObserver | null = null;
     private router!: Router;
-    private projectDetailPage: ProjectDetailPage | null = null;
-    private cvPage: CVPage | null = null;
     private blogListPage: BlogListPage | null = null;
     private blogPostPage: BlogPostPage | null = null;
     private tutoringPage: TutoringPage | null = null;
@@ -45,9 +39,6 @@ class Portfolio {
             // Initialize configuration system first
             await config.initialize();
 
-            // Load data from configuration
-            this.loadProjectsData();
-
             // Setup router with configuration-driven titles
             // But DON'T initialize it yet - we'll do that after checking the current route
             this.setupRouter();
@@ -66,8 +57,6 @@ class Portfolio {
 
         this.router = new Router(basePath);
         this.router.addRoute('/', this.renderHomePage.bind(this), pages.home);
-        this.router.addRoute('/project/:id', this.renderProjectPage.bind(this), pages.projects);
-        this.router.addRoute('/cv', this.renderCVPage.bind(this), pages.cv);
         this.router.addRoute('/blog', this.renderBlogPage.bind(this), pages.blog);
         this.router.addRoute('/blog/:slug', this.renderBlogPostPage.bind(this), pages.blog_post);
         this.router.addRoute('/tutoring', this.renderTutoringPage.bind(this), pages.tutoring);
@@ -116,35 +105,6 @@ class Portfolio {
         if (headerContainer) headerContainer.style.display = 'none';
         if (heroContainer) heroContainer.style.display = 'none';
         if (app) app.innerHTML = '';
-    }
-
-    private async renderProjectPage(): Promise<void> {
-        const path = window.location.pathname;
-        const projectId = this.router.getRouteParams('/project/:id', path).id;
-
-        const app = document.getElementById('app')!;
-
-        // Hide main content
-        const mainContent = document.getElementById('main-content');
-        if (mainContent) {
-            mainContent.style.display = 'none';
-        }
-
-        // Create or update project detail page
-        if (!this.projectDetailPage) {
-            this.projectDetailPage = new ProjectDetailPage(app);
-        }
-
-        await this.projectDetailPage.render(projectId, this.projects);
-    }
-
-    private async renderCVPage(): Promise<void> {
-        const app = document.getElementById('app')!;
-        this.clearMainLayout();
-
-        // Create CV page
-        this.cvPage = new CVPage(app);
-        await this.cvPage.render();
     }
 
     private async renderBlogPage(): Promise<void> {
@@ -284,19 +244,6 @@ class Portfolio {
         }
     }
 
-    private loadProjectsData(): void {
-        try {
-            const projectsData = config.getProjectsData();
-            // Type assertion since we know the YAML data conforms to Project interface
-            this.projects = projectsData.projects as Project[];
-            console.log(`Loaded ${this.projects.length} projects from configuration`);
-        } catch (error) {
-            console.error('Failed to load projects data:', error);
-            // Fallback to empty array
-            this.projects = [];
-        }
-    }
-
     private setupThreeViewers(): void {
         try {
             const heroContainer = document.getElementById('hero-three-scene');
@@ -365,15 +312,6 @@ class Portfolio {
 
         // Setup button click handlers with a delay to ensure DOM is ready
         setTimeout(() => {
-            const viewCvBtn = document.getElementById('view-cv-btn');
-            if (viewCvBtn) {
-                viewCvBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    Navigation.toCV();
-                });
-            }
-
-
         }, 100);
     }
 

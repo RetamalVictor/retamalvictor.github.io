@@ -17,12 +17,6 @@ interface BlogPostSEO {
     tags?: string[];
 }
 
-interface ProjectSEO {
-    title: string;
-    description: string;
-    id: string;
-}
-
 class SEOManager {
     /**
      * Set or update a meta tag by name attribute
@@ -263,19 +257,6 @@ class SEOManager {
         script.textContent = JSON.stringify(data);
     }
 
-    /**
-     * SEO for project detail page
-     */
-    project(project: ProjectSEO): void {
-        const title = `${project.title} - Victor Retamal`;
-        const url = `${SITE_URL}/project/${project.id}`;
-
-        this.updateAll({
-            title,
-            description: project.description,
-            url,
-        });
-    }
 }
 
 // Export singleton instance

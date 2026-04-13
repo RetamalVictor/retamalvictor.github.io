@@ -1,19 +1,3 @@
-export interface Project {
-  id: string;
-  title: string;
-  description: string;
-  longDescription?: string;
-  technologies: string[];
-  tags?: string[];
-  imageUrl?: string;
-  modelUrl?: string;
-  githubUrl?: string;
-  demoUrl?: string;
-  category: 'robotics' | 'computer-vision' | 'machine-learning' | 'multi-agent' | 'research';
-  featured: boolean;
-  year: number;
-}
-
 export interface Section {
   id: string;
   title: string;

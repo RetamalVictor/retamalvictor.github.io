@@ -42,6 +42,26 @@ areas:
       blogs: ["systems-engineering-part-1", "systems-engineering-part-2"]
       publications: [1, 2]  # From Shadows to Light, On-board Controller Design
 
+# Publications data (used by related items in research areas)
+publications:
+  - title: "Automatic Segmentation of Cardiac Structures from 2-D Echocardiographic Images using Transformers"
+    authors: ["Anne Chel", "Mats Gonggrijp", "Victor Kyriacou", "Victor Retamal", "Laura Latorre Moreno", "Navchetan Awasthi"]
+    journal: "IEEE SAUS"
+    date: 2024
+    doi: "10.1109/SAUS61785.2024.10563657"
+
+  - title: "From Shadows to Light: A Swarm-Robotics Approach with On-board Control for Seeking Dynamic Sources in Constrained Environments"
+    authors: ["Tugay Alperen Karagüzel", "Victor Retamal", "Nicolas Cambier", "Eliseo Ferrante"]
+    journal: "IEEE RAL"
+    date: 2023
+    doi: "10.1109/LRA.2023.3331897"
+
+  - title: "On-board Controller Design for Nano UAV Swarm in Operator-Guided Collective Behaviours"
+    authors: ["Tugay Alperen Karagüzel", "Victor Retamal", "Eliseo Ferrante"]
+    journal: "IEEE ICRA"
+    date: 2023
+    doi: "10.1109/ICRA48891.2023.10160630"
+
 # Configuration for the 3D visualization section
 visualization:
   title: "Interactive Robotics Visualization"

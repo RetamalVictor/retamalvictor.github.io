@@ -7,9 +7,13 @@
         // GitHub Pages SPA redirect for custom domain
         (function() {
             var path = window.location.pathname;
+            var search = window.location.search;
 
             // Redirect to index.html with the path as a query parameter
-            var redirect = '/?p=' + encodeURIComponent(path) + window.location.search.slice(1);
+            var redirect = '/?p=' + encodeURIComponent(path);
+            if (search) {
+                redirect += '&' + search.slice(1);
+            }
             window.location.replace(redirect);
         })();
     </script>

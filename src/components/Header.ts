@@ -111,8 +111,8 @@ export class Header {
                         <h1 class="text-2xl font-bold">Victor Retamal</h1>
                         <div class="space-x-6">
                             <a href="#about" class="hover:text-blue-400">About</a>
-                            <a href="#projects" class="hover:text-blue-400">Projects</a>
-                            <a href="#resume" class="hover:text-blue-400">Resume</a>
+                            <a href="/blog" class="hover:text-blue-400">Blog</a>
+                            <a href="/blog" class="hover:text-blue-400">Blog</a>
                         </div>
                     </div>
                 </nav>

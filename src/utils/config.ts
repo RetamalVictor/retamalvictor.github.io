@@ -6,9 +6,7 @@ import siteConfigYaml from '../data/site-config.yaml?raw';
 import uiTextYaml from '../data/ui-text.yaml?raw';
 import themeConfigYaml from '../data/theme-config.yaml?raw';
 import researchAreasYaml from '../data/research-areas.yaml?raw';
-import projectsYaml from '../data/projects.yaml?raw';
 import blogConfigYaml from '../data/blog-posts.yaml?raw'; // Only for blog_config section
-import cvDataYaml from '../data/cv-data.yaml?raw';
 
 // Auto-import all markdown files for blog posts
 const markdownModules = import.meta.glob('../content/markdown/*.md', {
@@ -53,10 +51,7 @@ export interface SiteConfig {
     pages: {
         [key: string]: string;
     };
-    assets: {
-        resume_pdf: string;
-        cv_download_filename: string;
-    };
+    assets: Record<string, string>;
     research_areas: string[];
 }
 
@@ -118,27 +113,6 @@ export interface ResearchAreas {
     };
 }
 
-export interface ProjectsData {
-    projects: Array<{
-        id: string;
-        title: string;
-        description: string;
-        longDescription?: string;
-        technologies: string[];
-        category: string;
-        featured: boolean;
-        year: number;
-        githubUrl?: string;
-        demoUrl?: string;
-        imageUrl?: string;
-    }>;
-    section: {
-        title: string;
-        description: string;
-        show_featured_only: boolean;
-    };
-}
-
 export interface BlogPost {
     slug: string;
     title: string;
@@ -163,36 +137,6 @@ export interface BlogPostsData {
     };
 }
 
-export interface CVData {
-    cv: {
-        name: string;
-        label: string;
-        location: string;
-        email: string;
-        phone: string;
-        website: string;
-        social_networks: Array<{
-            network: string;
-            username: string;
-        }>;
-    };
-    sections: {
-        education: any[];
-        experience: any[];
-        publications: Array<{
-            title: string;
-            authors: string[];
-            journal: string;
-            date: number;
-            doi: string;
-        }>;
-        projects: any[];
-        skills: any[];
-        awards: any[];
-    };
-    design: any;
-}
-
 /**
  * Configuration manager for loading and accessing all app configuration
  */
@@ -202,9 +146,7 @@ export class ConfigManager {
     private uiText: UIText | null = null;
     private themeConfig: ThemeConfig | null = null;
     private researchAreas: ResearchAreas | null = null;
-    private projectsData: ProjectsData | null = null;
     private blogPostsData: BlogPostsData | null = null;
-    private cvData: CVData | null = null;
 
     private constructor() {}
 
@@ -225,8 +167,6 @@ export class ConfigManager {
             this.uiText = yaml.load(uiTextYaml) as UIText;
             this.themeConfig = yaml.load(themeConfigYaml) as ThemeConfig;
             this.researchAreas = yaml.load(researchAreasYaml) as ResearchAreas;
-            this.projectsData = yaml.load(projectsYaml) as ProjectsData;
-            this.cvData = yaml.load(cvDataYaml) as CVData;
 
             // Load blog posts from frontmatter (single source of truth)
             const blogConfig = yaml.load(blogConfigYaml) as any;
@@ -303,16 +243,6 @@ export class ConfigManager {
     }
 
     /**
-     * Get projects data
-     */
-    public getProjectsData(): ProjectsData {
-        if (!this.projectsData) {
-            throw new Error('Projects data not loaded. Call initialize() first.');
-        }
-        return this.projectsData;
-    }
-
-    /**
      * Get blog posts data
      */
     public getBlogPostsData(): BlogPostsData {
@@ -320,16 +250,6 @@ export class ConfigManager {
             throw new Error('Blog posts data not loaded. Call initialize() first.');
         }
         return this.blogPostsData;
-    }
-
-    /**
-     * Get CV data
-     */
-    public getCVData(): CVData {
-        if (!this.cvData) {
-            throw new Error('CV data not loaded. Call initialize() first.');
-        }
-        return this.cvData;
     }
 
     /**
@@ -398,19 +318,10 @@ export class ConfigManager {
             return { projects: [], blogs: [], publications: [] };
         }
 
-        const projects = this.getProjectsByIds(area.related_items.projects);
         const blogs = this.getBlogPostsBySlug(area.related_items.blogs);
         const publications = this.getPublicationsByIndices(area.related_items.publications);
 
-        return { projects, blogs, publications };
-    }
-
-    /**
-     * Get projects by their IDs
-     */
-    private getProjectsByIds(ids: string[]) {
-        const projectsData = this.getProjectsData();
-        return projectsData.projects.filter(p => ids.includes(p.id));
+        return { projects: [], blogs, publications };
     }
 
     /**
@@ -425,23 +336,9 @@ export class ConfigManager {
      * Get publications by their indices
      */
     private getPublicationsByIndices(indices: number[]) {
-        const cvData = this.getCVData();
-        return indices.map(i => cvData.sections.publications[i]).filter(p => p !== undefined);
-    }
-
-    /**
-     * Get total counts for featured work panel
-     */
-    public getFeaturedWorkCounts() {
-        const projects = this.getProjectsData().projects.filter(p => p.featured);
-        const blogs = this.getBlogPostsData().posts.filter(p => p.featured);
-        const publications = this.getCVData().sections.publications;
-
-        return {
-            projects: projects.length,
-            blogs: blogs.length,
-            publications: publications.length
-        };
+        const researchData = this.getResearchAreas() as any;
+        const publications = researchData.publications || [];
+        return indices.map((i: number) => publications[i]).filter((p: any) => p !== undefined);
     }
 }
 
