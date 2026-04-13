@@ -14,8 +14,7 @@ areas:
       background: "bg-blue-100"
       icon: "text-blue-600"
     related_items:
-      projects: ["1"]  # PX4 State Sharing project
-      blogs: ["transformer-attention-mechanisms", "data-visualization-intro"]
+      blogs: ["bittorch-1.58-bits"]
       publications: [0]  # Automatic Segmentation of Cardiac Structures using Transformers
 
   - id: "reinforcement-learning"
@@ -26,8 +25,7 @@ areas:
       background: "bg-purple-100"
       icon: "text-purple-600"
     related_items:
-      projects: ["1"]  # PX4 State Sharing project
-      blogs: ["linear-regression-basics", "ml-pipeline-fundamentals"]
+      blogs: ["tinylm-intro"]
       publications: [1, 2]  # Swarm robotics papers with RL components
 
   - id: "multi-agent"
@@ -38,7 +36,6 @@ areas:
       background: "bg-green-100"
       icon: "text-green-600"
     related_items:
-      projects: ["1", "2"]  # PX4 State Sharing, MAPF-GNN projects
       blogs: ["systems-engineering-part-1", "systems-engineering-part-2"]
       publications: [1, 2]  # From Shadows to Light, On-board Controller Design
 
