@@ -209,14 +209,17 @@ export class DepthDemo {
 
                 // Run inference asynchronously (non-blocking)
                 this.engine.predict(imageData).then((depthMap) => {
+                    if (this.isDestroyed || !this.engine) return;
+
                     this.latestDepthMap = depthMap;
 
                     // Update metrics
-                    const stats = this.engine!.getStats();
+                    const stats = this.engine.getStats();
                     this.state.latencyMs = stats.lastLatencyMs;
 
                     this.isInferenceRunning = false;
                 }).catch((e) => {
+                    if (this.isDestroyed) return;
                     console.error('[DepthDemo] Inference error:', e);
                     this.isInferenceRunning = false;
                 });
