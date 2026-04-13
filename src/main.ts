@@ -155,7 +155,7 @@ class Portfolio {
         await this.loadSectionTemplates();
 
         const headerContainer = document.getElementById('header-container')!;
-        this.header = new Header(headerContainer, this.router);
+        this.header = new Header(headerContainer);
 
         await this.loadHeroSection();
     }

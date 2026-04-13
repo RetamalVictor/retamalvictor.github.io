@@ -1,12 +1,11 @@
 import { loadTemplate, smoothScrollTo } from '../utils/dom.js';
 import { Navigation } from '../utils/navigation.js';
-import { Router } from '../utils/router.js';
 
 export class Header {
     private element: HTMLElement | null = null;
     private mobileMenuOpen = false;
 
-    constructor(private container: HTMLElement, _router?: Router) {
+    constructor(private container: HTMLElement) {
         this.init();
     }
 
