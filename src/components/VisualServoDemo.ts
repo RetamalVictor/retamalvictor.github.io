@@ -64,6 +64,7 @@ export class VisualServoDemo {
     private isVisible: boolean = true;
     private isPageVisible: boolean = true;
     private intersectionObserver: IntersectionObserver | null = null;
+    private resizeObserver: ResizeObserver | null = null;
     private boundVisibilityHandler: () => void;
 
     // Constants
@@ -678,10 +679,10 @@ export class VisualServoDemo {
     }
 
     private setupResize(): void {
-        const resizeObserver = new ResizeObserver(() => {
+        this.resizeObserver = new ResizeObserver(() => {
             this.handleResize();
         });
-        resizeObserver.observe(this.container);
+        this.resizeObserver.observe(this.container);
     }
 
     private handleResize(): void {
@@ -831,6 +832,10 @@ export class VisualServoDemo {
         }
 
         // Clean up visibility observers
+        if (this.resizeObserver) {
+            this.resizeObserver.disconnect();
+            this.resizeObserver = null;
+        }
         if (this.intersectionObserver) {
             this.intersectionObserver.disconnect();
             this.intersectionObserver = null;
