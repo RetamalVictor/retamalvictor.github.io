@@ -19,6 +19,7 @@ import { ExpandableDemo } from './managers/ExpandableDemo.js';
 class Portfolio {
     private header!: Header;
     private observer: IntersectionObserver | null = null;
+    private animationObserver: IntersectionObserver | null = null;
     private router!: Router;
     private blogListPage: BlogListPage | null = null;
     private blogPostPage: BlogPostPage | null = null;
@@ -300,7 +301,7 @@ class Portfolio {
     private setupScrollAnimations(): void {
         const animatedElements = document.querySelectorAll('.fade-in-up');
 
-        const animationObserver = new IntersectionObserver((entries) => {
+        this.animationObserver = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
                     entry.target.classList.add('animate-fade-in-up');
@@ -308,11 +309,12 @@ class Portfolio {
             });
         }, { threshold: 0.1 });
 
-        animatedElements.forEach(el => animationObserver.observe(el));
+        animatedElements.forEach(el => this.animationObserver!.observe(el));
     }
 
     public destroy(): void {
         this.observer?.disconnect();
+        this.animationObserver?.disconnect();
         this.demoManager?.destroy();
         this.infoPanel?.destroy();
         this.expandableDemo?.destroy();
