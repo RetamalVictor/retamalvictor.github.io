@@ -51,7 +51,6 @@ export interface SiteConfig {
     pages: {
         [key: string]: string;
     };
-    assets: Record<string, string>;
     research_areas: string[];
 }
 
@@ -290,7 +289,6 @@ export class ConfigManager {
             bio: this.getSiteConfig().bio,
             social: this.getSiteConfig().social,
             pages: this.getSiteConfig().pages,
-            assets: this.getSiteConfig().assets,
             research_areas: this.getSiteConfig().research_areas,
             navigation: this.getUIText().navigation,
             buttons: this.getUIText().buttons,
