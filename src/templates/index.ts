@@ -5,6 +5,8 @@ import researchSectionTemplate from './research-section.html?raw';
 import footerTemplate from './footer.html?raw';
 import heroTemplate from './hero.html?raw';
 import headerTemplate from './header.html?raw';
+import selectedWorkSectionTemplate from './selected-work-section.html?raw';
+import publicationsSectionTemplate from './publications-section.html?raw';
 import recentPostsSectionTemplate from './recent-posts-section.html?raw';
 
 // Export templates as a map
@@ -15,6 +17,8 @@ export const templates: Record<string, string> = {
     '/src/templates/footer.html': footerTemplate,
     '/src/templates/hero.html': heroTemplate,
     '/src/templates/header.html': headerTemplate,
+    '/src/templates/selected-work-section.html': selectedWorkSectionTemplate,
+    '/src/templates/publications-section.html': publicationsSectionTemplate,
     '/src/templates/recent-posts-section.html': recentPostsSectionTemplate,
 };
 

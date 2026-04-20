@@ -5,7 +5,6 @@ import { Navigation, initializeNavigation } from './utils/navigation.js';
 import { BlogListPage } from './pages/BlogList.js';
 import { BlogPostPage } from './pages/BlogPost.js';
 import { TutoringPage } from './pages/Tutoring.js';
-import { TutoringEsPage } from './pages/TutoringEs.js';
 import { addIntersectionObserver } from './utils/dom.js';
 import { config } from './utils/config.js';
 import { templateManager } from './utils/template.js';
@@ -24,7 +23,6 @@ class Portfolio {
     private blogListPage: BlogListPage | null = null;
     private blogPostPage: BlogPostPage | null = null;
     private tutoringPage: TutoringPage | null = null;
-    private tutoringEsPage: TutoringEsPage | null = null;
 
     // Demo managers
     private demoManager: DemoManager | null = null;
@@ -61,7 +59,6 @@ class Portfolio {
         this.router.addRoute('/blog', this.renderBlogPage.bind(this), pages.blog);
         this.router.addRoute('/blog/:slug', this.renderBlogPostPage.bind(this), pages.blog_post);
         this.router.addRoute('/tutoring', this.renderTutoringPage.bind(this), pages.tutoring);
-        this.router.addRoute('/tutoring/es', this.renderTutoringEsPage.bind(this), pages.tutoring_es);
 
         // Initialize navigation module
         initializeNavigation(this.router, environment as 'development' | 'production');
@@ -135,14 +132,6 @@ class Portfolio {
 
         this.tutoringPage = new TutoringPage(app);
         await this.tutoringPage.render();
-    }
-
-    private async renderTutoringEsPage(): Promise<void> {
-        const app = document.getElementById('app')!;
-        this.clearMainLayout();
-
-        this.tutoringEsPage = new TutoringEsPage(app);
-        await this.tutoringEsPage.render();
     }
 
     private async initializeLayout(): Promise<void> {
