@@ -9,34 +9,24 @@ interface Service {
 
 const SERVICES: Service[] = [
     {
-        title: 'Sim-to-Real Robotics',
+        title: 'Sim-to-Real Infrastructure',
         icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" /></svg>',
-        description: 'MuJoCo, Isaac Lab, Genesis, PX4-SITL. Domain randomization, distributed training, hardware validation.',
+        description: 'Simulation environments, domain randomization, distributed training pipelines, and iterative hardware validation to close the sim-to-real gap.',
     },
     {
-        title: 'Multi-Agent Systems',
+        title: 'Multi-Agent RL & Robotics',
         icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>',
-        description: 'MARL, swarm coordination, decentralized control. Environment design, reward shaping, policy training for UAVs and ground robots.',
+        description: 'Environment design, reward shaping, policy training, evaluation benchmarks, and deployment on real platforms.',
     },
     {
-        title: 'Systems Engineering',
-        icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>',
-        description: 'V-model methodology, requirements engineering, functional and physical architecture. From spec to deployment.',
-    },
-    {
-        title: 'Control System Design',
-        icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>',
-        description: 'Visual servoing, PID/MPC controllers, state estimation. Perception-to-action pipelines for autonomous platforms.',
-    },
-    {
-        title: 'Software Engineering for Robotics',
-        icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>',
-        description: 'ROS2, Docker, CI/CD, distributed architectures. Production-grade infrastructure for robotic systems.',
-    },
-    {
-        title: 'Medical & Surgical AI',
+        title: 'Medical Imaging & Surgical AI',
         icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>',
-        description: 'Segmentation pipelines, 3D patient-specific models, clinical dataset curation. MD background.',
+        description: 'Segmentation pipelines, 3D patient-specific models, dataset curation. MD background means I understand the clinical workflow, not just the model.',
+    },
+    {
+        title: 'Computer Vision & Edge Deployment',
+        icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>',
+        description: 'Real-time inference pipelines for embedded devices. Model optimization, quantization, and deployment on Jetson or custom hardware.',
     },
 ];
 
@@ -44,6 +34,7 @@ const PUBLICATIONS = [
     { venue: 'SAUS 2024', title: 'Automatic Segmentation of Cardiac Structures from 2-D Echocardiographic Images using Transformers', doi: '10.1109/SAUS61785.2024.10563657' },
     { venue: 'RAL 2023', title: 'From Shadows to Light: A Swarm-Robotics Approach with On-board Control for Seeking Dynamic Sources', doi: '10.1109/LRA.2023.3331897' },
     { venue: 'ICRA 2023', title: 'On-board Controller Design for Nano UAV Swarm in Operator-Guided Collective Behaviours', doi: '10.1109/ICRA48891.2023.10160630' },
+    { venue: 'MPI 2023', title: 'Learning Methods with Range-Only Interactions in Active Systems', doi: '' },
 ];
 
 export class TutoringPage {
@@ -92,16 +83,22 @@ export class TutoringPage {
                             <h2 class="text-3xl md:text-5xl font-bold text-white mb-6 leading-tight tracking-tight">
                                 Victor <span class="text-accent-cyan">Retamal</span>
                             </h2>
+                            <p class="text-sm text-accent-cyan/80 font-medium tracking-wide uppercase mb-4">Senior Machine Learning Engineer</p>
                             <p class="text-gray-300 text-lg leading-relaxed mb-8 max-w-xl mx-auto">
-                                ML & Robotics engineer. Medical doctor. I've deployed multi-agent systems on real UAVs,
-                                built CUDA kernels for quantized inference, and published at IEEE RAL and ICRA.
+                                ML and robotics engineer with 6+ years building sim-to-real pipelines, multi-agent systems,
+                                computer vision, and medical imaging. 3 IEEE publications (RAL, ICRA) and a medical degree
+                                that gives me a genuine edge in clinical AI.
+                            </p>
+                            <p class="text-gray-400 text-sm mb-8">
+                                Available for contract work &middot; Remote or on-site (Spain/EU) &middot; EU citizen
                             </p>
 
                             <div class="flex flex-wrap justify-center gap-2.5 mb-10">
-                                <span class="px-3.5 py-1.5 text-xs font-medium rounded-full border border-accent-cyan/20 text-accent-cyan/90 bg-accent-cyan/[0.05]">MSc AI @ VU Amsterdam</span>
-                                <span class="px-3.5 py-1.5 text-xs font-medium rounded-full border border-amber-400/20 text-amber-400/90 bg-amber-400/[0.05]">BSc Medicine</span>
-                                <span class="px-3.5 py-1.5 text-xs font-medium rounded-full border border-accent-cyan/20 text-accent-cyan/90 bg-accent-cyan/[0.05]">IEEE Published</span>
-                                <span class="px-3.5 py-1.5 text-xs font-medium rounded-full border border-accent-cyan/20 text-accent-cyan/90 bg-accent-cyan/[0.05]">AIAA Systems Engineering</span>
+                                <span class="px-3.5 py-1.5 text-xs font-medium rounded-full border border-accent-cyan/20 text-accent-cyan/90 bg-accent-cyan/[0.05]">Gazebo/Isaac Lab/MuJoCo</span>
+                                <span class="px-3.5 py-1.5 text-xs font-medium rounded-full border border-accent-cyan/20 text-accent-cyan/90 bg-accent-cyan/[0.05]">PyTorch &middot; JAX &middot; CUDA</span>
+                                <span class="px-3.5 py-1.5 text-xs font-medium rounded-full border border-accent-cyan/20 text-accent-cyan/90 bg-accent-cyan/[0.05]">ROS/ROS2 &middot; PX4</span>
+                                <span class="px-3.5 py-1.5 text-xs font-medium rounded-full border border-amber-400/20 text-amber-400/90 bg-amber-400/[0.05]">TensorRT &middot; ONNX &middot; Jetson</span>
+                                <span class="px-3.5 py-1.5 text-xs font-medium rounded-full border border-accent-purple/20 text-accent-purple/90 bg-accent-purple/[0.05]">C/C++ &middot; Docker &middot; K8s</span>
                             </div>
 
                             <a href="#contact" class="btn-primary inline-flex items-center gap-2.5 text-base px-8 py-3.5 rounded-xl shadow-lg shadow-accent-cyan/20 hover:shadow-accent-cyan/30 transition-all duration-300">
@@ -132,14 +129,19 @@ export class TutoringPage {
                             Publications
                         </h2>
                         <div class="space-y-3">
-                            ${PUBLICATIONS.map(p => `
-                                <a href="https://doi.org/${p.doi}" target="_blank" rel="noopener noreferrer" class="block p-4 rounded-lg border border-dark-border hover:border-accent-purple/40 transition-colors group">
+                            ${PUBLICATIONS.map(p => {
+                                const tag = p.doi
+                                    ? `<a href="https://doi.org/${p.doi}" target="_blank" rel="noopener noreferrer" class="block p-4 rounded-lg border border-dark-border hover:border-accent-purple/40 transition-colors group">`
+                                    : `<div class="block p-4 rounded-lg border border-dark-border">`;
+                                const close = p.doi ? '</a>' : '</div>';
+                                return `
+                                ${tag}
                                     <div class="flex items-start gap-3">
                                         <span class="text-xs font-mono text-accent-purple bg-accent-purple/10 px-2 py-0.5 rounded flex-shrink-0 mt-0.5">${p.venue}</span>
-                                        <p class="text-sm text-gray-300 group-hover:text-white transition-colors">${p.title}</p>
+                                        <p class="text-sm text-gray-300 ${p.doi ? 'group-hover:text-white' : ''} transition-colors">${p.title}</p>
                                     </div>
-                                </a>
-                            `).join('')}
+                                ${close}`;
+                            }).join('')}
                         </div>
                     </section>
 
