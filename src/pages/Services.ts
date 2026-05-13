@@ -37,7 +37,7 @@ const PUBLICATIONS = [
     { venue: 'MPI 2023', title: 'Learning Methods with Range-Only Interactions in Active Systems', doi: '' },
 ];
 
-export class TutoringPage {
+export class ServicesPage {
     private container: HTMLElement;
 
     constructor(container: HTMLElement) {
@@ -45,7 +45,7 @@ export class TutoringPage {
     }
 
     public async render(): Promise<void> {
-        seo.tutoring();
+        seo.services();
         this.renderPage();
         this.setupEventListeners();
         this.setupScrollAnimations();

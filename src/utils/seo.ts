@@ -143,101 +143,41 @@ class SEOManager {
     }
 
     /**
-     * SEO for tutoring page
+     * SEO for services page
      */
-    tutoring(): void {
+    services(): void {
         this.updateAll({
-            title: 'Private Tutoring - Victor Retamal',
-            description: 'Private 1-on-1 tutoring in machine learning, deep learning, mathematics, reinforcement learning, computer vision, and robotics.',
-            url: `${SITE_URL}/tutoring`,
+            title: 'Services - Victor Retamal',
+            description: 'ML engineering, robotics, and consulting services. Sim-to-real infrastructure, multi-agent RL, medical imaging, and computer vision for edge deployment.',
+            url: `${SITE_URL}/services`,
         });
 
-        // JSON-LD structured data for tutoring service
-        this.setJsonLd('tutoring-jsonld', {
+        this.setJsonLd('services-jsonld', {
             '@context': 'https://schema.org',
             '@type': 'Service',
-            name: 'Private ML & Math Tutoring',
-            description: 'Private 1-on-1 tutoring in machine learning, deep learning, mathematics, reinforcement learning, computer vision, Python, and robotics.',
+            name: 'ML Engineering & Robotics Services',
+            description: 'Contract ML engineering: sim-to-real pipelines, multi-agent RL, medical imaging, and computer vision for edge deployment.',
             provider: {
                 '@type': 'Person',
                 name: 'Victor Retamal',
                 url: SITE_URL,
-                jobTitle: 'Machine Learning Engineer',
+                jobTitle: 'Senior Machine Learning Engineer',
                 alumniOf: {
                     '@type': 'EducationalOrganization',
                     name: 'Vrije Universiteit Amsterdam & University of Amsterdam',
                 },
             },
-            serviceType: 'Private Tutoring',
+            serviceType: 'Engineering Consulting',
             areaServed: 'Online',
-            url: `${SITE_URL}/tutoring`,
-            offers: {
-                '@type': 'Offer',
-                description: 'Free intro call, then flexible 1-on-1 video sessions',
-                availability: 'https://schema.org/InStock',
-            },
+            url: `${SITE_URL}/services`,
             hasOfferCatalog: {
                 '@type': 'OfferCatalog',
-                name: 'Tutoring Topics',
+                name: 'Services',
                 itemListElement: [
-                    'Mathematics for ML',
-                    'Machine Learning',
-                    'Deep Learning',
-                    'Reinforcement Learning',
-                    'Computer Vision',
-                    'Python for Engineers',
-                    'Robotics',
-                ],
-            },
-        });
-    }
-
-    /**
-     * SEO for Spanish tutoring page
-     */
-    tutoringEs(): void {
-        this.updateAll({
-            title: 'Clases Particulares - Victor Retamal',
-            description: 'Clases particulares 1 a 1 de machine learning, deep learning, matemáticas, reinforcement learning, visión por computador e ingeniería de software.',
-            url: `${SITE_URL}/tutoring/es`,
-        });
-
-        this.setJsonLd('tutoring-es-jsonld', {
-            '@context': 'https://schema.org',
-            '@type': 'Service',
-            name: 'Clases Particulares de ML y Matemáticas',
-            description: 'Clases particulares 1 a 1 de machine learning, deep learning, matemáticas, reinforcement learning, visión por computador, ingeniería de software y tesis.',
-            provider: {
-                '@type': 'Person',
-                name: 'Victor Retamal',
-                url: SITE_URL,
-                jobTitle: 'Machine Learning Engineer',
-                alumniOf: {
-                    '@type': 'EducationalOrganization',
-                    name: 'Vrije Universiteit Amsterdam & University of Amsterdam',
-                },
-            },
-            serviceType: 'Clases Particulares',
-            areaServed: 'Online',
-            url: `${SITE_URL}/tutoring/es`,
-            inLanguage: 'es',
-            offers: {
-                '@type': 'Offer',
-                description: 'Llamada introductoria gratis, luego sesiones flexibles 1 a 1 por video',
-                availability: 'https://schema.org/InStock',
-            },
-            hasOfferCatalog: {
-                '@type': 'OfferCatalog',
-                name: 'Temas de Tutoría',
-                itemListElement: [
-                    'Matemáticas para ML',
-                    'Machine Learning',
-                    'Deep Learning',
-                    'Reinforcement Learning',
-                    'Visión por Computador',
-                    'Ingeniería ML y Despliegue',
-                    'Ingeniería de Software',
-                    'Tesis y Proyectos',
+                    'Sim-to-Real Infrastructure',
+                    'Multi-Agent RL & Robotics',
+                    'Medical Imaging & Surgical AI',
+                    'Computer Vision & Edge Deployment',
                 ],
             },
         });

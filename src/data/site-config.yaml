@@ -55,8 +55,7 @@ pages:
   home: "Victor Retamal"
   blog: "Blog"
   blog_post: "Blog"
-  tutoring: "Tutoring"
-  tutoring_es: "Clases Particulares"
+  services: "Services"
 
 # Technical expertise areas for footer
 research_areas:

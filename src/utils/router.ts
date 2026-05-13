@@ -65,6 +65,11 @@ export class Router {
             path = '/';
         }
 
+        // Normalize trailing slash (GitHub Pages serves /blog/ for /blog/index.html)
+        if (path !== '/' && path.endsWith('/')) {
+            path = path.slice(0, -1);
+        }
+
         this.currentRoute = path;
 
         // Check for exact match

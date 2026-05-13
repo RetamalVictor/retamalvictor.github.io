@@ -28,6 +28,7 @@ export class BlogPostPage {
     private prevPost: BlogPost | null = null;
     private nextPost: BlogPost | null = null;
     private ternaryDemos: any[] = [];  // TernaryLMDemo instances
+    private embeddedDemos: Array<{ destroy(): void }> = [];
 
     constructor(container: HTMLElement) {
         this.container = container;
@@ -412,6 +413,124 @@ export class BlogPostPage {
                 console.error('Failed to load training comparison demo module:', error);
             });
         }
+
+        // CT Fracture Segmentation post components
+        const stlContainer = document.getElementById('stl-viewer-demo');
+        if (stlContainer) {
+            import('../components/stl-viewer').then(({ STLViewer }) => {
+                try {
+                    const viewer = new STLViewer({ containerId: 'stl-viewer-demo' });
+                    this.embeddedDemos.push(viewer);
+                } catch (error) {
+                    console.error('Failed to initialize STL viewer:', error);
+                }
+            }).catch(error => {
+                console.error('Failed to load STL viewer module:', error);
+            });
+        }
+
+        const youtubeContainer = document.getElementById('youtube-video');
+        if (youtubeContainer) {
+            import('../components/ct-segmentation').then(({ YouTubeEmbed }) => {
+                try {
+                    const embed = new YouTubeEmbed({
+                        containerId: 'youtube-video',
+                        videoId: 'XxzP5Dqwdmc',
+                        caption: 'End-to-end segmentation pipeline: CT input → ABBC prediction → fragment instance recovery → 3D mesh generation.',
+                    });
+                    this.embeddedDemos.push(embed);
+                } catch (error) {
+                    console.error('Failed to initialize YouTube embed:', error);
+                }
+            }).catch(error => {
+                console.error('Failed to load YouTube embed module:', error);
+            });
+        }
+
+        const pipelineContainer = document.getElementById('pipeline-diagram');
+        if (pipelineContainer) {
+            import('../components/ct-segmentation').then(({ PipelineDiagram }) => {
+                try {
+                    const diagram = new PipelineDiagram({ containerId: 'pipeline-diagram' });
+                    this.embeddedDemos.push(diagram);
+                } catch (error) {
+                    console.error('Failed to initialize pipeline diagram:', error);
+                }
+            }).catch(error => {
+                console.error('Failed to load pipeline diagram module:', error);
+            });
+        }
+
+        const archContainer = document.getElementById('architecture-diagram');
+        if (archContainer) {
+            import('../components/ct-segmentation').then(({ ArchDiagram }) => {
+                try {
+                    const diagram = new ArchDiagram({ containerId: 'architecture-diagram' });
+                    this.embeddedDemos.push(diagram);
+                } catch (error) {
+                    console.error('Failed to initialize architecture diagram:', error);
+                }
+            }).catch(error => {
+                console.error('Failed to load architecture diagram module:', error);
+            });
+        }
+
+        // Inline visual components
+        const scaleContainer = document.getElementById('scale-comparison');
+        if (scaleContainer) {
+            import('../components/ct-segmentation').then(({ ScaleComparison }) => {
+                try {
+                    const viz = new ScaleComparison({ containerId: 'scale-comparison' });
+                    this.embeddedDemos.push(viz);
+                } catch (error) {
+                    console.error('Failed to initialize scale comparison:', error);
+                }
+            }).catch(error => {
+                console.error('Failed to load scale comparison module:', error);
+            });
+        }
+
+        const voxelContainer = document.getElementById('voxel-anisotropy');
+        if (voxelContainer) {
+            import('../components/ct-segmentation').then(({ VoxelAnisotropy }) => {
+                try {
+                    const viz = new VoxelAnisotropy({ containerId: 'voxel-anisotropy' });
+                    this.embeddedDemos.push(viz);
+                } catch (error) {
+                    console.error('Failed to initialize voxel anisotropy:', error);
+                }
+            }).catch(error => {
+                console.error('Failed to load voxel anisotropy module:', error);
+            });
+        }
+
+        const abbcContainer = document.getElementById('abbc-cross-section');
+        if (abbcContainer) {
+            import('../components/ct-segmentation').then(({ ABBCDiagram }) => {
+                try {
+                    const viz = new ABBCDiagram({ containerId: 'abbc-cross-section' });
+                    this.embeddedDemos.push(viz);
+                } catch (error) {
+                    console.error('Failed to initialize ABBC diagram:', error);
+                }
+            }).catch(error => {
+                console.error('Failed to load ABBC diagram module:', error);
+            });
+        }
+
+        const trainingChartContainer = document.getElementById('training-chart-demo');
+        if (trainingChartContainer) {
+            import('../components/ct-segmentation').then(({ TrainingChart }) => {
+                try {
+                    const chart = new TrainingChart({ containerId: 'training-chart-demo' });
+                    this.embeddedDemos.push(chart);
+                } catch (error) {
+                    console.error('Failed to initialize training chart:', error);
+                }
+            }).catch(error => {
+                console.error('Failed to load training chart module:', error);
+            });
+        }
     }
 
     private addCopyButton(pre: HTMLElement, codeBlock: HTMLElement): void {
@@ -494,9 +613,15 @@ export class BlogPostPage {
     }
 
     public destroy(): void {
-        // Cleanup demos
+        // Cleanup embedded demos (STL viewer, charts, etc.)
+        for (const demo of this.embeddedDemos) {
+            try { demo.destroy(); } catch (e) { /* ignore */ }
+        }
+        this.embeddedDemos = [];
+
+        // Cleanup ternary demos
         for (const demo of this.ternaryDemos) {
-            demo.destroy();
+            try { demo.destroy(); } catch (e) { /* ignore */ }
         }
         this.ternaryDemos = [];
     }

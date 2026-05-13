@@ -71,10 +71,10 @@ export class Navigation {
     }
 
     /**
-     * Navigate to tutoring page
+     * Navigate to services page
      */
-    public static toTutoring(): void {
-        Navigation.to('/tutoring');
+    public static toServices(): void {
+        Navigation.to('/services');
     }
 
     /**

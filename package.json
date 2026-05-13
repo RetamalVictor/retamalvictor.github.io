@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build && node scripts/prerender.mjs",
+    "build:no-prerender": "tsc && vite build",
     "build:ci": "CI=true npm run build",
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
@@ -22,12 +23,12 @@
     "@webgpu/types": "^0.1.68",
     "husky": "^9.1.7",
     "lint-staged": "^16.1.6",
+    "puppeteer": "^24.43.1",
     "typescript": "^5.9.2",
     "vite": "^7.1.6"
   },
   "dependencies": {
     "@bittorch/js": "github:RetamalVictor/BitTorch#master",
-    "onnxruntime-web": "^1.17.0",
     "@types/dompurify": "^3.0.5",
     "@types/katex": "^0.16.7",
     "@types/marked": "^5.0.2",
@@ -38,6 +39,7 @@
     "js-yaml": "^4.1.0",
     "katex": "^0.16.22",
     "marked": "^17.0.0",
+    "onnxruntime-web": "^1.17.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
     "three": "^0.180.0"

@@ -493,6 +493,161 @@ body {
   border-radius: 0.5rem;
 }
 
+/* Collapsible primer sections */
+.blog-content-dark details {
+  background-color: var(--dark-surface);
+  border: 1px solid var(--dark-border);
+  border-radius: 0.5rem;
+  margin: 2rem 0;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.blog-content-dark details:hover {
+  border-color: rgba(0, 212, 255, 0.3);
+}
+
+.blog-content-dark details summary {
+  padding: 1rem 1.5rem;
+  cursor: pointer;
+  color: #e5e5e5;
+  font-size: 1rem;
+  font-weight: 600;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  transition: background-color 0.2s;
+  user-select: none;
+}
+
+.blog-content-dark details summary::-webkit-details-marker {
+  display: none;
+}
+
+.blog-content-dark details summary::before {
+  content: '▶';
+  font-size: 0.7rem;
+  color: var(--accent-cyan);
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+
+.blog-content-dark details[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.blog-content-dark details summary:hover {
+  background-color: var(--dark-hover);
+}
+
+.blog-content-dark details[open] summary {
+  border-bottom: 1px solid var(--dark-border);
+}
+
+.blog-content-dark details > div,
+.blog-content-dark details > p,
+.blog-content-dark details > h3,
+.blog-content-dark details > h4,
+.blog-content-dark details > ul,
+.blog-content-dark details > ol,
+.blog-content-dark details > pre,
+.blog-content-dark details > blockquote,
+.blog-content-dark details > table,
+.blog-content-dark details > hr {
+  margin-left: 1.5rem;
+  margin-right: 1.5rem;
+}
+
+.blog-content-dark details > *:first-child:not(summary) {
+  margin-top: 1.5rem;
+}
+
+.blog-content-dark details > *:last-child {
+  margin-bottom: 1.5rem;
+}
+
+/* STL viewer container */
+.stl-viewer-container {
+  position: relative;
+  width: 100%;
+  height: 500px;
+  background-color: var(--dark-surface);
+  border: 1px solid var(--dark-border);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.stl-viewer-container canvas {
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .stl-viewer-container {
+    height: 350px;
+  }
+}
+
+/* YouTube embed container */
+.youtube-embed-container {
+  position: relative;
+  width: 100%;
+  padding-bottom: 56.25%; /* 16:9 */
+  background-color: var(--dark-surface);
+  border: 1px solid var(--dark-border);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.youtube-embed-container iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.embed-caption {
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  color: #9ca3af;
+  font-style: italic;
+  text-align: center;
+}
+
+/* Diagram containers */
+.diagram-container {
+  width: 100%;
+  background-color: var(--dark-surface);
+  border: 1px solid var(--dark-border);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  padding: 1.5rem;
+}
+
+.diagram-container svg {
+  width: 100%;
+  height: auto;
+}
+
+/* Training chart container */
+.training-chart-container {
+  position: relative;
+  width: 100%;
+  height: 400px;
+  background-color: var(--dark-surface);
+  border: 1px solid var(--dark-border);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .training-chart-container {
+    height: 300px;
+  }
+}
+
 /* Fallback particle animation */
 @keyframes float {
   0%, 100% {

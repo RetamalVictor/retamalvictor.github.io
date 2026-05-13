@@ -4,7 +4,7 @@ import { Router } from './utils/router.js';
 import { Navigation, initializeNavigation } from './utils/navigation.js';
 import { BlogListPage } from './pages/BlogList.js';
 import { BlogPostPage } from './pages/BlogPost.js';
-import { TutoringPage } from './pages/Tutoring.js';
+import { ServicesPage } from './pages/Services.js';
 import { addIntersectionObserver } from './utils/dom.js';
 import { config } from './utils/config.js';
 import { templateManager } from './utils/template.js';
@@ -22,7 +22,7 @@ class Portfolio {
     private router!: Router;
     private blogListPage: BlogListPage | null = null;
     private blogPostPage: BlogPostPage | null = null;
-    private tutoringPage: TutoringPage | null = null;
+    private servicesPage: ServicesPage | null = null;
 
     // Demo managers
     private demoManager: DemoManager | null = null;
@@ -58,7 +58,7 @@ class Portfolio {
         this.router.addRoute('/', this.renderHomePage.bind(this), pages.home);
         this.router.addRoute('/blog', this.renderBlogPage.bind(this), pages.blog);
         this.router.addRoute('/blog/:slug', this.renderBlogPostPage.bind(this), pages.blog_post);
-        this.router.addRoute('/tutoring', this.renderTutoringPage.bind(this), pages.tutoring);
+        this.router.addRoute('/services', this.renderServicesPage.bind(this), pages.services);
 
         // Initialize navigation module
         initializeNavigation(this.router, environment as 'development' | 'production');
@@ -74,11 +74,8 @@ class Portfolio {
         // Check if we need to restore the layout
         if (!document.getElementById('main-content')) {
             await this.initializeLayout();
-            this.setupThreeViewers();
-            this.setupIntersectionObserver();
-            this.setupScrollAnimations();
         } else {
-            // Show all main elements
+            // Content exists (prerendered or returning from another page)
             const mainContent = document.getElementById('main-content');
             const headerContainer = document.getElementById('header-container');
             const heroContainer = document.getElementById('hero-container');
@@ -86,7 +83,42 @@ class Portfolio {
             if (mainContent) mainContent.style.display = 'block';
             if (headerContainer) headerContainer.style.display = 'block';
             if (heroContainer) heroContainer.style.display = 'block';
+
+            // Initialize header on prerendered pages
+            if (!this.header) {
+                const hc = document.getElementById('header-container');
+                if (hc) this.header = new Header(hc);
+            }
+
+            // Attach SPA navigation to prerendered links
+            this.attachLinkNavigation();
         }
+
+        // Initialize interactive features (guarded against re-init)
+        if (!this.demoManager) {
+            this.setupThreeViewers();
+        }
+        if (!this.observer) {
+            this.setupIntersectionObserver();
+        }
+        if (!this.animationObserver) {
+            this.setupScrollAnimations();
+        }
+    }
+
+    /**
+     * Attach SPA navigation handlers to existing links on prerendered pages.
+     */
+    private attachLinkNavigation(): void {
+        const grid = document.getElementById('recent-posts-grid');
+        if (!grid) return;
+        grid.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const href = link.getAttribute('href');
+                if (href) Navigation.to(href);
+            });
+        });
     }
 
     /**
@@ -106,6 +138,9 @@ class Portfolio {
     }
 
     private async renderBlogPage(): Promise<void> {
+        this.blogPostPage?.destroy();
+        this.blogPostPage = null;
+
         const app = document.getElementById('app')!;
         this.clearMainLayout();
 
@@ -115,6 +150,9 @@ class Portfolio {
     }
 
     private async renderBlogPostPage(): Promise<void> {
+        // Clean up previous blog post (prevents WebGL context leaks)
+        this.blogPostPage?.destroy();
+
         const path = window.location.pathname;
         const postSlug = this.router.getRouteParams('/blog/:slug', path).slug;
 
@@ -126,12 +164,15 @@ class Portfolio {
         await this.blogPostPage.render(postSlug);
     }
 
-    private async renderTutoringPage(): Promise<void> {
+    private async renderServicesPage(): Promise<void> {
+        this.blogPostPage?.destroy();
+        this.blogPostPage = null;
+
         const app = document.getElementById('app')!;
         this.clearMainLayout();
 
-        this.tutoringPage = new TutoringPage(app);
-        await this.tutoringPage.render();
+        this.servicesPage = new ServicesPage(app);
+        await this.servicesPage.render();
     }
 
     private async initializeLayout(): Promise<void> {
