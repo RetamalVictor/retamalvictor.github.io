@@ -296,8 +296,9 @@ class Portfolio {
                 this.infoPanel?.setContent(demoType);
             });
 
-            // Initialize the default demo
+            // Initialize the default demo (drone-racing)
             this.demoManager.initialize();
+            this.infoPanel.setContent('drone-racing');
 
             // Setup reset button
             const resetBtn = document.getElementById('reset-demo-btn');

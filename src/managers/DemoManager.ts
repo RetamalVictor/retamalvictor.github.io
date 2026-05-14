@@ -34,7 +34,7 @@ export type DemoChangeCallback = (demoType: DemoType) => void;
  */
 export class DemoManager {
     private containerId: string;
-    private activeDemo: DemoType = 'ibvs';
+    private activeDemo: DemoType = 'drone-racing';
     private currentInstance: DemoInstance | null = null;
     private onDemoChange: DemoChangeCallback | null = null;
 
@@ -52,11 +52,9 @@ export class DemoManager {
             return;
         }
 
-        // Initialize default demo (IBVS)
-        this.currentInstance = new VisualServoDemo({
-            containerId: this.containerId,
-            backgroundColor: 0x0a0a0f
-        });
+        // Initialize default demo (Drone Racing)
+        container.innerHTML = '';
+        await this.createDemo(this.activeDemo, container);
 
         this.setupTabs();
     }
