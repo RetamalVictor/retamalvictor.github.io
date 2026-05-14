@@ -102,7 +102,7 @@ class SEOManager {
      */
     home(): void {
         this.updateAll({
-            title: 'Victor Retamal - ML Research Engineer',
+            title: 'Victor Retamal - ML & Robotics Engineer',
             description: 'Machine Learning Research Engineer specializing in computer vision, reinforcement learning, and multi-agent systems for robotics applications.',
             url: SITE_URL,
         });
