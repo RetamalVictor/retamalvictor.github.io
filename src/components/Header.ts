@@ -1,5 +1,6 @@
 import { loadTemplate, smoothScrollTo } from '../utils/dom.js';
 import { Navigation } from '../utils/navigation.js';
+import { refreshThemeToggles } from '../utils/theme.js';
 
 export class Header {
     private element: HTMLElement | null = null;
@@ -18,6 +19,8 @@ export class Header {
             if (this.element) {
                 this.setupEventListeners();
                 this.setupScrollEffect();
+                this.markCurrentTab();
+                refreshThemeToggles();
             }
         } catch (error) {
             console.error('Failed to initialize header:', error);
@@ -60,6 +63,22 @@ export class Header {
         document.addEventListener('click', (e) => {
             if (this.mobileMenuOpen && !this.element?.contains(e.target as Node)) {
                 this.toggleMobileMenu();
+            }
+        });
+    }
+
+    /** Flags the tab matching the current route so the folder tab reads as open. */
+    private markCurrentTab(): void {
+        const path = window.location.pathname;
+
+        this.element?.querySelectorAll<HTMLAnchorElement>('.retro-tab[href]').forEach(tab => {
+            const href = tab.getAttribute('href') || '';
+            const isCurrent = href === '/' ? path === '/' : path.startsWith(href);
+
+            if (isCurrent && href.startsWith('/')) {
+                tab.setAttribute('aria-current', 'page');
+            } else {
+                tab.removeAttribute('aria-current');
             }
         });
     }
@@ -125,11 +144,7 @@ export class Header {
         const links = this.element.querySelectorAll('.nav-link');
         links.forEach(link => {
             const href = (link as HTMLAnchorElement).getAttribute('href');
-            if (href === `#${sectionId}`) {
-                link.classList.add('text-blue-400');
-            } else {
-                link.classList.remove('text-blue-400');
-            }
+            link.classList.toggle('is-active', href === `#${sectionId}`);
         });
     }
 }

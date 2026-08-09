@@ -47,16 +47,19 @@ export function toggleTheme(): Theme {
 
 /**
  * Keep every toggle button on the page in sync. Buttons are found by attribute
- * rather than id because pages render their own headers.
+ * rather than id because pages render their own headers. Visible labels and
+ * icons are handled in CSS so late-rendered markup is always correct.
  */
 function syncToggles(theme: Theme): void {
     document.querySelectorAll<HTMLElement>('[data-theme-toggle]').forEach(btn => {
         btn.setAttribute('aria-pressed', String(theme === 'dark'));
         btn.setAttribute('title', theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
-
-        const label = btn.querySelector('[data-theme-label]');
-        if (label) label.textContent = theme === 'dark' ? 'Dark' : 'Light';
     });
+}
+
+/** Call after rendering markup that contains a toggle. */
+export function refreshThemeToggles(): void {
+    syncToggles(getTheme());
 }
 
 let initialized = false;

@@ -531,6 +531,18 @@ body {
   display: none;
 }
 
+.theme-label-light {
+  display: none;
+}
+
+[data-theme="dark"] .theme-label-light {
+  display: inline;
+}
+
+[data-theme="dark"] .theme-label-dark {
+  display: none;
+}
+
 /* ---------------------------------------------------------------------------
    Layout helpers kept from the previous stylesheet
    --------------------------------------------------------------------------- */
