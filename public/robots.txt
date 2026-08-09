@@ -2,3 +2,6 @@ User-agent: *
 Allow: /
 
 Sitemap: https://victor-retamal.com/sitemap.xml
+
+# Plain-language summary of this site for language models:
+# https://victor-retamal.com/llms.txt

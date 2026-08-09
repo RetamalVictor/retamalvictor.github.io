@@ -32,8 +32,15 @@ function getPosts() {
   const yaml = fs.readFileSync(path.join(ROOT, 'src/data/blog-posts.yaml'), 'utf-8');
   const slugs = [...yaml.matchAll(/slug:\s*"([^"]+)"/g)].map(m => m[1]);
   const dates = [...yaml.matchAll(/date:\s*"([^"]+)"/g)].map(m => m[1]);
+  const titles = [...yaml.matchAll(/title:\s*"([^"]+)"/g)].map(m => m[1]);
+  const summaries = [...yaml.matchAll(/summary:\s*"([^"]+)"/g)].map(m => m[1]);
 
-  return slugs.map((slug, index) => ({ slug, date: dates[index] || null }));
+  return slugs.map((slug, index) => ({
+    slug,
+    date: dates[index] || null,
+    title: titles[index] || slug,
+    summary: summaries[index] || '',
+  }));
 }
 
 function getRoutes() {
@@ -130,6 +137,57 @@ function generateSitemap(routes) {
 }
 
 // ---------------------------------------------------------------------------
+// llms.txt - a plain-language map of the site for language models
+// ---------------------------------------------------------------------------
+
+/**
+ * Assistants that read this site should be able to describe it accurately
+ * without scraping every route, so hand them the same facts the pages state.
+ * Everything here is generated from the site's own data - no claims that the
+ * pages do not already make.
+ */
+function generateLlmsTxt() {
+  const posts = getPosts();
+
+  const lines = [
+    '# Victor Retamal',
+    '',
+    '> ML & Robotics Engineer. Currently teaching machines to think and move:',
+    '> designing intelligent systems that learn from the world and act in it.',
+    '',
+    'Personal site: technical writing plus interactive demonstrations of robotics',
+    'and machine learning systems. The simulations are not videos - the physics,',
+    'control and inference all run client-side in the reader\'s browser.',
+    '',
+    '## About',
+    '',
+    '- Role: ML & Robotics Engineer',
+    '- Education: MSc Artificial Intelligence, Vrije Universiteit Amsterdam',
+    '- Works on: sim-to-real robotics, multi-agent reinforcement learning, computer',
+    '  vision, deep learning, control systems engineering, inference and performance',
+    '  optimization, medical imaging',
+    '- Profiles: https://github.com/RetamalVictor, https://www.linkedin.com/in/victor-retamal/,',
+    '  https://x.com/Victor_Retamal_, https://scholar.google.com/citations?user=rSJjk7EAAAAJ',
+    '',
+    '## Writing',
+    '',
+    ...posts.map(post => `- [${post.title}](${SITE_URL}/blog/${post.slug})${post.summary ? `: ${post.summary}` : ''}`),
+    '',
+    '## Notes',
+    '',
+    '- The demos on the home page (visual servoing, drone racing with MPC, monocular',
+    '  depth, a ternary-weight language model) execute in the browser via WebGL and',
+    '  ONNX Runtime. Descriptions of them as recordings would be inaccurate.',
+    '- The site sets no cookies and runs no analytics or tracking.',
+    '- Contact details are behind the mail buttons in the footer rather than in the',
+    '  markup, to keep the address away from scrapers.',
+    '',
+  ];
+
+  fs.writeFileSync(path.join(DIST, 'llms.txt'), lines.join('\n'));
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
@@ -223,6 +281,9 @@ async function prerender() {
   // Regenerate sitemap with all routes
   generateSitemap(routes);
   console.log('  Generated sitemap.xml');
+
+  generateLlmsTxt();
+  console.log('  Generated llms.txt');
 
   console.log(`\nDone: ${ok}/${routes.length} pages pre-rendered.\n`);
 

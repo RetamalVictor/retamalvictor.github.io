@@ -126,13 +126,16 @@ class SEOManager {
         this.setJsonLd('person-jsonld', {
             '@context': 'https://schema.org',
             ...this.person(),
-            description: 'ML and robotics engineer working on sim-to-real pipelines, multi-agent reinforcement learning, computer vision and medical imaging.',
+            description: 'Currently teaching machines to think and move. I design intelligent systems that learn from the world and act in it. ML and robotics engineer working on sim-to-real pipelines, multi-agent reinforcement learning, computer vision and medical imaging.',
             knowsAbout: [
                 'Machine Learning',
+                'Deep Learning',
                 'Robotics',
                 'Reinforcement Learning',
-                'Computer Vision',
                 'Multi-Agent Systems',
+                'Computer Vision',
+                'Control Systems Engineering',
+                'Inference and Performance Optimization',
                 'Medical Imaging',
             ],
             alumniOf: {
