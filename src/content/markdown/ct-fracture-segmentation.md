@@ -2,22 +2,22 @@
 title: "From CT Scan to Fracture Map: A Practical Guide to 3D Medical Image Segmentation"
 date: "2026-05-02"
 tags: ["medical-imaging", "3d-segmentation", "deep-learning", "nnunet"]
-summary: "How we built a pelvic fracture segmentation pipeline - and the single design decision that mattered more than the model. ABBC methodology, two-stage architecture with nnU-Net, and what actually matters when training on 3D medical data."
+summary: "How I built a pelvic fracture segmentation pipeline - and the single design decision that mattered more than the model. ABBC methodology, two-stage architecture with nnU-Net, and what actually matters when training on 3D medical data."
 readTime: "25 min"
 featured: true
 ---
 
-*How we built a pelvic fracture segmentation pipeline - and the single design decision that mattered more than the model.*
+*How I built a pelvic fracture segmentation pipeline - and the single design decision that mattered more than the model.*
 
 ---
 
 ## The Thesis, Up Front
 
-We spent weeks on this project. The model architecture wasn't what made it work. The loss function wasn't what made it work. The GPU wasn't what made it work.
+I spent weeks on this project. The model architecture wasn't what made it work. The loss function wasn't what made it work. The GPU wasn't what made it work.
 
-**What made it work was changing what we asked the network to predict.**
+**What made it work was changing what I asked the network to predict.**
 
-Instead of asking a neural network to label 30 arbitrary fragment classes, we asked it to predict 4 geometric properties - interior, surface, fracture line, background. From those 4 predictions, we recovered 30 labeled fragments using classical algorithms. This single design decision - the choice of **prediction target** - was the difference between a pipeline that couldn't learn and one that achieved state-of-the-art results.
+Instead of asking a neural network to label 30 arbitrary fragment classes, I asked it to predict 4 geometric properties - interior, surface, fracture line, background. From those 4 predictions, I recovered 30 labeled fragments using classical algorithms. This single design decision - the choice of **prediction target** - was the difference between a pipeline that couldn't learn and one that achieved state-of-the-art results.
 
 This post walks through the full pipeline. But keep that thesis in mind: when you're stuck on a segmentation problem, before reaching for a bigger model or more data, ask yourself if you're asking the network the right question.
 
@@ -31,9 +31,9 @@ The first step is understanding the fracture. A radiologist sits down with the C
 
 In many surgical planning workflows, the next step is even more manual: those traced fragments get converted into 3D meshes - STL files that can be loaded into planning software or 3D-printed as physical models. The surgeon holds the shattered pelvis in their hands, plans the reconstruction on the physical model, then walks into the operating room. The bottleneck isn't the surgery; it's the hours of manual segmentation and mesh generation that precede it.
 
-This is the problem we're trying to solve: **given a 3D CT volume of a fractured pelvis, automatically segment every bone fragment** - and produce the 3D meshes that surgeons actually use.
+This is the problem I'm trying to solve: **given a 3D CT volume of a fractured pelvis, automatically segment every bone fragment** - and produce the 3D meshes that surgeons actually use.
 
-Here are real segmentation results from our pipeline - each colored mesh is a separate bone fragment, automatically extracted from a CT scan:
+Here are real segmentation results from my pipeline - each colored mesh is a separate bone fragment, automatically extracted from a CT scan:
 
 <div id="stl-viewer-demo" class="my-8"></div>
 
@@ -75,7 +75,7 @@ Medical datasets are small by ML standards. PENGWIN 2024 had 100 cases. Even PEN
 
 ### The pretrained model landscape is changing
 
-A year ago, 3D medical segmentation meant training from scratch. Today, foundation models like **TotalSegmentator** (104 anatomical structures, 1,200+ CTs) and **STU-Net** (pretrained on TotalSegmentator, up to 1.4B parameters) offer pretrained starting points. We use TotalSegmentator as a zero-shot baseline for anatomical bone segmentation in our pipeline - no training required.
+A year ago, 3D medical segmentation meant training from scratch. Today, foundation models like **TotalSegmentator** (104 anatomical structures, 1,200+ CTs) and **STU-Net** (pretrained on TotalSegmentator, up to 1.4B parameters) offer pretrained starting points. I use TotalSegmentator as a zero-shot baseline for anatomical bone segmentation in my pipeline - no training required.
 
 <details>
 <summary>Deep Dive: 3D Segmentation Architectures (U-Net, nnU-Net, ResEncL)</summary>
@@ -206,7 +206,7 @@ This section is the core of the post. Everything else is infrastructure around t
 
 ### Generating ABBC labels: from fragment IDs to geometry
 
-Given ground truth fragment labels, how do we compute the ABBC representation? Three steps, each building on the previous.
+Given ground truth fragment labels, how is the ABBC representation computed? Three steps, each building on the previous.
 
 #### Step 1: Distance Transform - how deep is each voxel?
 
@@ -228,7 +228,7 @@ Voxels at the bone surface have EDT = 0. Voxels deep inside have high EDT. The E
 
 #### Step 2: Laplacian - finding the skeleton adaptively
 
-We could classify "core" as simply "EDT > some threshold." But what threshold?
+I could classify "core" as simply "EDT > some threshold." But what threshold?
 
 > **The thin-bone problem**: The iliac wing is only 4 voxels thick. A fixed threshold of 6mm would give it zero core voxels. No core = no seed = no instance recovery.
 
@@ -282,11 +282,11 @@ In the fracture zone, boundary voxels are promoted to border. Core voxels near f
 
 ### From 4 classes back to 30 fragments
 
-The ABBC representation makes the prediction problem learnable. But the challenge expects labels 0-30. We need to convert 4 geometry classes back to instance labels. This is a three-stage classical algorithm - no learning required.
+The ABBC representation makes the prediction problem learnable. But the challenge expects labels 0-30. I need to convert 4 geometry classes back to instance labels. This is a three-stage classical algorithm - no learning required.
 
 #### Stage A: Seeds from core
 
-Each connected component of the predicted core class is one fragment seed. We use 26-connectivity (including diagonals) and filter out components smaller than 50 voxels (noise):
+Each connected component of the predicted core class is one fragment seed. I use 26-connectivity (including diagonals) and filter out components smaller than 50 voxels (noise):
 
 ```python
 core_mask = (abbc_prediction == CORE)
@@ -296,7 +296,7 @@ seeds = cc3d.dust(seeds, threshold=50)  # remove noise
 
 #### Stage B: Expanding seeds with Fast Marching
 
-Each seed is a small blob deep inside a fragment. We need to expand it to fill the entire fragment. But "nearest" must respect anatomy: the expansion can't shortcut through a fracture line.
+Each seed is a small blob deep inside a fragment. It has to be expanded to fill the entire fragment. But "nearest" must respect anatomy: the expansion can't shortcut through a fracture line.
 
 > **Why not Euclidean distance?** In curved bone geometry, the Euclidean nearest seed might be across a fracture line - through empty space or through another fragment. FMM follows the bone surface, respecting the actual topology.
 
@@ -351,7 +351,7 @@ for inst_id in unique_instances:
 
 ## 5. The Two-Stage Pipeline
 
-The ABBC pipeline needs an anatomical segmentation to assign fragments to bone regions. This gives us a two-stage system: first identify the bones, then segment the fragments.
+The ABBC pipeline needs an anatomical segmentation to assign fragments to bone regions. The result is a two-stage system: first identify the bones, then segment the fragments.
 
 ### Why two models?
 
@@ -366,7 +366,7 @@ Why not one model with 7 output classes? Two reasons:
 
 ### Stage 1: Anatomical bone segmentation
 
-We evaluated **TotalSegmentator** [4] - a pretrained model that segments 104 anatomical structures - as a zero-shot Stage 1:
+I evaluated **TotalSegmentator** [4] - a pretrained model that segments 104 anatomical structures - as a zero-shot Stage 1:
 
 | Structure | Dice | HD95 |
 |-----------|------|------|
@@ -388,7 +388,7 @@ This is the main risk of two-stage systems: errors compound. The mitigation is m
 
 ### The framework: nnU-Net
 
-We use **nnU-Net** [2] - a framework that automatically configures a U-Net for your dataset. No manual tuning required:
+I use **nnU-Net** [2] - a framework that automatically configures a U-Net for your dataset. No manual tuning required:
 
 ```bash
 # That's it. nnU-Net figures out everything else.
@@ -439,7 +439,7 @@ Training on 100 cases (ABBC labels, fold 0 of 5-fold cross-validation, ResEncL p
 
 ### nnU-Net training details
 
-**Patch sampling with oversampling.** One-third of patches in each batch are guaranteed to contain foreground. For our ABBC task, the border class (< 1% of the volume) appears in training patches far more often than random sampling would provide.
+**Patch sampling with oversampling.** One-third of patches in each batch are guaranteed to contain foreground. For my ABBC task, the border class (< 1% of the volume) appears in training patches far more often than random sampling would provide.
 
 ---
 
@@ -478,7 +478,7 @@ transforms = [
 | Default | 34s | ~9.4 hours | good (baseline) |
 | ResEncL | 119s | ~33 hours | 0.860 (better) |
 
-We train on **RunPod** cloud GPUs - RTX 4090 (24GB) at $0.50/hour. A competitive pipeline from scratch costs under $100 in cloud compute.
+I train on **RunPod** cloud GPUs - RTX 4090 (24GB) at $0.50/hour. A competitive pipeline from scratch costs under $100 in cloud compute.
 
 <details>
 <summary>Deep Dive: Segmentation Metrics - Dice, IoU, HD95</summary>
@@ -530,7 +530,7 @@ $$\text{HD}(A, B) = \max\big(\max_{a \in A} \min_{b \in B} \|a - b\|_2, \; \max_
 
 ---
 
-## 7. What We Learned
+## 7. What I Learned
 
 ### The prediction target is the most important design decision
 
@@ -542,7 +542,7 @@ When you're stuck on a segmentation problem - especially instance segmentation -
 
 ### Test your label generation as rigorously as your model
 
-Our ABBC label generation pipeline has **34 unit tests**:
+My ABBC label generation pipeline has **34 unit tests**:
 
 ```python
 # Critical test: every fragment must retain at least one core voxel
@@ -552,7 +552,7 @@ def test_every_fragment_has_core():
         assert core_count >= 1, f"Fragment {frag_id} has no core voxels"
 ```
 
-We caught a bug early where demotion of core voxels near fracture zones could remove all core from thin fragments. Without this test, it would have silently produced fragments with no seeds - invisible during training, catastrophic during inference.
+I caught a bug early where demotion of core voxels near fracture zones could remove all core from thin fragments. Without this test, it would have silently produced fragments with no seeds - invisible during training, catastrophic during inference.
 
 ---
 
@@ -560,14 +560,14 @@ We caught a bug early where demotion of core voxels near fracture zones could re
 
 The neural network outputs 4 probability maps. Getting from there to 30 labeled fragments requires connected components, FMM, EDT, majority voting, and size filtering.
 
-> **Budget rule**: If you budget 2 weeks for the neural network and 2 days for postprocessing, you'll regret it. Budget equal time. Our postprocessing pipeline has its own parameters, failure modes, and test suite (16 tests).
+> **Budget rule**: If you budget 2 weeks for the neural network and 2 days for postprocessing, you'll regret it. Budget equal time. My postprocessing pipeline has its own parameters, failure modes, and test suite (16 tests).
 
 ---
 
 ### Start with pretrained models where you can
 
 ```bash
-# This gave us a working Stage 1 with Dice > 0.93 on hips
+# This gave me a working Stage 1 with Dice > 0.93 on hips
 pip install totalsegmentator
 TotalSegmentator -i patient_ct.nii.gz -o segmentation/ --task total
 ```
@@ -593,7 +593,7 @@ None of this is ML work. All of it is essential.
 
 ### Domain shift is real - and predictable
 
-Our model was trained on 100 research CTs at ~0.8mm isotropic spacing. The real risk is **slice thickness** - you can't segment a 1-voxel fracture line if your voxels are 5mm thick.
+My model was trained on 100 research CTs at ~0.8mm isotropic spacing. The real risk is **slice thickness** - you can't segment a 1-voxel fracture line if your voxels are 5mm thick.
 
 > **Mitigation**: Get sample data from the target clinical environment early. Run it through the pipeline before committing to a demo. nnU-Net makes fine-tuning straightforward - add the new cases, re-run training, same pipeline.
 
@@ -602,7 +602,7 @@ Our model was trained on 100 research CTs at ~0.8mm isotropic spacing. The real 
 ### Cloud training needs resilience engineering
 
 ```bash
-# Our checkpoint sync runs every 5 minutes in the background
+# My checkpoint sync runs every 5 minutes in the background
 while true; do
     rsync checkpoints/ hf://username/model-repo/ 
     sleep 300
@@ -618,7 +618,7 @@ done
 
 ## 8. Getting Started
 
-If you want to try 3D medical segmentation, here's the path we'd recommend:
+If you want to try 3D medical segmentation, here's the path I'd recommend:
 
 ### Start with nnU-Net on an established benchmark
 
