@@ -110,11 +110,11 @@ export class TernaryLMDemo {
         if (this.isDestroyed) return;
 
         this.container.innerHTML = `
-            <div class="bg-[#12121a] rounded-lg border border-gray-700/50 overflow-hidden shadow-xl h-full flex flex-col">
+            <div class="bg-[rgb(var(--c-surface))] rounded-lg border border-gray-700/50 overflow-hidden shadow-xl h-full flex flex-col">
                 <!-- Header -->
-                <div class="px-4 py-2 border-b border-gray-700/50 flex items-center justify-between bg-[#0a0a0f] flex-shrink-0">
+                <div class="px-4 py-2 border-b border-gray-700/50 flex items-center justify-between bg-[rgb(var(--c-bg))] flex-shrink-0">
                     <div class="flex items-center gap-2">
-                        <span class="text-[#00d4ff] text-sm">●</span>
+                        <span class="text-[rgb(var(--c-accent))] text-sm">●</span>
                         <span class="text-sm font-medium text-gray-300">${this.isTransformer ? 'Ternary Transformer' : 'Ternary LM Demo'}</span>
                         <span class="text-xs text-gray-500 ml-2">1.58 bits/weight</span>
                         <span class="text-xs px-1.5 py-0.5 rounded ${this.usingCPU ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400'}">
@@ -124,7 +124,7 @@ export class TernaryLMDemo {
                     <div class="flex items-center gap-3">
                         <button
                             id="toggle-how-it-works"
-                            class="text-xs text-gray-500 hover:text-[#00d4ff] transition-colors flex items-center gap-1"
+                            class="text-xs text-gray-500 hover:text-[rgb(var(--c-accent))] transition-colors flex items-center gap-1"
                         >
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -133,7 +133,7 @@ export class TernaryLMDemo {
                         </button>
                         <button
                             id="toggle-hood"
-                            class="text-xs text-gray-500 hover:text-[#a855f7] transition-colors flex items-center gap-1"
+                            class="text-xs text-gray-500 hover:text-[rgb(var(--c-accent-2))] transition-colors flex items-center gap-1"
                         >
                             ${this.state.showUnderTheHood ? 'Hide Details' : 'Under the Hood'}
                             <span class="text-[10px]">${this.state.showUnderTheHood ? '▲' : '▼'}</span>
@@ -148,8 +148,8 @@ export class TernaryLMDemo {
                             type="text"
                             id="prompt-input"
                             value="${this.escapeHtml(this.state.prompt)}"
-                            class="flex-1 px-3 py-2 bg-[#0a0a0f] border border-gray-700/50 rounded text-white text-sm
-                                   focus:border-[#00d4ff] focus:ring-1 focus:ring-[#00d4ff]/30 outline-none
+                            class="flex-1 px-3 py-2 bg-[rgb(var(--c-bg))] border border-gray-700/50 rounded text-white text-sm
+                                   focus:border-[rgb(var(--c-accent))] focus:ring-1 focus:ring-[rgb(var(--c-accent))]/30 outline-none
                                    placeholder-gray-600 font-mono"
                             placeholder="Enter prompt..."
                             ${this.state.status === 'generating' ? 'disabled' : ''}
@@ -167,7 +167,7 @@ export class TernaryLMDemo {
                             id="generate-btn"
                             class="px-4 py-2 rounded text-sm font-medium transition-all
                                    ${this.state.status === 'ready'
-                                       ? 'bg-[#00d4ff]/20 text-[#00d4ff] hover:bg-[#00d4ff]/30 border border-[#00d4ff]/30'
+                                       ? 'bg-[rgb(var(--c-accent))]/20 text-[rgb(var(--c-accent))] hover:bg-[rgb(var(--c-accent))]/30 border border-[rgb(var(--c-accent))]/30'
                                        : 'bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700'}"
                             ${this.state.status !== 'ready' ? 'disabled' : ''}
                         >
@@ -177,13 +177,13 @@ export class TernaryLMDemo {
                     </div>
 
                     <!-- Output Display -->
-                    <div class="font-mono text-xs bg-[#0a0a0f] p-3 rounded border border-gray-700/50
+                    <div class="font-mono text-xs bg-[rgb(var(--c-bg))] p-3 rounded border border-gray-700/50
                                 min-h-[60px] max-h-[100px] overflow-y-auto">
                         <span class="text-gray-500">${this.escapeHtml(this.state.prompt)}</span><span
-                            class="text-[#a855f7]"
+                            class="text-[rgb(var(--c-accent-2))]"
                             id="generated-output"
                         >${this.escapeHtml(this.state.output)}</span>${this.state.status === 'generating'
-                            ? '<span class="animate-pulse text-[#00d4ff]">▌</span>'
+                            ? '<span class="animate-pulse text-[rgb(var(--c-accent))]">▌</span>'
                             : ''}
                     </div>
                 </div>
@@ -199,7 +199,7 @@ export class TernaryLMDemo {
             </div>
 
             <!-- How It Works Panel (slides in from right) -->
-            <div id="how-it-works-panel" class="fixed top-0 right-0 h-full w-96 max-w-[90vw] border-l transform ${this.state.showHowItWorks ? 'translate-x-0' : 'translate-x-full'} transition-transform duration-300 ease-in-out z-50 overflow-y-auto" style="background-color: #0a0a0f; border-color: #1e1e2e;">
+            <div id="how-it-works-panel" class="fixed top-0 right-0 h-full w-96 max-w-[90vw] border-l transform ${this.state.showHowItWorks ? 'translate-x-0' : 'translate-x-full'} transition-transform duration-300 ease-in-out z-50 overflow-y-auto" style="background-color: rgb(var(--c-bg)); border-color: rgb(var(--c-border));">
                 ${this.renderHowItWorksPanel()}
             </div>
 
@@ -230,14 +230,14 @@ export class TernaryLMDemo {
         const memStats = this.engine?.getMemoryStats();
 
         return `
-            <div class="px-3 py-1.5 bg-[#0a0a0f]/50 border-t border-gray-700/50
+            <div class="px-3 py-1.5 bg-[rgb(var(--c-bg))]/50 border-t border-gray-700/50
                         flex items-center gap-3 text-xs text-gray-400 flex-shrink-0">
                 <span>
-                    <span class="text-[#00d4ff] font-medium">${stats.tokensPerSecond.toFixed(1)}</span>
+                    <span class="text-[rgb(var(--c-accent))] font-medium">${stats.tokensPerSecond.toFixed(1)}</span>
                     tok/s
                 </span>
                 <span>
-                    <span class="text-[#a855f7] font-medium">${stats.totalTokens}</span>
+                    <span class="text-[rgb(var(--c-accent-2))] font-medium">${stats.totalTokens}</span>
                     tokens
                 </span>
                 ${memStats ? `
@@ -258,9 +258,9 @@ export class TernaryLMDemo {
     private renderLoadingStats(): string {
         if (this.state.status === 'loading') {
             return `
-                <div class="px-3 py-1.5 bg-[#0a0a0f]/50 border-t border-gray-700/50
+                <div class="px-3 py-1.5 bg-[rgb(var(--c-bg))]/50 border-t border-gray-700/50
                             flex items-center gap-2 text-xs text-gray-500 flex-shrink-0">
-                    <div class="w-4 h-4 border-2 border-gray-700 border-t-[#00d4ff] rounded-full animate-spin"></div>
+                    <div class="w-4 h-4 border-2 border-gray-700 border-t-[rgb(var(--c-accent))] rounded-full animate-spin"></div>
                     <span>Loading model...</span>
                 </div>
             `;
@@ -286,10 +286,10 @@ export class TernaryLMDemo {
         const compressionPercent = (1 / memStats.compressionRatio) * 100;
 
         return `
-            <div class="border-t border-gray-700/50 bg-[#0a0a0f]/30">
+            <div class="border-t border-gray-700/50 bg-[rgb(var(--c-bg))]/30">
                 <div class="p-3 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                     <!-- Memory Savings -->
-                    <div class="bg-[#0a0a0f] rounded-lg p-3 border border-gray-700/30">
+                    <div class="bg-[rgb(var(--c-bg))] rounded-lg p-3 border border-gray-700/30">
                         <div class="text-gray-400 text-xs mb-2 font-medium uppercase tracking-wide">
                             Memory Footprint
                         </div>
@@ -305,12 +305,12 @@ export class TernaryLMDemo {
                             </div>
                             <div>
                                 <div class="flex justify-between text-xs mb-1">
-                                    <span class="text-[#00d4ff]">Ternary (1.58-bit)</span>
-                                    <span class="text-[#00d4ff]">${memStats.packedWeightsKB.toFixed(0)} KB</span>
+                                    <span class="text-[rgb(var(--c-accent))]">Ternary (1.58-bit)</span>
+                                    <span class="text-[rgb(var(--c-accent))]">${memStats.packedWeightsKB.toFixed(0)} KB</span>
                                 </div>
                                 <div class="h-2 bg-gray-700 rounded-full overflow-hidden">
                                     <div
-                                        class="h-full bg-gradient-to-r from-[#00d4ff] to-[#a855f7] rounded-full"
+                                        class="h-full bg-gradient-to-r from-[rgb(var(--c-accent))] to-[rgb(var(--c-accent-2))] rounded-full"
                                         style="width: ${compressionPercent.toFixed(1)}%"
                                     ></div>
                                 </div>
@@ -323,7 +323,7 @@ export class TernaryLMDemo {
                     </div>
 
                     <!-- Architecture Info -->
-                    <div class="bg-[#0a0a0f] rounded-lg p-3 border border-gray-700/30">
+                    <div class="bg-[rgb(var(--c-bg))] rounded-lg p-3 border border-gray-700/30">
                         <div class="text-gray-400 text-xs mb-2 font-medium uppercase tracking-wide">
                             ${this.isTransformer ? 'Transformer Architecture' : 'Model Architecture'}
                         </div>
@@ -347,12 +347,12 @@ export class TernaryLMDemo {
                         </div>
                         <div class="mt-3 pt-2 border-t border-gray-700/50">
                             <div class="flex items-center gap-2 text-xs">
-                                <span class="text-[#00d4ff]">●</span>
+                                <span class="text-[rgb(var(--c-accent))]">●</span>
                                 <span class="text-gray-400">Weights: {-1, 0, +1}</span>
                             </div>
                             ${this.isTransformer ? `
                             <div class="flex items-center gap-2 text-xs mt-1">
-                                <span class="text-[#a855f7]">●</span>
+                                <span class="text-[rgb(var(--c-accent-2))]">●</span>
                                 <span class="text-gray-400">RMSNorm + RoPE + SwiGLU</span>
                             </div>
                             ` : ''}
@@ -365,11 +365,11 @@ export class TernaryLMDemo {
                     Running entirely in your browser using
                     ${this.usingCPU
                         ? '<span class="text-yellow-400">JavaScript (CPU fallback)</span>'
-                        : '<span class="text-[#00d4ff]">WebGPU</span> compute shaders'}.
+                        : '<span class="text-[rgb(var(--c-accent))]">WebGPU</span> compute shaders'}.
                     <a
                         href="https://github.com/RetamalVictor/bittorch"
                         target="_blank"
-                        class="text-[#a855f7] hover:underline ml-1"
+                        class="text-[rgb(var(--c-accent-2))] hover:underline ml-1"
                     >View source →</a>
                 </div>
             </div>
@@ -381,14 +381,14 @@ export class TernaryLMDemo {
      */
     private renderHowItWorksPanel(): string {
         // Color constants (matching IBVS panel)
-        const cyan = '#00d4ff';
-        const purple = '#a855f7';
-        const yellow = '#facc15';
-        const darkBg = '#0a0a0f';
+        const cyan = 'rgb(var(--c-accent))';
+        const purple = 'rgb(var(--c-accent-2))';
+        const yellow = 'rgb(var(--c-yellow))';
+        const darkBg = 'rgb(var(--c-bg))';
 
         return `
             <!-- Panel Header -->
-            <div class="sticky top-0 border-b p-4 flex items-center justify-between" style="background-color: ${darkBg}; border-color: #1e1e2e;">
+            <div class="sticky top-0 border-b p-4 flex items-center justify-between" style="background-color: ${darkBg}; border-color: rgb(var(--c-border));">
                 <h2 class="text-lg font-semibold" style="color: ${cyan};">Ternary Inference</h2>
                 <button id="how-it-works-close" class="p-1 rounded text-gray-400 hover:text-white transition-colors">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -446,7 +446,7 @@ export class TernaryLMDemo {
                     </div>
                     <div class="mt-3 rounded-lg p-3 text-sm" style="background-color: ${darkBg};">
                         <table class="w-full text-left">
-                            <thead class="text-gray-500 border-b" style="border-color: #1e1e2e;">
+                            <thead class="text-gray-500 border-b" style="border-color: rgb(var(--c-border));">
                                 <tr>
                                     <th class="pb-2 font-medium">Strategy</th>
                                     <th class="pb-2 font-medium">Traffic</th>
@@ -454,7 +454,7 @@ export class TernaryLMDemo {
                                 </tr>
                             </thead>
                             <tbody class="text-gray-400">
-                                <tr class="border-b" style="border-color: #1e1e2e50;">
+                                <tr class="border-b" style="border-color: rgb(var(--c-border) / 0.5);">
                                     <td class="py-2">Pre-expanded</td>
                                     <td class="py-2 text-gray-500">4-8x</td>
                                     <td class="py-2 text-gray-500">Higher memory, cache pressure</td>
@@ -538,7 +538,7 @@ export class TernaryLMDemo {
         const isWebGPUError = this.state.errorMessage?.includes('WebGPU');
 
         this.container.innerHTML = `
-            <div class="bg-[#12121a] rounded-lg border border-gray-700/50 p-8 text-center">
+            <div class="bg-[rgb(var(--c-surface))] rounded-lg border border-gray-700/50 p-8 text-center">
                 <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-red-500/10
                             flex items-center justify-center border border-red-500/30">
                     <svg class="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -558,8 +558,8 @@ export class TernaryLMDemo {
                     <a
                         href="https://github.com/RetamalVictor/bittorch"
                         target="_blank"
-                        class="px-4 py-2 bg-[#00d4ff]/20 text-[#00d4ff] rounded text-sm
-                               hover:bg-[#00d4ff]/30 transition-colors border border-[#00d4ff]/30"
+                        class="px-4 py-2 bg-[rgb(var(--c-accent))]/20 text-[rgb(var(--c-accent))] rounded text-sm
+                               hover:bg-[rgb(var(--c-accent))]/30 transition-colors border border-[rgb(var(--c-accent))]/30"
                     >
                         View Code on GitHub
                     </a>
@@ -711,11 +711,11 @@ export class TernaryLMDemo {
             const memStats = this.engine?.getMemoryStats();
             statsBar.innerHTML = `
                 <span>
-                    <span class="text-[#00d4ff] font-medium">${stats.tokensPerSecond.toFixed(1)}</span>
+                    <span class="text-[rgb(var(--c-accent))] font-medium">${stats.tokensPerSecond.toFixed(1)}</span>
                     tok/s
                 </span>
                 <span>
-                    <span class="text-[#a855f7] font-medium">${stats.totalTokens}</span>
+                    <span class="text-[rgb(var(--c-accent-2))] font-medium">${stats.totalTokens}</span>
                     tokens
                 </span>
                 ${memStats ? `
