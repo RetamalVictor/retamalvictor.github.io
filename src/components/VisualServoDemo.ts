@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { applySceneTheme, onThemeChange, themeColor, themed, themedGrid } from './../utils/themeColors.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { PinholeCamera } from './ibvs/Camera';
 import { IBVSController } from './ibvs/Controller';
@@ -21,6 +22,9 @@ export class VisualServoDemo {
 
     // Three.js
     private renderer!: THREE.WebGLRenderer;
+    private gridHelper: THREE.GridHelper | null = null;
+    private targetLabel: { canvas: HTMLCanvasElement; texture: THREE.CanvasTexture } | null = null;
+    private unsubscribeTheme: (() => void) | null = null;
     private scene!: THREE.Scene;
     private viewCamera!: THREE.PerspectiveCamera;
     private orbitControls!: OrbitControls;
@@ -74,7 +78,7 @@ export class VisualServoDemo {
 
     constructor(config: VisualServoDemoConfig) {
         this.container = document.getElementById(config.containerId)!;
-        this.backgroundColor = config.backgroundColor || 0x0a0a0f;
+        this.backgroundColor = config.backgroundColor ?? themeColor('--c-scene-bg');
 
         if (!this.container) {
             throw new Error(`Container with id ${config.containerId} not found`);
@@ -114,6 +118,7 @@ export class VisualServoDemo {
             this.isInitialized = true;
             this.lastTime = performance.now() / 1000;
             this.setupVisibilityHandling();
+            this.unsubscribeTheme = onThemeChange(() => this.applyTheme());
             this.animate();
         } catch (error) {
             console.error('VisualServoDemo initialization failed:', error);
@@ -175,18 +180,18 @@ export class VisualServoDemo {
         const floorY = -1;
 
         // Grid on floor (GridHelper is already horizontal by default in XZ plane)
-        const gridHelper = new THREE.GridHelper(groundSize, 20, 0x2a2a3e, 0x1e1e2e);
+        const gridHelper = themedGrid(groundSize, 20);
         gridHelper.position.y = floorY;
+        this.gridHelper = gridHelper;
         this.scene.add(gridHelper);
 
         // Semi-transparent floor surface
         const groundGeometry = new THREE.PlaneGeometry(groundSize, groundSize);
-        const groundMaterial = new THREE.MeshBasicMaterial({
-            color: 0x1a1a2e,
+        const groundMaterial = themed(new THREE.MeshBasicMaterial({
             side: THREE.DoubleSide,
             transparent: true,
             opacity: 0.3
-        });
+        }), '--c-scene-floor');
         const ground = new THREE.Mesh(groundGeometry, groundMaterial);
         ground.rotation.x = -Math.PI / 2;  // Rotate to horizontal (XZ plane)
         ground.position.y = floorY - 0.01;  // Slightly below grid
@@ -207,10 +212,7 @@ export class VisualServoDemo {
         ];
 
         // Create target square outline (thicker)
-        const squareMaterial = new THREE.LineBasicMaterial({
-            color: 0x00d4ff,
-            linewidth: 3
-        });
+        const squareMaterial = themed(new THREE.LineBasicMaterial({ linewidth: 3 }), '--c-accent');
 
         const squarePoints = [
             ...this.targetCorners,
@@ -221,7 +223,7 @@ export class VisualServoDemo {
         this.targetGroup.add(squareLine);
 
         // Add corner spheres for better visibility
-        const cornerMaterial = new THREE.MeshBasicMaterial({ color: 0x00d4ff });
+        const cornerMaterial = themed(new THREE.MeshBasicMaterial(), '--c-accent');
         for (const corner of this.targetCorners) {
             const sphere = new THREE.Mesh(
                 new THREE.SphereGeometry(0.05, 8, 8),
@@ -233,12 +235,11 @@ export class VisualServoDemo {
 
         // Add fill for dragging
         const fillGeometry = new THREE.PlaneGeometry(this.TARGET_SIZE, this.TARGET_SIZE);
-        const fillMaterial = new THREE.MeshBasicMaterial({
-            color: 0x00d4ff,
+        const fillMaterial = themed(new THREE.MeshBasicMaterial({
             transparent: true,
             opacity: 0.15,
             side: THREE.DoubleSide
-        });
+        }), '--c-accent');
         const fillMesh = new THREE.Mesh(fillGeometry, fillMaterial);
         fillMesh.name = 'targetFill';
         this.targetGroup.add(fillMesh);
@@ -252,17 +253,30 @@ export class VisualServoDemo {
         this.scene.add(this.targetGroup);
     }
 
+    private drawTargetLabel(canvas: HTMLCanvasElement): void {
+        const ctx = canvas.getContext('2d')!;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = `#${themeColor('--c-accent').toString(16).padStart(6, '0')}`;
+        ctx.font = 'bold 20px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('TARGET', 64, 22);
+    }
+
+    /** The label is drawn to a canvas, so it needs a repaint of its own. */
+    private refreshTargetLabel(): void {
+        if (!this.targetLabel) return;
+        this.drawTargetLabel(this.targetLabel.canvas);
+        this.targetLabel.texture.needsUpdate = true;
+    }
+
     private addTargetLabel(): void {
         const canvas = document.createElement('canvas');
         canvas.width = 128;
         canvas.height = 32;
-        const ctx = canvas.getContext('2d')!;
-        ctx.fillStyle = '#00d4ff';
-        ctx.font = 'bold 20px monospace';
-        ctx.textAlign = 'center';
-        ctx.fillText('TARGET', 64, 22);
+        this.drawTargetLabel(canvas);
 
         const texture = new THREE.CanvasTexture(canvas);
+        this.targetLabel = { canvas, texture };
         const material = new THREE.SpriteMaterial({ map: texture });
         const sprite = new THREE.Sprite(material);
         sprite.position.set(0, 0.8, 0);
@@ -284,11 +298,10 @@ export class VisualServoDemo {
         this.scene.add(this.quadrotor.mesh);
 
         // Add a line showing the camera look direction (from drone toward target)
-        const lineMaterial = new THREE.LineBasicMaterial({
-            color: 0xa855f7,
+        const lineMaterial = themed(new THREE.LineBasicMaterial({
             transparent: true,
             opacity: 0.5
-        });
+        }), '--c-accent-2');
         const lineGeometry = new THREE.BufferGeometry().setFromPoints([
             new THREE.Vector3(0, 0, 0),
             new THREE.Vector3(0, 0, 2)  // Points 2 units in +Z
@@ -298,11 +311,10 @@ export class VisualServoDemo {
     }
 
     private createTrajectoryLine(): void {
-        const material = new THREE.LineBasicMaterial({
-            color: 0xa855f7,
+        const material = themed(new THREE.LineBasicMaterial({
             transparent: true,
             opacity: 0.6
-        });
+        }), '--c-accent-2');
         const geometry = new THREE.BufferGeometry();
         this.trajectoryLine = new THREE.Line(geometry, material);
         this.scene.add(this.trajectoryLine);
@@ -823,9 +835,32 @@ export class VisualServoDemo {
         this.computeDesiredFeatures();
     }
 
+    /** Repaint the scene when the site theme changes. */
+    private applyTheme(): void {
+        this.backgroundColor = themeColor('--c-scene-bg');
+        this.renderer?.setClearColor(this.backgroundColor);
+
+        // Grids bake their colours into geometry, so swap the helper
+        if (this.gridHelper && this.scene) {
+            const { position } = this.gridHelper;
+            this.scene.remove(this.gridHelper);
+            this.gridHelper.geometry.dispose();
+            (this.gridHelper.material as THREE.Material).dispose();
+
+            this.gridHelper = themedGrid(16, 20);
+            this.gridHelper.position.copy(position);
+            this.scene.add(this.gridHelper);
+        }
+
+        applySceneTheme(this.scene);
+        this.refreshTargetLabel();
+    }
+
     public destroy(): void {
         // Stop animation
         this.isPaused = true;
+        this.unsubscribeTheme?.();
+        this.unsubscribeTheme = null;
         if (this.animationId) {
             cancelAnimationFrame(this.animationId);
             this.animationId = null;

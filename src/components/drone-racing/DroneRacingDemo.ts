@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { applySceneTheme, onThemeChange, themeColor, themed, themedGrid } from '../../utils/themeColors.js';
 
 // Core components
 import { RacingDrone } from './core/RacingDrone';
@@ -72,6 +73,8 @@ export class DroneRacingDemo {
     // Visualization
     private trajectoryLine: THREE.Line | null = null;
     private droneTrail: THREE.Line | null = null;
+    private gridHelper: THREE.GridHelper | null = null;
+    private unsubscribeTheme: (() => void) | null = null;
     private trailPositions: THREE.Vector3[] = [];
     private readonly maxTrailLength = 1000;
     private gateManager: GateManager | null = null;
@@ -108,7 +111,7 @@ export class DroneRacingDemo {
             alpha: true,
         });
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        this.renderer.setClearColor(0x0a0a0f, 1);
+        this.renderer.setClearColor(themeColor('--c-scene-bg'), 1);
 
         // Create scene
         this.scene = new THREE.Scene();
@@ -143,6 +146,8 @@ export class DroneRacingDemo {
         // Setup visibility-based pausing
         this.setupVisibilityHandling();
 
+        this.unsubscribeTheme = onThemeChange(() => this.applyTheme());
+
         // Show start overlay instead of auto-starting
         this.showStartOverlay();
 
@@ -163,15 +168,16 @@ export class DroneRacingDemo {
         this.scene.add(directionalLight);
 
         // Ground grid - large enough for the track
-        const gridHelper = new THREE.GridHelper(150, 75, 0x2a2a3e, 0x1a1a2e);
+        const gridHelper = themedGrid(150, 75);
         gridHelper.position.set(20, 0, 20);  // Center under the track
+        this.gridHelper = gridHelper;
         this.scene.add(gridHelper);
 
         // Add drone
         this.scene.add(this.drone.mesh);
 
         // Initialize gate manager
-        this.gateManager = new GateManager(this.scene, { color: 0xff4444 });
+        this.gateManager = new GateManager(this.scene, { color: themeColor('--c-red') });
 
         // Create trajectory visualization
         this.updateTrajectoryVisualization();
@@ -343,11 +349,10 @@ export class DroneRacingDemo {
 
             // Create new line
             const geometry = new THREE.BufferGeometry().setFromPoints(points);
-            const material = new THREE.LineBasicMaterial({
-                color: 0xa855f7,
+            const material = themed(new THREE.LineBasicMaterial({
                 opacity: 0.6,
                 transparent: true,
-            });
+            }), '--c-accent-2');
             this.trajectoryLine = new THREE.Line(geometry, material);
             this.scene.add(this.trajectoryLine);
         }
@@ -413,12 +418,11 @@ export class DroneRacingDemo {
         geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
         geometry.setDrawRange(0, 0);
 
-        const material = new THREE.LineBasicMaterial({
-            color: 0x22c55e,
+        const material = themed(new THREE.LineBasicMaterial({
             opacity: 0.6,
             transparent: true,
             depthWrite: false,  // Prevents z-fighting glitches
-        });
+        }), '--c-green');
 
         this.droneTrail = new THREE.Line(geometry, material);
         this.droneTrail.renderOrder = 1;  // Render after other objects
@@ -746,11 +750,36 @@ export class DroneRacingDemo {
     }
 
     /**
+     * Repaint the scene in the current theme, without interrupting the race.
+     */
+    private applyTheme(): void {
+        this.renderer.setClearColor(themeColor('--c-scene-bg'), 1);
+
+        if (this.gridHelper) {
+            const { position } = this.gridHelper;
+            this.scene.remove(this.gridHelper);
+            this.gridHelper.geometry.dispose();
+            (this.gridHelper.material as THREE.Material).dispose();
+
+            this.gridHelper = themedGrid(150, 75);
+            this.gridHelper.position.copy(position);
+            this.scene.add(this.gridHelper);
+        }
+
+        // Gates carry a pass/fail colour of their own, so recolour them by state
+        this.gateManager?.setBaseColor(themeColor('--c-red'));
+
+        applySceneTheme(this.scene);
+    }
+
+    /**
      * Cleanup
      */
     public destroy(): void {
         // Stop animation
         this.isPaused = true;
+        this.unsubscribeTheme?.();
+        this.unsubscribeTheme = null;
         if (this.animationFrameId) {
             cancelAnimationFrame(this.animationFrameId);
             this.animationFrameId = 0;

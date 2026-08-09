@@ -50,6 +50,12 @@
   --link: #0b57d0;
   --link-visited: #5b3fb0;
   --terminal-bg: #0b1a2e;
+
+  /* 3D scenes - read by the WebGL demos through utils/themeColors */
+  --c-scene-bg: 255 255 255;
+  --c-scene-grid: 199 217 238;
+  --c-scene-grid-center: 150 183 224;
+  --c-scene-floor: 219 232 247;
 }
 
 [data-theme="dark"] {
@@ -92,6 +98,12 @@
   --link: #00d4ff;
   --link-visited: #c4a2ff;
   --terminal-bg: #0d0d16;
+
+  /* Same values the demos have always used */
+  --c-scene-bg: 10 10 15;
+  --c-scene-grid: 30 30 46;
+  --c-scene-grid-center: 42 42 62;
+  --c-scene-floor: 26 26 46;
 }
 
 /* Legacy aliases - plain colour values for rules that don't need opacity */
