@@ -2,6 +2,7 @@ import { createElement } from '../utils/dom.js';
 import { Navigation } from '../utils/navigation.js';
 import { parseFrontmatter, extractSlugFromPath, type BlogPostMeta } from '../utils/frontmatter.js';
 import { seo } from '../utils/seo.js';
+import { refreshThemeToggles, themeToggleMarkup } from '../utils/theme.js';
 
 // Auto-import all markdown files from content/markdown/
 const markdownModules = import.meta.glob('../content/markdown/*.md', {
@@ -61,30 +62,33 @@ export class BlogListPage {
         }
 
         this.container.innerHTML = `
-            <div class="min-h-screen bg-dark-bg">
+            <div class="min-h-screen">
                 <!-- Header -->
-                <header class="bg-dark-surface border-b border-dark-border">
-                    <div class="max-w-4xl mx-auto px-6 py-8">
-                        <div class="flex justify-between items-center">
-                            <div>
-                                <h1 class="text-3xl font-bold text-white mb-2">Blog</h1>
-                                <p class="text-gray-400">Thoughts on ML, robotics, and engineering</p>
-                            </div>
-                            <div>
-                                <button id="back-btn" class="text-gray-400 hover:text-accent-cyan transition-colors flex items-center">
-                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                                    </svg>
-                                    Home
-                                </button>
+                <header class="sticky top-0 z-40">
+                    <div class="win-bar">
+                        <span class="win-title">/blog/index.htm</span>
+                        <span class="win-controls" aria-hidden="true"><i></i><i></i><i></i></span>
+                    </div>
+                    <div class="bg-dark-surface border-b border-dark-border">
+                        <div class="max-w-4xl mx-auto px-4 sm:px-6 py-4">
+                            <div class="flex flex-wrap justify-between items-center gap-3">
+                                <div>
+                                    <h1 class="heading-retro text-2xl">Blog</h1>
+                                    <p class="text-sm text-gray-500 mt-1 pl-[1.3rem]">Thoughts on ML, robotics, and engineering</p>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <button id="back-btn" class="btn-mini">&#8592; Home</button>
+                                    ${themeToggleMarkup()}
+                                </div>
                             </div>
                         </div>
                     </div>
                 </header>
 
                 <!-- Blog Posts -->
-                <main class="max-w-4xl mx-auto px-6 py-12">
-                    <div id="blog-posts-container" class="space-y-6">
+                <main class="max-w-4xl mx-auto px-4 sm:px-6 py-10">
+                    <p class="text-xs font-mono text-gray-500 mb-4">${this.posts.length} ${this.posts.length === 1 ? 'entry' : 'entries'} &middot; newest first</p>
+                    <div id="blog-posts-container" class="space-y-5">
                         <!-- Blog posts will be loaded here -->
                     </div>
                 </main>
@@ -92,6 +96,7 @@ export class BlogListPage {
         `;
 
         this.populateBlogPosts();
+        refreshThemeToggles();
     }
 
     private populateBlogPosts(): void {
@@ -108,35 +113,31 @@ export class BlogListPage {
     }
 
     private createBlogPostCard(post: BlogPost): HTMLElement {
-        const card = createElement('article', 'bg-dark-surface border border-dark-border rounded-lg p-6 hover:border-accent-cyan transition-all cursor-pointer');
+        const card = createElement('article', 'card group cursor-pointer');
 
         card.innerHTML = `
-            <div class="flex items-center gap-3 mb-3">
-                <span class="text-sm text-gray-500">${this.formatDate(post.date)}</span>
-                <span class="text-gray-600">·</span>
-                <span class="text-sm text-gray-500">${post.readTime} read</span>
+            <div class="win-bar">
+                <span class="win-title">${post.slug}.md</span>
+                <span class="ml-auto font-normal tracking-normal normal-case opacity-80">${post.readTime}</span>
             </div>
 
-            <h2 class="text-xl font-bold text-white mb-3 group-hover:text-accent-cyan transition-colors">${post.title}</h2>
+            <div class="p-5 md:p-6">
+                <p class="text-xs font-mono text-gray-500 mb-2">${this.formatDate(post.date)}</p>
 
-            <p class="text-gray-400 mb-4 leading-relaxed">${post.summary}</p>
+                <h2 class="text-xl font-bold text-white mb-3 group-hover:text-accent-cyan transition-colors">${post.title}</h2>
 
-            <div class="flex flex-wrap gap-2 mb-4">
-                ${post.tags.map(tag => `
-                    <span class="px-2 py-1 text-xs rounded bg-dark-border text-gray-400">
-                        ${tag}
-                    </span>
-                `).join('')}
-            </div>
+                <p class="text-gray-400 mb-4 leading-relaxed">${post.summary}</p>
 
-            <div class="flex items-center justify-between">
-                <button class="read-more-btn text-accent-cyan font-medium hover:text-white transition-colors flex items-center" data-slug="${post.slug}">
-                    Read Post
-                    <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                <div class="flex flex-wrap gap-1.5 mb-5">
+                    ${post.tags.map(tag => `<span class="pill">${tag}</span>`).join('')}
+                </div>
+
+                <button class="read-more-btn btn-mini" data-slug="${post.slug}">
+                    Read post
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path>
                     </svg>
                 </button>
-                <span class="text-sm text-gray-500">📝 Article</span>
             </div>
         `;
 
@@ -159,13 +160,19 @@ export class BlogListPage {
 
     private renderError(): void {
         this.container.innerHTML = `
-            <div class="min-h-screen bg-dark-bg flex items-center justify-center">
-                <div class="text-center">
-                    <h1 class="text-4xl font-bold text-white mb-4">Blog Unavailable</h1>
-                    <p class="text-gray-400 mb-6">Failed to load blog posts. Please try again later.</p>
-                    <button id="back-btn" class="btn-primary">
-                        Back to Home
-                    </button>
+            <div class="min-h-screen flex items-center justify-center p-6">
+                <div class="win max-w-md w-full">
+                    <div class="win-bar">
+                        <span class="win-title">error.htm</span>
+                        <span class="win-controls" aria-hidden="true"><i></i><i></i><i></i></span>
+                    </div>
+                    <div class="win-body text-center">
+                        <h1 class="text-2xl font-bold text-white mb-3">Blog unavailable</h1>
+                        <p class="text-gray-400 mb-6">Failed to load blog posts. Please try again later.</p>
+                        <button id="back-btn" class="btn-primary">
+                            Back to home
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
