@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { DroneState } from '../types';
-import { themeColor, themed } from '../../../utils/themeColors.js';
+import { FALLBACK_COLORS, themeColor, themed } from '../../../utils/themeColors.js';
 
 /**
  * Pure Drone Visualization
@@ -22,9 +22,10 @@ export interface DroneVisualizationConfig {
 }
 
 export const DEFAULT_VISUALIZATION_CONFIG: DroneVisualizationConfig = {
-    frameColor: 0x00d4ff,    // these three are replaced with palette
-    rotorColor: 0xffffff,    // colours when the drone is constructed
-    cameraColor: 0xa855f7,
+    // Replaced with the live palette when the drone is constructed
+    frameColor: FALLBACK_COLORS['--c-accent'],
+    rotorColor: FALLBACK_COLORS['--c-ink'],
+    cameraColor: FALLBACK_COLORS['--c-accent-2'],
     armLength: 0.25,
     rotorRadius: 0.1,
     bodySize: 0.08,
@@ -44,9 +45,9 @@ export class DroneVisualization {
     constructor(config: Partial<DroneVisualizationConfig> = {}) {
         this.config = {
             ...DEFAULT_VISUALIZATION_CONFIG,
-            frameColor: themeColor('--c-accent', DEFAULT_VISUALIZATION_CONFIG.frameColor),
-            rotorColor: themeColor('--c-ink', DEFAULT_VISUALIZATION_CONFIG.rotorColor),
-            cameraColor: themeColor('--c-accent-2', DEFAULT_VISUALIZATION_CONFIG.cameraColor),
+            frameColor: themeColor('--c-accent'),
+            rotorColor: themeColor('--c-ink'),
+            cameraColor: themeColor('--c-accent-2'),
             ...config,
         };
         this.mesh = this.createMesh();

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { applySceneTheme, onThemeChange, themeColor, themed, themedGrid } from '../../utils/themeColors.js';
+import { applySceneTheme, bindTheme, swapGrid, themeColor, themed, themedGrid, type ThemeAware } from '../../utils/themeColors.js';
 
 // Core components
 import { RacingDrone } from './core/RacingDrone';
@@ -25,7 +25,7 @@ import { VisibilityManager } from '../../utils/VisibilityManager';
  * Interactive demonstration of MPC-controlled drone racing.
  * Features multiple trajectory types that can be selected via UI.
  */
-export class DroneRacingDemo {
+export class DroneRacingDemo implements ThemeAware {
     // DOM elements
     private container: HTMLElement;
     private canvas: HTMLCanvasElement;
@@ -146,7 +146,7 @@ export class DroneRacingDemo {
         // Setup visibility-based pausing
         this.setupVisibilityHandling();
 
-        this.unsubscribeTheme = onThemeChange(() => this.applyTheme());
+        this.unsubscribeTheme = bindTheme(this);
 
         // Show start overlay instead of auto-starting
         this.showStartOverlay();
@@ -750,21 +750,11 @@ export class DroneRacingDemo {
     }
 
     /**
-     * Repaint the scene in the current theme, without interrupting the race.
+     * ThemeAware: repaint the scene without interrupting the race.
      */
-    private applyTheme(): void {
+    public applyTheme(): void {
         this.renderer.setClearColor(themeColor('--c-scene-bg'), 1);
-
-        if (this.gridHelper) {
-            const { position } = this.gridHelper;
-            this.scene.remove(this.gridHelper);
-            this.gridHelper.geometry.dispose();
-            (this.gridHelper.material as THREE.Material).dispose();
-
-            this.gridHelper = themedGrid(150, 75);
-            this.gridHelper.position.copy(position);
-            this.scene.add(this.gridHelper);
-        }
+        this.gridHelper = swapGrid(this.scene, this.gridHelper, 150, 75);
 
         // Gates carry a pass/fail colour of their own, so recolour them by state
         this.gateManager?.setBaseColor(themeColor('--c-red'));

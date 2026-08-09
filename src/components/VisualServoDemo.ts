@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { applySceneTheme, onThemeChange, themeColor, themed, themedGrid } from './../utils/themeColors.js';
+import { applySceneTheme, bindTheme, swapGrid, themeColor, themed, themedGrid, type ThemeAware } from './../utils/themeColors.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { PinholeCamera } from './ibvs/Camera';
 import { IBVSController } from './ibvs/Controller';
@@ -16,7 +16,7 @@ export interface VisualServoDemoConfig {
  * Interactive Visual Servoing Demo
  * Shows a quadrotor using IBVS to track a draggable target
  */
-export class VisualServoDemo {
+export class VisualServoDemo implements ThemeAware {
     private container: HTMLElement;
     private backgroundColor: number;
 
@@ -118,7 +118,7 @@ export class VisualServoDemo {
             this.isInitialized = true;
             this.lastTime = performance.now() / 1000;
             this.setupVisibilityHandling();
-            this.unsubscribeTheme = onThemeChange(() => this.applyTheme());
+            this.unsubscribeTheme = bindTheme(this);
             this.animate();
         } catch (error) {
             console.error('VisualServoDemo initialization failed:', error);
@@ -835,21 +835,13 @@ export class VisualServoDemo {
         this.computeDesiredFeatures();
     }
 
-    /** Repaint the scene when the site theme changes. */
-    private applyTheme(): void {
+    /** ThemeAware: repaint the scene in the current palette. */
+    public applyTheme(): void {
         this.backgroundColor = themeColor('--c-scene-bg');
         this.renderer?.setClearColor(this.backgroundColor);
 
-        // Grids bake their colours into geometry, so swap the helper
-        if (this.gridHelper && this.scene) {
-            const { position } = this.gridHelper;
-            this.scene.remove(this.gridHelper);
-            this.gridHelper.geometry.dispose();
-            (this.gridHelper.material as THREE.Material).dispose();
-
-            this.gridHelper = themedGrid(16, 20);
-            this.gridHelper.position.copy(position);
-            this.scene.add(this.gridHelper);
+        if (this.scene) {
+            this.gridHelper = swapGrid(this.scene, this.gridHelper, 16, 20);
         }
 
         applySceneTheme(this.scene);

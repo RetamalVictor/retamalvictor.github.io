@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Gate, GatePosition, Quaternion } from '../types';
-import { themeColor } from '../../../utils/themeColors.js';
+import { FALLBACK_COLORS, themeColor } from '../../../utils/themeColors.js';
 
 /**
  * Gate Visualization
@@ -18,7 +18,7 @@ export interface GateVisualizationConfig {
 }
 
 export const DEFAULT_GATE_CONFIG: GateVisualizationConfig = {
-    color: 0xff4444,   // replaced with the palette colour at construction
+    color: FALLBACK_COLORS['--c-red'],   // replaced with the live palette at construction
     emissiveIntensity: 0.5,
     frameThickness: 0.1,
     opacity: 0.9,
@@ -33,7 +33,7 @@ export class GateVisualization {
     private gate: Gate;
 
     constructor(gate: Gate, config: Partial<GateVisualizationConfig> = {}) {
-        this.config = { ...DEFAULT_GATE_CONFIG, color: themeColor('--c-red', DEFAULT_GATE_CONFIG.color), ...config };
+        this.config = { ...DEFAULT_GATE_CONFIG, color: themeColor('--c-red'), ...config };
         this.gate = gate;
         this.mesh = this.createMesh();
         this.updatePose();
@@ -305,7 +305,7 @@ export class GateManager {
     public resetGates(): void {
         this.passed.clear();
         for (const gate of this.gates) {
-            gate.setColor(this.config.color ?? themeColor('--c-red', DEFAULT_GATE_CONFIG.color));
+            gate.setColor(this.config.color ?? themeColor('--c-red'));
             gate.setHighlighted(false);
         }
     }

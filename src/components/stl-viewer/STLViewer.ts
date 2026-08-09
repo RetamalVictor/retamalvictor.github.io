@@ -6,7 +6,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
-import { onThemeChange, themeColor } from '../../utils/themeColors.js';
+import { bindTheme, themeColor, type ThemeAware } from '../../utils/themeColors.js';
 
 export interface STLViewerConfig {
     containerId: string;
@@ -46,7 +46,7 @@ function boneType(name: string): 'sacrum' | 'left_hip' | 'right_hip' {
     return 'right_hip';
 }
 
-export class STLViewer {
+export class STLViewer implements ThemeAware {
     private container: HTMLElement;
     private wrapper: HTMLElement | null = null;
     private styleEl: HTMLStyleElement | null = null;
@@ -154,12 +154,14 @@ export class STLViewer {
 
         this.startRenderLoop();
 
-        // Every panel shares the page background
-        this.unsubscribeTheme = onThemeChange(() => {
-            const background = themeColor('--c-scene-bg');
-            this.mainPanel?.renderer.setClearColor(background);
-            for (const panel of this.sidePanels.values()) panel.renderer.setClearColor(background);
-        });
+        this.unsubscribeTheme = bindTheme(this);
+    }
+
+    /** ThemeAware: every panel shares the page background. */
+    public applyTheme(): void {
+        const background = themeColor('--c-scene-bg');
+        this.mainPanel?.renderer.setClearColor(background);
+        for (const panel of this.sidePanels.values()) panel.renderer.setClearColor(background);
     }
 
     private createPanel(canvas: HTMLCanvasElement): ViewPanel {

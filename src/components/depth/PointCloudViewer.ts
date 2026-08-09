@@ -10,7 +10,7 @@
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { onThemeChange, themeColor } from '../../utils/themeColors.js';
+import { bindTheme, themeColor, type ThemeAware } from '../../utils/themeColors.js';
 
 export interface PointCloudConfig {
     subsample: number;      // Sample every N pixels (2-4 recommended)
@@ -51,7 +51,7 @@ function turboColormap(t: number): THREE.Color {
     return new THREE.Color(r, g, b);
 }
 
-export class PointCloudViewer {
+export class PointCloudViewer implements ThemeAware {
     private container: HTMLElement;
     private config: PointCloudConfig;
 
@@ -105,12 +105,15 @@ export class PointCloudViewer {
         this.handleResize = this.handleResize.bind(this);
         window.addEventListener('resize', this.handleResize);
 
-        this.unsubscribeTheme = onThemeChange(() => {
-            (this.scene.background as THREE.Color)?.setHex(themeColor('--c-scene-bg'));
-        });
+        this.unsubscribeTheme = bindTheme(this);
 
         // Start render loop
         this.animate();
+    }
+
+    /** ThemeAware: the backdrop follows the page. */
+    public applyTheme(): void {
+        (this.scene.background as THREE.Color)?.setHex(themeColor('--c-scene-bg'));
     }
 
     /**
