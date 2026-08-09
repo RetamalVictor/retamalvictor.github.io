@@ -24,16 +24,32 @@ const SITE_URL = 'https://victor-retamal.com';
 // Route discovery
 // ---------------------------------------------------------------------------
 
-function getRoutes() {
+/**
+ * Posts, in the order they appear in the YAML (newest first), with the date
+ * each was published so the sitemap can carry a truthful lastmod.
+ */
+function getPosts() {
   const yaml = fs.readFileSync(path.join(ROOT, 'src/data/blog-posts.yaml'), 'utf-8');
   const slugs = [...yaml.matchAll(/slug:\s*"([^"]+)"/g)].map(m => m[1]);
+  const dates = [...yaml.matchAll(/date:\s*"([^"]+)"/g)].map(m => m[1]);
+  const titles = [...yaml.matchAll(/title:\s*"([^"]+)"/g)].map(m => m[1]);
+  const summaries = [...yaml.matchAll(/summary:\s*"([^"]+)"/g)].map(m => m[1]);
 
+  return slugs.map((slug, index) => ({
+    slug,
+    date: dates[index] || null,
+    title: titles[index] || slug,
+    summary: summaries[index] || '',
+  }));
+}
+
+function getRoutes() {
   // /services is intentionally absent: the page still resolves client-side,
   // but it is unlisted, so it stays out of the pre-render and the sitemap.
   return [
     '/',
     '/blog',
-    ...slugs.map(s => `/blog/${s}`),
+    ...getPosts().map(post => `/blog/${post.slug}`),
   ];
 }
 
@@ -41,7 +57,7 @@ function getRoutes() {
 // Minimal static file server with SPA fallback
 // ---------------------------------------------------------------------------
 
-function createServer() {
+function createServer(fallbackHtml) {
   const MIME = {
     '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript',
     '.css': 'text/css', '.json': 'application/json',
@@ -65,9 +81,12 @@ function createServer() {
       res.writeHead(200, { 'Content-Type': 'text/html' });
       fs.createReadStream(path.join(filePath, 'index.html')).pipe(res);
     } else {
-      // SPA fallback — serve root index.html for any unmatched path
+      // SPA fallback. This must be the pristine shell, not whatever is
+      // currently on disk: by the time posts are rendered, dist/index.html
+      // is the finished home page, and serving that would leak the home
+      // page's head - structured data included - into every post.
       res.writeHead(200, { 'Content-Type': 'text/html' });
-      fs.createReadStream(path.join(DIST, 'index.html')).pipe(res);
+      res.end(fallbackHtml);
     }
   });
 }
@@ -78,6 +97,17 @@ function createServer() {
 
 function generateSitemap(routes) {
   const today = new Date().toISOString().split('T')[0];
+  const posts = getPosts();
+
+  // A post's lastmod is the day it was published, not the day we happened to
+  // build. The listing pages move whenever the newest post does.
+  const postDates = new Map(posts.map(post => [`/blog/${post.slug}`, post.date]));
+  const newestPost = posts.map(post => post.date).filter(Boolean).sort().pop();
+
+  const lastmodFor = route => {
+    if (route === '/' || route === '/blog') return newestPost || today;
+    return postDates.get(route) || today;
+  };
 
   const entries = routes.map(route => {
     const priority =
@@ -88,7 +118,7 @@ function generateSitemap(routes) {
     return [
       '  <url>',
       `    <loc>${SITE_URL}${route}</loc>`,
-      `    <lastmod>${today}</lastmod>`,
+      `    <lastmod>${lastmodFor(route)}</lastmod>`,
       `    <changefreq>${changefreq}</changefreq>`,
       `    <priority>${priority}</priority>`,
       '  </url>',
@@ -107,6 +137,57 @@ function generateSitemap(routes) {
 }
 
 // ---------------------------------------------------------------------------
+// llms.txt - a plain-language map of the site for language models
+// ---------------------------------------------------------------------------
+
+/**
+ * Assistants that read this site should be able to describe it accurately
+ * without scraping every route, so hand them the same facts the pages state.
+ * Everything here is generated from the site's own data - no claims that the
+ * pages do not already make.
+ */
+function generateLlmsTxt() {
+  const posts = getPosts();
+
+  const lines = [
+    '# Victor Retamal',
+    '',
+    '> ML & Robotics Engineer. Currently teaching machines to think and move:',
+    '> designing intelligent systems that learn from the world and act in it.',
+    '',
+    'Personal site: technical writing plus interactive demonstrations of robotics',
+    'and machine learning systems. The simulations are not videos - the physics,',
+    'control and inference all run client-side in the reader\'s browser.',
+    '',
+    '## About',
+    '',
+    '- Role: ML & Robotics Engineer',
+    '- Education: MSc Artificial Intelligence, Vrije Universiteit Amsterdam',
+    '- Works on: sim-to-real robotics, multi-agent reinforcement learning, computer',
+    '  vision, deep learning, control systems engineering, inference and performance',
+    '  optimization, medical imaging',
+    '- Profiles: https://github.com/RetamalVictor, https://www.linkedin.com/in/victor-retamal/,',
+    '  https://x.com/Victor_Retamal_, https://scholar.google.com/citations?user=rSJjk7EAAAAJ',
+    '',
+    '## Writing',
+    '',
+    ...posts.map(post => `- [${post.title}](${SITE_URL}/blog/${post.slug})${post.summary ? `: ${post.summary}` : ''}`),
+    '',
+    '## Notes',
+    '',
+    '- The demos on the home page (visual servoing, drone racing with MPC, monocular',
+    '  depth, a ternary-weight language model) execute in the browser via WebGL and',
+    '  ONNX Runtime. Descriptions of them as recordings would be inaccurate.',
+    '- The site sets no cookies and runs no analytics or tracking.',
+    '- Contact details are behind the mail buttons in the footer rather than in the',
+    '  markup, to keep the address away from scrapers.',
+    '',
+  ];
+
+  fs.writeFileSync(path.join(DIST, 'llms.txt'), lines.join('\n'));
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
@@ -120,7 +201,10 @@ async function prerender() {
   console.log(`\nPre-rendering ${routes.length} routes…\n`);
 
   // Start local server
-  const server = createServer();
+  // The shell as vite built it, before any route overwrites index.html
+  const fallbackHtml = fs.readFileSync(path.join(DIST, 'index.html'), 'utf-8');
+
+  const server = createServer(fallbackHtml);
   await new Promise(resolve => server.listen(PORT, resolve));
 
   const browser = await puppeteer.launch({
@@ -133,8 +217,6 @@ async function prerender() {
     ],
   });
 
-  // Keep original index.html as fallback for failed renders
-  const fallbackHtml = fs.readFileSync(path.join(DIST, 'index.html'), 'utf-8');
   let ok = 0;
 
   for (const route of routes) {
@@ -199,6 +281,9 @@ async function prerender() {
   // Regenerate sitemap with all routes
   generateSitemap(routes);
   console.log('  Generated sitemap.xml');
+
+  generateLlmsTxt();
+  console.log('  Generated llms.txt');
 
   console.log(`\nDone: ${ok}/${routes.length} pages pre-rendered.\n`);
 

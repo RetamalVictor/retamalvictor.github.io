@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { DroneState } from '../types';
+import { FALLBACK_COLORS, themeColor, themed } from '../../../utils/themeColors.js';
 
 /**
  * Pure Drone Visualization
@@ -21,9 +22,10 @@ export interface DroneVisualizationConfig {
 }
 
 export const DEFAULT_VISUALIZATION_CONFIG: DroneVisualizationConfig = {
-    frameColor: 0x00d4ff,    // Cyan
-    rotorColor: 0xffffff,    // White
-    cameraColor: 0xa855f7,   // Purple
+    // Replaced with the live palette when the drone is constructed
+    frameColor: FALLBACK_COLORS['--c-accent'],
+    rotorColor: FALLBACK_COLORS['--c-ink'],
+    cameraColor: FALLBACK_COLORS['--c-accent-2'],
     armLength: 0.25,
     rotorRadius: 0.1,
     bodySize: 0.08,
@@ -41,7 +43,13 @@ export class DroneVisualization {
     private readonly cameraOffset = new THREE.Vector3(0, -0.05, 0.1);
 
     constructor(config: Partial<DroneVisualizationConfig> = {}) {
-        this.config = { ...DEFAULT_VISUALIZATION_CONFIG, ...config };
+        this.config = {
+            ...DEFAULT_VISUALIZATION_CONFIG,
+            frameColor: themeColor('--c-accent'),
+            rotorColor: themeColor('--c-ink'),
+            cameraColor: themeColor('--c-accent-2'),
+            ...config,
+        };
         this.mesh = this.createMesh();
     }
 
@@ -117,7 +125,7 @@ export class DroneVisualization {
         // Velocity indicator arrow (hidden by default)
         const arrowGroup = new THREE.Group();
         arrowGroup.name = 'velocityArrow';
-        const arrowMaterial = new THREE.MeshBasicMaterial({ color: 0x22c55e });
+        const arrowMaterial = themed(new THREE.MeshBasicMaterial(), '--c-green');
         const arrowShaft = new THREE.Mesh(
             new THREE.CylinderGeometry(0.02, 0.02, 0.3, 8),
             arrowMaterial

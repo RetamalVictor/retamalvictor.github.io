@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
+import { bindTheme, themeColor, type ThemeAware } from '../../utils/themeColors.js';
 
 export interface STLViewerConfig {
     containerId: string;
@@ -45,7 +46,7 @@ function boneType(name: string): 'sacrum' | 'left_hip' | 'right_hip' {
     return 'right_hip';
 }
 
-export class STLViewer {
+export class STLViewer implements ThemeAware {
     private container: HTMLElement;
     private wrapper: HTMLElement | null = null;
     private styleEl: HTMLStyleElement | null = null;
@@ -53,6 +54,7 @@ export class STLViewer {
     private sidePanels: Map<string, ViewPanel> = new Map();
     private activeCaseIdx = 0;
     private animId = 0;
+    private unsubscribeTheme: (() => void) | null = null;
     private observer: IntersectionObserver | null = null;
     private visible = true;
     private abortCtrl: AbortController | null = null;
@@ -151,12 +153,21 @@ export class STLViewer {
         });
 
         this.startRenderLoop();
+
+        this.unsubscribeTheme = bindTheme(this);
+    }
+
+    /** ThemeAware: every panel shares the page background. */
+    public applyTheme(): void {
+        const background = themeColor('--c-scene-bg');
+        this.mainPanel?.renderer.setClearColor(background);
+        for (const panel of this.sidePanels.values()) panel.renderer.setClearColor(background);
     }
 
     private createPanel(canvas: HTMLCanvasElement): ViewPanel {
         const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.setClearColor(0x0a0a0f);
+        renderer.setClearColor(themeColor('--c-scene-bg'));
 
         const scene = new THREE.Scene();
         const ambient = new THREE.AmbientLight(0xffffff, 0.5);
@@ -348,6 +359,8 @@ export class STLViewer {
 
     destroy(): void {
         if (this.animId) cancelAnimationFrame(this.animId);
+        this.unsubscribeTheme?.();
+        this.unsubscribeTheme = null;
         this.abortCtrl?.abort();
         this.observer?.disconnect();
         this.clearMeshes();

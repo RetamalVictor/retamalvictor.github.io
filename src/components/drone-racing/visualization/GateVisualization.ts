@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Gate, GatePosition, Quaternion } from '../types';
+import { FALLBACK_COLORS, themeColor } from '../../../utils/themeColors.js';
 
 /**
  * Gate Visualization
@@ -17,7 +18,7 @@ export interface GateVisualizationConfig {
 }
 
 export const DEFAULT_GATE_CONFIG: GateVisualizationConfig = {
-    color: 0xff4444,        // Bright red
+    color: FALLBACK_COLORS['--c-red'],   // replaced with the live palette at construction
     emissiveIntensity: 0.5,
     frameThickness: 0.1,
     opacity: 0.9,
@@ -32,7 +33,7 @@ export class GateVisualization {
     private gate: Gate;
 
     constructor(gate: Gate, config: Partial<GateVisualizationConfig> = {}) {
-        this.config = { ...DEFAULT_GATE_CONFIG, ...config };
+        this.config = { ...DEFAULT_GATE_CONFIG, color: themeColor('--c-red'), ...config };
         this.gate = gate;
         this.mesh = this.createMesh();
         this.updatePose();
@@ -234,6 +235,8 @@ export class GateManager {
     private gates: GateVisualization[] = [];
     private scene: THREE.Scene;
     private config: Partial<GateVisualizationConfig>;
+    /** Passed gates keep their green, so a repaint must skip them */
+    private passed = new Set<number>();
 
     constructor(scene: THREE.Scene, config: Partial<GateVisualizationConfig> = {}) {
         this.scene = scene;
@@ -281,16 +284,28 @@ export class GateManager {
      */
     public markGatePassed(index: number): void {
         if (index >= 0 && index < this.gates.length) {
-            this.gates[index].setColor(0x22c55e); // Green
+            this.gates[index].setColor(themeColor('--c-green'));
+            this.passed.add(index);
         }
+    }
+
+    /**
+     * Repaint the gates that have not been passed yet, e.g. after a theme change.
+     */
+    public setBaseColor(color: number): void {
+        this.config = { ...this.config, color };
+        this.gates.forEach((gate, index) => {
+            if (!this.passed.has(index)) gate.setColor(color);
+        });
     }
 
     /**
      * Reset all gates to default state
      */
     public resetGates(): void {
+        this.passed.clear();
         for (const gate of this.gates) {
-            gate.setColor(this.config.color ?? DEFAULT_GATE_CONFIG.color);
+            gate.setColor(this.config.color ?? themeColor('--c-red'));
             gate.setHighlighted(false);
         }
     }
@@ -299,6 +314,7 @@ export class GateManager {
      * Clear all gates from scene
      */
     public clearGates(): void {
+        this.passed.clear();
         for (const gate of this.gates) {
             this.scene.remove(gate.mesh);
             gate.dispose();
