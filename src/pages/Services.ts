@@ -33,10 +33,10 @@ const SERVICES: Service[] = [
 ];
 
 const PUBLICATIONS = [
-    { venue: 'SAUS 2024', title: 'Automatic Segmentation of Cardiac Structures from 2-D Echocardiographic Images using Transformers', doi: '10.1109/SAUS61785.2024.10563657' },
-    { venue: 'RAL 2023', title: 'From Shadows to Light: A Swarm-Robotics Approach with On-board Control for Seeking Dynamic Sources', doi: '10.1109/LRA.2023.3331897' },
-    { venue: 'ICRA 2023', title: 'On-board Controller Design for Nano UAV Swarm in Operator-Guided Collective Behaviours', doi: '10.1109/ICRA48891.2023.10160630' },
-    { venue: 'MPI 2023', title: 'Learning Methods with Range-Only Interactions in Active Systems', doi: '' },
+    { venue: 'ICUAS 2026', title: 'Speed-Based Trajectory Tracking Control for Fixed-Wing UAV', doi: '' },
+    { venue: 'SAUS 2024', title: 'Automatic Segmentation of Cardiac Structures from 2D Echocardiographic Images using Transformers', doi: '10.1109/SAUS61785.2024.10563657' },
+    { venue: 'RAL 2023', title: 'From Shadows to Light: A Swarm Robotics Approach with Onboard Control for Seeking Dynamic Sources in Constrained Environments', doi: '10.1109/LRA.2023.3331897' },
+    { venue: 'ICRA 2023', title: 'Onboard Controller Design for Nano UAV Swarm in Operator-Guided Collective Behaviors', doi: '10.1109/ICRA48891.2023.10160630' },
 ];
 
 export class ServicesPage {
@@ -101,7 +101,7 @@ export class ServicesPage {
 
                             <p class="text-gray-400 text-lg leading-relaxed mb-6 max-w-2xl">
                                 ML and robotics engineer with 6+ years building sim-to-real pipelines, multi-agent systems,
-                                computer vision, and medical imaging. 3 IEEE publications (RAL, ICRA) and a medical degree
+                                computer vision, and medical imaging. 4 IEEE publications and a medical degree
                                 that gives me a genuine edge in clinical AI.
                             </p>
 
