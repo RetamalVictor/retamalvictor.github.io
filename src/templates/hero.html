@@ -1,21 +1,49 @@
-<section id="hero" class="bg-dark-bg text-white relative overflow-hidden">
-    <!-- Ambient corner glow: purple top-left -->
-    <div class="absolute top-0 left-0 w-full h-full pointer-events-none" style="background: radial-gradient(ellipse 55% 50% at 0% 0%, rgba(168,85,247,0.10) 0%, transparent 55%)"></div>
+<section id="hero" class="relative overflow-hidden">
+    <!-- Ambient corner glow -->
+    <div class="absolute top-0 left-0 w-full h-full pointer-events-none" style="background: radial-gradient(ellipse 55% 50% at 0% 0%, rgb(var(--c-accent) / 0.10) 0%, transparent 55%)"></div>
 
-    <div class="max-w-6xl mx-auto px-6 py-12 w-full relative">
-        <div class="grid lg:grid-cols-2 gap-12 items-center">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-8 lg:py-12 w-full relative">
+        <div class="grid lg:grid-cols-2 gap-8 lg:gap-12 items-start">
             <!-- Intro -->
-            <div class="fade-in-up">
-                <h1 class="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">
+            <div class="fade-in-up win">
+                <div class="win-bar">
+                    <span class="win-title">index.htm</span>
+                    <span class="win-controls" aria-hidden="true"><i></i><i></i><i></i></span>
+                </div>
+
+                <div class="win-body">
+                <p class="prompt mb-5"><span>C:\&gt; whoami</span><span class="caret"></span></p>
+
+                <h1 class="title-3d text-3xl md:text-4xl lg:text-5xl font-black leading-[1.1] text-white mb-5">
                     I'm <span class="text-accent-cyan">Victor</span>,<br>
-                    ML & Robotics Engineer
+                    ML &amp; Robotics Engineer
                 </h1>
-                <p class="text-xl text-gray-400 mb-4 max-w-lg">
+
+                <p class="text-lg md:text-xl text-gray-400 mb-6 max-w-lg">
                     Teaching machines to think and move. I design intelligent systems that learn from the world and act in it.
                 </p>
-                <p class="text-sm text-gray-500 mb-8 max-w-lg">
-                    MSc AI @ VU Amsterdam &middot; BSc Medicine &middot; Previously TII, VU Robotics Lab
-                </p>
+
+                <table class="specs mb-6">
+                    <tbody>
+                        <tr>
+                            <th scope="row">Education</th>
+                            <td>MSc Artificial Intelligence, VU Amsterdam</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Also</th>
+                            <td>BSc Medicine</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Previously</th>
+                            <td>TII &middot; VU Robotics Lab</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Works on</th>
+                            <td>Sim-to-real robotics, multi-agent RL, computer vision</td>
+                        </tr>
+                    </tbody>
+                </table>
+
                 <div class="flex flex-wrap gap-3">
                     <a href="/blog" class="btn-primary inline-flex items-center gap-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -35,6 +63,15 @@
                         </svg>
                         GitHub
                     </a>
+                </div>
+                </div>
+
+                <div class="ticker px-4 py-2 text-xs text-gray-500 border-t border-dark-border bg-dark-bg">
+                    <span class="ticker-track">
+                        &#9670; Welcome to my corner of the internet &nbsp; &#9670; 3 IEEE publications &nbsp;
+                        &#9670; The simulation on the right runs in your browser, in real time &nbsp;
+                        &#9670; Currently open to contract work &nbsp; &#9670; Scroll down for the writing
+                    </span>
                 </div>
             </div>
 

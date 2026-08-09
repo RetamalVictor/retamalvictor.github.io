@@ -330,6 +330,72 @@ body {
 }
 
 /* ---------------------------------------------------------------------------
+   Terminal prompt chip
+   --------------------------------------------------------------------------- */
+.prompt {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.65rem;
+  font-family: 'Courier New', ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: rgb(var(--c-accent));
+  background-color: var(--terminal-bg);
+  border: 1px solid rgb(var(--chrome-frame));
+  border-radius: 3px;
+}
+
+[data-theme="dark"] .prompt {
+  color: #00d4ff;
+}
+
+/* Headline with the hard offset shadow every 2000s banner had */
+.title-3d {
+  text-shadow: 3px 3px 0 rgb(var(--c-accent) / 0.16);
+}
+
+/* ---------------------------------------------------------------------------
+   Spec table - because back then everything was a table
+   --------------------------------------------------------------------------- */
+.specs {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  background-color: rgb(var(--c-surface));
+  border: 1px solid rgb(var(--c-border));
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.specs th {
+  width: 1%;
+  padding: 0.4rem 0.7rem;
+  font-family: Verdana, Geneva, Tahoma, 'DejaVu Sans', sans-serif;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+  vertical-align: top;
+  color: rgb(var(--c-gray-500));
+  background-color: rgb(var(--c-accent) / 0.07);
+  border-right: 1px solid rgb(var(--c-border));
+}
+
+.specs td {
+  padding: 0.4rem 0.7rem;
+  color: rgb(var(--c-gray-300));
+}
+
+.specs tr + tr th,
+.specs tr + tr td {
+  border-top: 1px solid rgb(var(--c-border));
+}
+
+/* ---------------------------------------------------------------------------
    Section headings
    --------------------------------------------------------------------------- */
 .heading-retro {
