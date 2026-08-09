@@ -498,6 +498,153 @@ body {
   background-image: linear-gradient(180deg, #ffffff, #d9e7f8);
 }
 
+/* Small bevelled button for inline actions (copy, etc.) */
+.btn-mini {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.6rem;
+  font-family: Verdana, Geneva, Tahoma, 'DejaVu Sans', sans-serif;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: rgb(var(--c-gray-300));
+  background-color: rgb(var(--c-surface));
+  border: 1px solid rgb(var(--c-border));
+  border-radius: 3px;
+  box-shadow: 2px 2px 0 rgb(var(--c-ink) / 0.12);
+  transition: transform 0.1s ease, box-shadow 0.1s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-mini:hover {
+  color: rgb(var(--c-accent));
+  border-color: rgb(var(--c-accent));
+}
+
+.btn-mini:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+/* Square icon button, the kind that used to hold a 16px GIF */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  color: rgb(var(--c-gray-400));
+  background-color: rgb(var(--c-surface));
+  border: 1px solid rgb(var(--c-border));
+  border-radius: 4px;
+  box-shadow: 2px 2px 0 rgb(var(--c-ink) / 0.12);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.icon-btn:hover {
+  color: rgb(var(--c-accent));
+  border-color: rgb(var(--c-accent));
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 rgb(var(--c-accent) / 0.25);
+}
+
+.icon-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+/* Status LED */
+.led {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background-color: rgb(var(--c-green));
+  box-shadow: 0 0 0 2px rgb(var(--c-green) / 0.2), 0 0 6px rgb(var(--c-green) / 0.8);
+  animation: led-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes led-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .led {
+    animation: none;
+  }
+}
+
+/* Link lists with a marker that slides on hover */
+.link-list a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: rgb(var(--c-gray-400));
+  transition: color 0.15s ease;
+}
+
+.link-list a::before {
+  content: '\25B8';
+  color: rgb(var(--c-accent));
+  transition: transform 0.15s ease;
+}
+
+.link-list a:hover {
+  color: rgb(var(--c-accent));
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.link-list a:hover::before {
+  transform: translateX(3px);
+}
+
+/* The obligatory blinking NEW tag */
+.tag-new {
+  font-family: Verdana, Geneva, Tahoma, 'DejaVu Sans', sans-serif;
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 0.05rem 0.25rem;
+  border-radius: 2px;
+  color: #ffffff;
+  background-color: rgb(var(--c-red));
+  animation: tag-blink 1.6s steps(1, end) infinite;
+}
+
+@keyframes tag-blink {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tag-new {
+    animation: none;
+  }
+}
+
+/* Dotted rule with a centred ornament */
+.ornament {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: rgb(var(--c-accent) / 0.7);
+  font-size: 0.7rem;
+}
+
+.ornament::before,
+.ornament::after {
+  content: '';
+  flex: 1;
+  border-top: 2px dotted rgb(var(--c-border));
+}
+
 /* ---------------------------------------------------------------------------
    Pills and small labels
    --------------------------------------------------------------------------- */

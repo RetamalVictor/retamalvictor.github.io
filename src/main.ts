@@ -265,8 +265,26 @@ class Portfolio {
     }
 
     private populateFooterContent(): void {
-        // Footer content is now static in the template
-        // Social links are hardcoded with template variables
+        const copyBtn = document.getElementById('copy-email-btn');
+        const emailField = document.getElementById('footer-email') as HTMLInputElement | null;
+        if (!copyBtn) return;
+
+        copyBtn.addEventListener('click', async () => {
+            const address = copyBtn.dataset.copy || emailField?.value || '';
+            if (!address) return;
+
+            try {
+                await navigator.clipboard.writeText(address);
+            } catch {
+                // Clipboard API needs a secure context - fall back to selecting the field
+                emailField?.select();
+                return;
+            }
+
+            const original = copyBtn.textContent;
+            copyBtn.textContent = 'Copied!';
+            window.setTimeout(() => { copyBtn.textContent = original; }, 1600);
+        });
     }
 
     private async loadHeroSection(): Promise<void> {
