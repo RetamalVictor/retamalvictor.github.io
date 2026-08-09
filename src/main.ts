@@ -10,6 +10,7 @@ import { config } from './utils/config.js';
 import { templateManager } from './utils/template.js';
 import { seo } from './utils/seo.js';
 import { initTheme } from './utils/theme.js';
+import { copyAddress, openMail } from './utils/contact.js';
 
 // Manager imports
 import { DemoManager } from './managers/DemoManager.js';
@@ -226,25 +227,28 @@ class Portfolio {
             const recentPosts = posts.slice(0, 3);
 
             container.innerHTML = recentPosts.map((post: any) => `
-                <a href="/blog/${post.slug}" class="card p-6 group cursor-pointer block">
-                    <div class="flex items-center gap-2 text-sm text-gray-500 mb-3">
-                        <span>${post.date}</span>
-                        <span>·</span>
-                        <span>${post.readTime}</span>
-                    </div>
-                    <h3 class="text-lg font-semibold text-white mb-2 group-hover:text-accent-cyan transition-colors">
-                        ${post.title}
-                    </h3>
-                    <p class="text-gray-400 text-sm line-clamp-2">
-                        ${post.summary}
-                    </p>
-                    <div class="flex flex-wrap gap-2 mt-4">
-                        ${post.tags.slice(0, 3).map((tag: string) => `
-                            <span class="text-xs px-2 py-1 rounded bg-dark-border text-gray-400">
-                                ${tag}
-                            </span>
-                        `).join('')}
-                    </div>
+                <a href="/blog/${post.slug}" class="card group cursor-pointer flex flex-col">
+                    <span class="win-bar">
+                        <span class="win-title">${post.slug}.md</span>
+                    </span>
+                    <span class="block p-5 flex-1 flex flex-col">
+                        <span class="flex items-center gap-2 text-xs font-mono text-gray-500 mb-3">
+                            <span>${post.date}</span>
+                            <span>·</span>
+                            <span>${post.readTime}</span>
+                        </span>
+                        <h3 class="text-lg font-bold text-white mb-2 group-hover:text-accent-cyan transition-colors">
+                            ${post.title}
+                        </h3>
+                        <span class="block text-gray-400 text-sm line-clamp-2 mb-4">
+                            ${post.summary}
+                        </span>
+                        <span class="mt-auto flex flex-wrap gap-1.5">
+                            ${post.tags.slice(0, 3).map((tag: string) => `
+                                <span class="pill">${tag}</span>
+                            `).join('')}
+                        </span>
+                    </span>
                 </a>
             `).join('');
 
@@ -265,25 +269,16 @@ class Portfolio {
     }
 
     private populateFooterContent(): void {
+        // The address is only assembled on click, so it never sits in the markup
+        document.getElementById('mail-btn')?.addEventListener('click', () => openMail('Hello'));
+        document.getElementById('mail-icon-btn')?.addEventListener('click', () => openMail('Hello'));
+
         const copyBtn = document.getElementById('copy-email-btn');
-        const emailField = document.getElementById('footer-email') as HTMLInputElement | null;
-        if (!copyBtn) return;
-
-        copyBtn.addEventListener('click', async () => {
-            const address = copyBtn.dataset.copy || emailField?.value || '';
-            if (!address) return;
-
-            try {
-                await navigator.clipboard.writeText(address);
-            } catch {
-                // Clipboard API needs a secure context - fall back to selecting the field
-                emailField?.select();
-                return;
-            }
-
+        copyBtn?.addEventListener('click', async () => {
+            const copied = await copyAddress();
             const original = copyBtn.textContent;
-            copyBtn.textContent = 'Copied!';
-            window.setTimeout(() => { copyBtn.textContent = original; }, 1600);
+            copyBtn.textContent = copied ? 'Copied!' : 'Use mail button';
+            window.setTimeout(() => { copyBtn.textContent = original; }, 1800);
         });
     }
 

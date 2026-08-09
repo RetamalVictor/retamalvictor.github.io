@@ -30,7 +30,8 @@ export interface SiteConfig {
         subtitle: string;
         label: string;
         location: string;
-        email: string;
+        /** base64 - decode through utils/contact.ts, never render directly */
+        email_encoded: string;
         phone: string;
         website: string;
     };

@@ -24,12 +24,10 @@
                     </div>
 
                     <div class="mt-5">
-                        <label class="block text-[0.65rem] font-bold uppercase tracking-widest text-gray-500 mb-1.5" for="footer-email">Drop me a line</label>
-                        <div class="flex items-stretch gap-2">
-                            <input id="footer-email" class="min-w-0 flex-1 px-2.5 py-1.5 text-xs font-mono text-gray-300 bg-dark-bg border border-dark-border rounded focus:outline-none focus:border-accent-cyan"
-                                   value="{{personal.email}}" readonly aria-label="Email address">
-                            <button id="copy-email-btn" type="button" class="btn-mini" data-copy="{{personal.email}}">Copy</button>
-                            <a href="mailto:{{personal.email}}?subject=Hello" class="btn-mini" style="color: rgb(var(--c-accent)); border-color: rgb(var(--c-accent) / 0.6);">Mail &#8594;</a>
+                        <p class="text-[0.65rem] font-bold uppercase tracking-widest text-gray-500 mb-1.5">Drop me a line</p>
+                        <div class="flex flex-wrap items-stretch gap-2">
+                            <button id="mail-btn" type="button" class="btn-mini" style="color: rgb(var(--c-accent)); border-color: rgb(var(--c-accent) / 0.6);">Open mail &#8594;</button>
+                            <button id="copy-email-btn" type="button" class="btn-mini">Copy address</button>
                         </div>
                     </div>
 
@@ -49,11 +47,11 @@
                                 <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
                             </svg>
                         </a>
-                        <a href="mailto:{{personal.email}}" class="icon-btn" title="Email" aria-label="Email">
+                        <button id="mail-icon-btn" type="button" class="icon-btn" title="Email" aria-label="Email">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                             </svg>
-                        </a>
+                        </button>
                     </div>
                 </div>
 
@@ -66,9 +64,8 @@
                         </h5>
                         <ul class="link-list space-y-2 text-sm">
                             <li><a href="/">Home</a></li>
-                            <li><a href="/blog">Blog <span class="tag-new">NEW</span></a></li>
+                            <li><a href="/blog">Blog</a></li>
                             <li><a href="/services">Services</a></li>
-                            <li><a href="/sitemap.xml">sitemap.xml</a></li>
                         </ul>
                     </div>
 
@@ -103,16 +100,7 @@
                 </div>
             </dl>
 
-            <div class="ornament my-6" aria-hidden="true">&#9670;</div>
-
-            <div class="ticker text-xs text-gray-500 mb-6">
-                <span class="ticker-track">
-                    Thanks for stopping by &nbsp;&#9670;&nbsp; This page renders its own physics &nbsp;&#9670;&nbsp;
-                    No trackers, no cookie banner, no newsletter popup &nbsp;&#9670;&nbsp;
-                    Sim-to-real robotics, multi-agent RL, medical imaging &nbsp;&#9670;&nbsp;
-                    Best experienced with the sound of a modem &nbsp;&#9670;&nbsp; Sign the guestbook by sending an email
-                </span>
-            </div>
+            <hr class="rule-dots my-6">
 
             <div class="flex flex-wrap items-center justify-between gap-4">
                 <div class="flex flex-wrap items-center gap-2">
@@ -121,9 +109,6 @@
                     </span>
                     <span class="badge88 badge-invert" title="No trackers, no cookie banner">
                         100% hand<b>WRITTEN CODE</b>
-                    </span>
-                    <span class="badge88 badge-paper" title="The simulations run locally in your browser">
-                        Physics runs<b>ON YOUR GPU</b>
                     </span>
                 </div>
 
