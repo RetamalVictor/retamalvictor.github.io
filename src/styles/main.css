@@ -2,17 +2,104 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom CSS Variables - Dark Theme */
+/* ---------------------------------------------------------------------------
+   Palette tokens
+   Two themes share one set of names. Values are raw RGB channels so Tailwind
+   utilities can apply opacity modifiers (bg-dark-surface/80 and friends).
+   Light is the default; dark is opt-in via data-theme="dark" on <html>.
+   --------------------------------------------------------------------------- */
 :root {
-  --dark-bg: #0a0a0f;
-  --dark-surface: #12121a;
-  --dark-border: #1e1e2e;
-  --dark-hover: #1a1a24;
-  --accent-cyan: #00d4ff;
-  --accent-purple: #a855f7;
-  --text-primary: #e5e5e5;
-  --text-secondary: #888888;
-  --text-muted: #666666;
+  /* Light - white paper, blueprint blue */
+  --c-bg: 234 241 251;
+  --c-surface: 255 255 255;
+  --c-border: 179 203 232;
+  --c-hover: 220 233 249;
+  --c-accent: 11 87 208;
+  --c-accent-2: 18 58 148;
+  --c-ink: 11 37 69;
+
+  --c-gray-50: 247 251 255;
+  --c-gray-100: 16 42 77;
+  --c-gray-200: 23 53 94;
+  --c-gray-300: 29 66 112;
+  --c-gray-400: 51 88 126;
+  --c-gray-500: 91 120 153;
+  --c-gray-600: 115 145 177;
+  --c-gray-700: 195 214 236;
+  --c-gray-800: 220 232 247;
+  --c-gray-900: 234 241 251;
+  --c-gray-950: 244 248 253;
+
+  --c-yellow: 161 98 7;
+  --c-amber: 180 83 9;
+  --c-green: 21 128 61;
+  --c-red: 185 28 28;
+  --c-blue: 29 78 216;
+
+  /* Window chrome */
+  --chrome-titlebar: linear-gradient(180deg, #4a90e2 0%, #1a5fc0 50%, #0b46a0 100%);
+  --chrome-titlebar-fg: #ffffff;
+  --chrome-frame: 30 79 163;
+  --chrome-shadow: 3px 3px 0 rgb(11 37 69 / 0.16);
+  --chrome-bevel-light: #ffffff;
+  --chrome-bevel-dark: #8fb0d8;
+  --grid-line: rgb(11 87 208 / 0.07);
+  --grid-size: 28px;
+  --link: #0b57d0;
+  --link-visited: #5b3fb0;
+}
+
+[data-theme="dark"] {
+  /* Dark - the original palette */
+  --c-bg: 10 10 15;
+  --c-surface: 18 18 26;
+  --c-border: 30 30 46;
+  --c-hover: 26 26 36;
+  --c-accent: 0 212 255;
+  --c-accent-2: 168 85 247;
+  --c-ink: 255 255 255;
+
+  --c-gray-50: 249 250 251;
+  --c-gray-100: 243 244 246;
+  --c-gray-200: 229 231 235;
+  --c-gray-300: 209 213 219;
+  --c-gray-400: 156 163 175;
+  --c-gray-500: 107 114 128;
+  --c-gray-600: 75 85 99;
+  --c-gray-700: 55 65 81;
+  --c-gray-800: 31 41 55;
+  --c-gray-900: 17 24 39;
+  --c-gray-950: 3 7 18;
+
+  --c-yellow: 250 204 21;
+  --c-amber: 251 191 36;
+  --c-green: 74 222 128;
+  --c-red: 248 113 113;
+  --c-blue: 96 165 250;
+
+  --chrome-titlebar: linear-gradient(180deg, #1b1b2b 0%, #14141f 100%);
+  --chrome-titlebar-fg: #00d4ff;
+  --chrome-frame: 30 30 46;
+  --chrome-shadow: 3px 3px 0 rgb(0 0 0 / 0.5);
+  --chrome-bevel-light: #2a2a3d;
+  --chrome-bevel-dark: #08080c;
+  --grid-line: rgb(0 212 255 / 0.04);
+  --link: #00d4ff;
+  --link-visited: #b388ff;
+}
+
+/* Legacy aliases - plain colour values for rules that don't need opacity */
+:root,
+[data-theme="dark"] {
+  --dark-bg: rgb(var(--c-bg));
+  --dark-surface: rgb(var(--c-surface));
+  --dark-border: rgb(var(--c-border));
+  --dark-hover: rgb(var(--c-hover));
+  --accent-cyan: rgb(var(--c-accent));
+  --accent-purple: rgb(var(--c-accent-2));
+  --text-primary: rgb(var(--c-gray-200));
+  --text-secondary: rgb(var(--c-gray-400));
+  --text-muted: rgb(var(--c-gray-500));
 }
 
 /* Base Styles */
@@ -28,7 +115,20 @@ body {
   color: var(--text-primary);
 }
 
-/* Component Styles - Dark Theme */
+/* Theme toggle icons: show the theme you would switch to */
+.theme-icon-sun {
+  display: none;
+}
+
+[data-theme="dark"] .theme-icon-sun {
+  display: inline-block;
+}
+
+[data-theme="dark"] .theme-icon-moon {
+  display: none;
+}
+
+/* Component Styles */
 .btn-primary {
   @apply px-6 py-3 rounded-lg font-semibold transition-all duration-200;
   background-color: var(--accent-cyan);

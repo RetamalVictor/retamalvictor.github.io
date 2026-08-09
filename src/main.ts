@@ -9,6 +9,7 @@ import { addIntersectionObserver } from './utils/dom.js';
 import { config } from './utils/config.js';
 import { templateManager } from './utils/template.js';
 import { seo } from './utils/seo.js';
+import { initTheme } from './utils/theme.js';
 
 // Manager imports
 import { DemoManager } from './managers/DemoManager.js';
@@ -35,6 +36,9 @@ class Portfolio {
 
     private async init(): Promise<void> {
         try {
+            // Theme first so nothing renders in the wrong palette
+            initTheme();
+
             // Initialize configuration system first
             await config.initialize();
 
