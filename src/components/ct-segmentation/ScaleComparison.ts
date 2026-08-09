@@ -30,7 +30,7 @@ export class ScaleComparison {
         // Title
         const title = document.createElement('h4');
         title.textContent = '2D Image vs 3D CT Volume: Scale Comparison';
-        title.style.cssText = 'margin:0;color:#ffffff;font-size:14px;font-weight:600;letter-spacing:0.5px;';
+        title.style.cssText = 'margin:0;color:rgb(var(--c-ink));font-size:14px;font-weight:600;letter-spacing:0.5px;';
         wrapper.appendChild(title);
 
         // Panels container
@@ -57,7 +57,7 @@ export class ScaleComparison {
 
         const label = document.createElement('div');
         label.textContent = '2D Image';
-        label.style.cssText = 'color:#00d4ff;font-size:13px;font-weight:600;';
+        label.style.cssText = 'color:rgb(var(--c-accent));font-size:13px;font-weight:600;';
         panel.appendChild(label);
 
         // 8x8 grid
@@ -69,8 +69,8 @@ export class ScaleComparison {
             width:120px;
             height:120px;
             padding:4px;
-            background:#0d0d14;
-            border:1px solid #2e2e4a;
+            background:rgb(var(--c-bg));
+            border:1px solid rgb(var(--c-border));
             border-radius:6px;
         `;
 
@@ -78,20 +78,20 @@ export class ScaleComparison {
             const cell = document.createElement('div');
             // Vary brightness slightly for visual interest
             const brightness = 25 + Math.floor(Math.random() * 30);
-            cell.style.cssText = `background:hsl(220, 20%, ${brightness}%);border-radius:2px;`;
+            cell.style.cssText = `background:rgb(var(--c-accent) / ${(brightness / 100).toFixed(2)});border-radius:2px;`;
             grid.appendChild(cell);
         }
 
         panel.appendChild(grid);
 
         const dims = document.createElement('div');
-        dims.innerHTML = '<strong style="color:#ffffff;">256 &times; 256</strong> = <span style="color:#00d4ff;">65,536</span> pixels';
-        dims.style.cssText = 'font-size:12px;color:#d1d5db;text-align:center;';
+        dims.innerHTML = '<strong style="color:rgb(var(--c-ink));">256 &times; 256</strong> = <span style="color:rgb(var(--c-accent));">65,536</span> pixels';
+        dims.style.cssText = 'font-size:12px;color:rgb(var(--c-gray-300));text-align:center;';
         panel.appendChild(dims);
 
         const sub = document.createElement('div');
         sub.textContent = 'Fits in memory easily';
-        sub.style.cssText = 'font-size:11px;color:#9ca3af;';
+        sub.style.cssText = 'font-size:11px;color:rgb(var(--c-gray-400));';
         panel.appendChild(sub);
 
         return panel;
@@ -103,7 +103,7 @@ export class ScaleComparison {
 
         const label = document.createElement('div');
         label.textContent = '3D CT Volume';
-        label.style.cssText = 'color:#a855f7;font-size:13px;font-weight:600;';
+        label.style.cssText = 'color:rgb(var(--c-accent-2));font-size:13px;font-weight:600;';
         panel.appendChild(label);
 
         // Isometric stack using CSS transforms
@@ -131,8 +131,8 @@ export class ScaleComparison {
                 grid-template-columns:repeat(6, 1fr);
                 gap:1px;
                 padding:3px;
-                background:rgba(13,13,20,0.9);
-                border:1px solid rgba(168,85,247,${opacity * 0.6});
+                background:rgb(var(--c-bg) / 0.92);
+                border:1px solid rgb(var(--c-accent-2) / ${opacity * 0.6});
                 border-radius:4px;
                 transform:rotateX(15deg) rotateY(-15deg);
                 opacity:${opacity};
@@ -141,7 +141,7 @@ export class ScaleComparison {
             for (let c = 0; c < 36; c++) {
                 const cell = document.createElement('div');
                 const brightness = 15 + Math.floor(Math.random() * 25);
-                cell.style.cssText = `background:hsl(270, 30%, ${brightness}%);border-radius:1px;`;
+                cell.style.cssText = `background:rgb(var(--c-accent-2) / ${(brightness / 60).toFixed(2)});border-radius:1px;`;
                 layer.appendChild(cell);
             }
 
@@ -156,7 +156,7 @@ export class ScaleComparison {
             bottom:8px;
             width:40px;
             height:40px;
-            border:2px dashed #eab308;
+            border:2px dashed rgb(var(--c-yellow));
             border-radius:4px;
             display:flex;
             align-items:center;
@@ -164,25 +164,25 @@ export class ScaleComparison {
         `;
         const patchLabel = document.createElement('span');
         patchLabel.textContent = '160\u00B3';
-        patchLabel.style.cssText = 'font-size:8px;color:#eab308;font-weight:600;';
+        patchLabel.style.cssText = 'font-size:8px;color:rgb(var(--c-yellow));font-weight:600;';
         patch.appendChild(patchLabel);
         stackContainer.appendChild(patch);
 
         panel.appendChild(stackContainer);
 
         const dims = document.createElement('div');
-        dims.innerHTML = '<strong style="color:#ffffff;">512 &times; 512 &times; 400</strong> = <span style="color:#a855f7;">105M</span> voxels';
-        dims.style.cssText = 'font-size:12px;color:#d1d5db;text-align:center;';
+        dims.innerHTML = '<strong style="color:rgb(var(--c-ink));">512 &times; 512 &times; 400</strong> = <span style="color:rgb(var(--c-accent-2));">105M</span> voxels';
+        dims.style.cssText = 'font-size:12px;color:rgb(var(--c-gray-300));text-align:center;';
         panel.appendChild(dims);
 
         const sub = document.createElement('div');
         sub.textContent = 'Must use patch-based training';
-        sub.style.cssText = 'font-size:11px;color:#9ca3af;';
+        sub.style.cssText = 'font-size:11px;color:rgb(var(--c-gray-400));';
         panel.appendChild(sub);
 
         const patchNote = document.createElement('div');
-        patchNote.innerHTML = '<span style="color:#eab308;">&#9634;</span> training patch: 160\u00B3 voxels';
-        patchNote.style.cssText = 'font-size:10px;color:#9ca3af;margin-top:2px;';
+        patchNote.innerHTML = '<span style="color:rgb(var(--c-yellow));">&#9634;</span> training patch: 160\u00B3 voxels';
+        patchNote.style.cssText = 'font-size:10px;color:rgb(var(--c-gray-400));margin-top:2px;';
         panel.appendChild(patchNote);
 
         return panel;
@@ -194,28 +194,28 @@ export class ScaleComparison {
             width:100%;
             max-width:400px;
             padding:16px;
-            background:#0d0d14;
-            border:1px solid #2e2e4a;
+            background:rgb(var(--c-bg));
+            border:1px solid rgb(var(--c-border));
             border-radius:8px;
         `;
 
         const barTitle = document.createElement('div');
         barTitle.textContent = 'Relative Size (log scale)';
-        barTitle.style.cssText = 'color:#9ca3af;font-size:11px;margin-bottom:12px;text-align:center;';
+        barTitle.style.cssText = 'color:rgb(var(--c-gray-400));font-size:11px;margin-bottom:12px;text-align:center;';
         container.appendChild(barTitle);
 
         // 2D bar
-        const bar2d = this.createBar('2D (65K)', 3, '#00d4ff');
+        const bar2d = this.createBar('2D (65K)', 3, 'rgb(var(--c-accent))');
         container.appendChild(bar2d);
 
         // 3D bar
-        const bar3d = this.createBar('3D (105M)', 100, '#a855f7');
+        const bar3d = this.createBar('3D (105M)', 100, 'rgb(var(--c-accent-2))');
         container.appendChild(bar3d);
 
         // Factor label
         const factor = document.createElement('div');
         factor.textContent = '\u00D71,600x larger';
-        factor.style.cssText = 'color:#eab308;font-size:11px;text-align:right;margin-top:6px;font-weight:600;';
+        factor.style.cssText = 'color:rgb(var(--c-yellow));font-size:11px;text-align:right;margin-top:6px;font-weight:600;';
         container.appendChild(factor);
 
         return container;
@@ -227,10 +227,10 @@ export class ScaleComparison {
 
         const lbl = document.createElement('span');
         lbl.textContent = label;
-        lbl.style.cssText = 'color:#d1d5db;font-size:11px;min-width:70px;text-align:right;font-family:monospace;';
+        lbl.style.cssText = 'color:rgb(var(--c-gray-300));font-size:11px;min-width:70px;text-align:right;font-family:monospace;';
 
         const barBg = document.createElement('div');
-        barBg.style.cssText = 'flex:1;height:20px;background:#1a1a2e;border-radius:4px;overflow:hidden;';
+        barBg.style.cssText = 'flex:1;height:20px;background:rgb(var(--c-gray-700));border-radius:4px;overflow:hidden;';
 
         const barFill = document.createElement('div');
         barFill.style.cssText = `

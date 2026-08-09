@@ -35,6 +35,7 @@ export class TrainingChart {
     // Bindings for cleanup
     private boundMouseMove: ((e: MouseEvent) => void) | null = null;
     private boundMouseLeave: (() => void) | null = null;
+    private boundThemeChange: (() => void) | null = null;
 
     // Chart padding
     private static readonly PAD = { top: 20, right: 30, bottom: 50, left: 70 };
@@ -88,9 +89,9 @@ export class TrainingChart {
         const tooltip = document.createElement('div');
         tooltip.style.cssText = `
             position:absolute; display:none; pointer-events:none; z-index:10;
-            background:#0d0d1a; border:1px solid #2e2e4a; border-radius:6px;
-            padding:8px 12px; font-family:monospace; font-size:11px; color:#d1d5db;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            background:rgb(var(--c-surface)); border:1px solid rgb(var(--c-border)); border-radius:6px;
+            padding:8px 12px; font-family:monospace; font-size:11px; color:rgb(var(--c-gray-300));
+            box-shadow: 3px 3px 0 rgb(var(--c-ink) / 0.15);
         `;
         wrapper.appendChild(tooltip);
 
@@ -115,6 +116,10 @@ export class TrainingChart {
         canvas.addEventListener('mousemove', this.boundMouseMove);
         canvas.addEventListener('mouseleave', this.boundMouseLeave);
 
+        // Repaint when the palette changes under us
+        this.boundThemeChange = () => this.drawChart();
+        window.addEventListener('themechange', this.boundThemeChange);
+
         this.drawChart();
     }
 
@@ -123,10 +128,10 @@ export class TrainingChart {
         btn.textContent = text;
         btn.style.cssText = `
             padding: 6px 16px; font-size: 12px; font-family: monospace;
-            border: 1px solid #2e2e4a; cursor: pointer; transition: all 0.2s;
+            border: 1px solid rgb(var(--c-border)); cursor: pointer; transition: all 0.2s;
             ${active
-                ? 'background: rgba(0,212,255,0.15); color: #00d4ff; border-color: #00d4ff;'
-                : 'background: transparent; color: #9ca3af; border-color: #2e2e4a;'
+                ? 'background: rgb(var(--c-accent) / 0.12); color: rgb(var(--c-accent)); border-color: rgb(var(--c-accent));'
+                : 'background: transparent; color: rgb(var(--c-gray-400)); border-color: rgb(var(--c-border));'
             }
         `;
         btn.style.borderRadius = text === 'Loss' ? '4px 0 0 4px' : '0 4px 4px 0';
@@ -134,12 +139,12 @@ export class TrainingChart {
     }
 
     private updateTabStyles(active: HTMLButtonElement, inactive: HTMLButtonElement): void {
-        active.style.background = 'rgba(0,212,255,0.15)';
-        active.style.color = '#00d4ff';
-        active.style.borderColor = '#00d4ff';
+        active.style.background = 'rgb(var(--c-accent) / 0.12)';
+        active.style.color = 'rgb(var(--c-accent))';
+        active.style.borderColor = 'rgb(var(--c-accent))';
         inactive.style.background = 'transparent';
-        inactive.style.color = '#9ca3af';
-        inactive.style.borderColor = '#2e2e4a';
+        inactive.style.color = 'rgb(var(--c-gray-400))';
+        inactive.style.borderColor = 'rgb(var(--c-border))';
     }
 
     private setupCanvas(): void {
@@ -153,9 +158,33 @@ export class TrainingChart {
         }
     }
 
+    /**
+     * Canvas can't read CSS variables, so resolve the theme tokens here and
+     * redraw whenever the theme changes.
+     */
+    private palette() {
+        const styles = getComputedStyle(document.documentElement);
+        const token = (name: string, alpha = 1) => {
+            const channels = styles.getPropertyValue(name).trim();
+            if (!channels) return '#888888';
+            return alpha === 1 ? `rgb(${channels})` : `rgb(${channels} / ${alpha})`;
+        };
+
+        return {
+            grid: token('--c-border'),
+            axis: token('--c-gray-400'),
+            legend: token('--c-gray-300'),
+            accent: token('--c-accent'),
+            red: token('--c-red'),
+            green: token('--c-green'),
+            crosshair: token('--c-ink', 0.25),
+        };
+    }
+
     private drawChart(): void {
         if (!this.canvas || !this.ctx) return;
 
+        const C = this.palette();
         const ctx = this.ctx;
         const rect = this.canvas.getBoundingClientRect();
         const w = rect.width;
@@ -179,15 +208,15 @@ export class TrainingChart {
             yMin = -0.9;
             yMax = 0;
             series = [
-                { data: this.data.train_loss, color: '#00d4ff', label: 'Train Loss' },
-                { data: this.data.val_loss, color: '#ef4444', label: 'Val Loss' },
+                { data: this.data.train_loss, color: C.accent, label: 'Train Loss' },
+                { data: this.data.val_loss, color: C.red, label: 'Val Loss' },
             ];
         } else {
             yMin = 0.4;
             yMax = 0.9;
             series = [
-                { data: this.data.pseudo_dice, color: '#9ca3af', label: 'Raw Pseudo Dice', dashed: true },
-                { data: this.data.pseudo_dice_ema, color: '#4ade80', label: 'Dice EMA' },
+                { data: this.data.pseudo_dice, color: C.axis, label: 'Raw Pseudo Dice', dashed: true },
+                { data: this.data.pseudo_dice_ema, color: C.green, label: 'Dice EMA' },
             ];
         }
 
@@ -196,7 +225,7 @@ export class TrainingChart {
         const toY = (val: number) => P.top + ((yMax - val) / (yMax - yMin)) * chartH;
 
         // Draw grid
-        ctx.strokeStyle = '#1e1e2e';
+        ctx.strokeStyle = C.grid;
         ctx.lineWidth = 1;
         const yTicks = 6;
         for (let i = 0; i <= yTicks; i++) {
@@ -208,7 +237,7 @@ export class TrainingChart {
             ctx.stroke();
 
             // Y axis labels
-            ctx.fillStyle = '#9ca3af';
+            ctx.fillStyle = C.axis;
             ctx.font = '10px monospace';
             ctx.textAlign = 'right';
             ctx.fillText(yVal.toFixed(2), P.left - 8, py + 3);
@@ -224,14 +253,14 @@ export class TrainingChart {
             ctx.stroke();
 
             // X axis labels
-            ctx.fillStyle = '#9ca3af';
+            ctx.fillStyle = C.axis;
             ctx.font = '10px monospace';
             ctx.textAlign = 'center';
             ctx.fillText(Math.round(xVal).toString(), px, h - P.bottom + 16);
         }
 
         // Axis labels
-        ctx.fillStyle = '#9ca3af';
+        ctx.fillStyle = C.axis;
         ctx.font = '11px monospace';
         ctx.textAlign = 'center';
         ctx.fillText('Epoch', w / 2, h - 8);
@@ -280,7 +309,7 @@ export class TrainingChart {
             ctx.stroke();
             ctx.setLineDash([]);
 
-            ctx.fillStyle = '#d1d5db';
+            ctx.fillStyle = C.legend;
             ctx.font = '10px monospace';
             ctx.textAlign = 'left';
             ctx.fillText(s.label, legendX + 26, ly + 3);
@@ -303,7 +332,7 @@ export class TrainingChart {
             const px = toX(epochs[nearest]);
 
             // Vertical line
-            ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+            ctx.strokeStyle = C.crosshair;
             ctx.lineWidth = 1;
             ctx.setLineDash([3, 3]);
             ctx.beginPath();
@@ -327,7 +356,7 @@ export class TrainingChart {
                 this.tooltipEl.style.left = `${this.mouseX + 12}px`;
                 this.tooltipEl.style.top = `${this.mouseY - 40}px`;
 
-                let html = `<div style="color:#fff;margin-bottom:4px">Epoch ${epochs[nearest]}</div>`;
+                let html = `<div style="color:rgb(var(--c-ink));margin-bottom:4px">Epoch ${epochs[nearest]}</div>`;
                 for (const s of series) {
                     html += `<div style="color:${s.color}">${s.label}: ${s.data[nearest].toFixed(4)}</div>`;
                 }
@@ -364,8 +393,12 @@ export class TrainingChart {
         if (this.canvas && this.boundMouseLeave) {
             this.canvas.removeEventListener('mouseleave', this.boundMouseLeave);
         }
+        if (this.boundThemeChange) {
+            window.removeEventListener('themechange', this.boundThemeChange);
+        }
         this.boundMouseMove = null;
         this.boundMouseLeave = null;
+        this.boundThemeChange = null;
 
         const wrapper = this.container.querySelector('.training-chart-container');
         if (wrapper) {

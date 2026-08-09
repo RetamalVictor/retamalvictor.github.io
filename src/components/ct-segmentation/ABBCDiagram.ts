@@ -17,10 +17,10 @@ export class ABBCDiagram {
     private wrapper: HTMLElement | null = null;
 
     private static readonly COLORS: Record<CellClass, string> = {
-        0: '#1a1a2e',  // background
-        1: '#3b82f6',  // boundary (blue)
-        2: '#ef4444',  // core (red/orange)
-        3: '#eab308',  // border (yellow - fracture contact)
+        0: 'rgb(var(--c-gray-700))',  // background
+        1: 'rgb(var(--c-blue))',  // boundary (blue)
+        2: 'rgb(var(--c-red))',  // core (red/orange)
+        3: 'rgb(var(--c-yellow))',  // border (yellow - fracture contact)
     };
 
     private static readonly LABELS: Record<CellClass, string> = {
@@ -65,7 +65,7 @@ export class ABBCDiagram {
         // Title
         const title = document.createElement('h4');
         title.textContent = 'ABBC Cross-Section: Two Adjacent Bone Fragments';
-        title.style.cssText = 'margin:0;color:#ffffff;font-size:14px;font-weight:600;letter-spacing:0.5px;';
+        title.style.cssText = 'margin:0;color:rgb(var(--c-ink));font-size:14px;font-weight:600;letter-spacing:0.5px;';
         wrapper.appendChild(title);
 
         // Grid container
@@ -78,8 +78,8 @@ export class ABBCDiagram {
             width:100%;
             border-radius:8px;
             padding:8px;
-            background:#0d0d14;
-            border:1px solid #2e2e4a;
+            background:rgb(var(--c-bg));
+            border:1px solid rgb(var(--c-border));
         `;
 
         const grid = ABBCDiagram.GRID;
@@ -116,12 +116,12 @@ export class ABBCDiagram {
             swatch.style.cssText = `
                 width:14px;height:14px;border-radius:3px;
                 background:${colors[key]};
-                border:1px solid ${key === 0 ? '#2e2e4a' : colors[key]};
+                border:1px solid ${key === 0 ? 'rgb(var(--c-border))' : colors[key]};
             `;
 
             const label = document.createElement('span');
             label.textContent = ABBCDiagram.LABELS[key];
-            label.style.cssText = 'font-size:12px;color:#d1d5db;font-family:system-ui,sans-serif;';
+            label.style.cssText = 'font-size:12px;color:rgb(var(--c-gray-300));font-family:system-ui,sans-serif;';
 
             item.appendChild(swatch);
             item.appendChild(label);
@@ -133,7 +133,7 @@ export class ABBCDiagram {
         // Description
         const desc = document.createElement('p');
         desc.textContent = 'Each cell represents a voxel classified by its anatomical context: cores lie deep inside each fragment, boundary wraps the outer surface, and border marks the fracture contact zone.';
-        desc.style.cssText = 'margin:8px 0 0;color:#9ca3af;font-size:11px;text-align:center;max-width:440px;line-height:1.5;';
+        desc.style.cssText = 'margin:8px 0 0;color:rgb(var(--c-gray-400));font-size:11px;text-align:center;max-width:440px;line-height:1.5;';
         wrapper.appendChild(desc);
 
         this.container.appendChild(wrapper);

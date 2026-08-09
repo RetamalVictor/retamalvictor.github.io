@@ -28,15 +28,15 @@ export class VoxelAnisotropy {
         // Title
         const title = document.createElement('h4');
         title.textContent = 'Voxel Spacing: Isotropic vs Anisotropic';
-        title.style.cssText = 'margin:0;color:#ffffff;font-size:14px;font-weight:600;letter-spacing:0.5px;';
+        title.style.cssText = 'margin:0;color:rgb(var(--c-ink));font-size:14px;font-weight:600;letter-spacing:0.5px;';
         wrapper.appendChild(title);
 
         // Cubes container
         const cubesRow = document.createElement('div');
         cubesRow.style.cssText = 'display:flex;gap:60px;flex-wrap:wrap;justify-content:center;width:100%;';
 
-        cubesRow.appendChild(this.createCube('Isotropic', '1 \u00D7 1 \u00D7 1 mm', 80, 80, 80, '#00d4ff'));
-        cubesRow.appendChild(this.createCube('Anisotropic', '0.8 \u00D7 0.8 \u00D7 2.5 mm', 64, 64, 140, '#a855f7'));
+        cubesRow.appendChild(this.createCube('Isotropic', '1 \u00D7 1 \u00D7 1 mm', 80, 80, 80, 'rgb(var(--c-accent))'));
+        cubesRow.appendChild(this.createCube('Anisotropic', '0.8 \u00D7 0.8 \u00D7 2.5 mm', 64, 64, 140, 'rgb(var(--c-accent-2))'));
 
         wrapper.appendChild(cubesRow);
 
@@ -45,11 +45,11 @@ export class VoxelAnisotropy {
         note.style.cssText = `
             max-width:480px;
             padding:12px 16px;
-            background:#0d0d14;
-            border:1px solid #2e2e4a;
-            border-left:3px solid #eab308;
+            background:rgb(var(--c-bg));
+            border:1px solid rgb(var(--c-border));
+            border-left:3px solid rgb(var(--c-yellow));
             border-radius:6px;
-            color:#d1d5db;
+            color:rgb(var(--c-gray-300));
             font-size:12px;
             line-height:1.6;
         `;
@@ -126,7 +126,7 @@ export class VoxelAnisotropy {
         // Dimensions label
         const dims = document.createElement('div');
         dims.textContent = dimensions;
-        dims.style.cssText = 'color:#d1d5db;font-size:12px;font-family:monospace;';
+        dims.style.cssText = 'color:rgb(var(--c-gray-300));font-size:12px;font-family:monospace;';
         panel.appendChild(dims);
 
         return panel;

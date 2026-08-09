@@ -12,9 +12,9 @@ export class PelvisAnatomy {
     private wrapper: HTMLElement | null = null;
 
     private static readonly REGIONS = {
-        sacrum: { color: '#e05050', label: 'Sacrum', fragments: '1\u201310' },
-        leftHip: { color: '#50c878', label: 'Left Hip', fragments: '11\u201320' },
-        rightHip: { color: '#5070e0', label: 'Right Hip', fragments: '21\u201330' },
+        sacrum: { color: 'rgb(var(--c-red))', label: 'Sacrum', fragments: '1\u201310' },
+        leftHip: { color: 'rgb(var(--c-green))', label: 'Left Hip', fragments: '11\u201320' },
+        rightHip: { color: 'rgb(var(--c-blue))', label: 'Right Hip', fragments: '21\u201330' },
     };
 
     constructor(config: PelvisAnatomyConfig) {
@@ -34,7 +34,7 @@ export class PelvisAnatomy {
         // Title
         const title = document.createElement('h4');
         title.textContent = 'Pelvic Ring Anatomy & Fragment Labeling';
-        title.style.cssText = 'margin:0;color:#ffffff;font-size:14px;font-weight:600;letter-spacing:0.5px;';
+        title.style.cssText = 'margin:0;color:rgb(var(--c-ink));font-size:14px;font-weight:600;letter-spacing:0.5px;';
         wrapper.appendChild(title);
 
         // SVG diagram
@@ -52,7 +52,7 @@ export class PelvisAnatomy {
             <path d="M 200 60 Q 300 100 300 180" stroke="${R.sacrum.color}" stroke-width="2" fill="none" opacity="0.5"/>
             <path d="M 100 180 Q 120 250 180 270" stroke="${R.leftHip.color}" stroke-width="2" fill="none" opacity="0.5"/>
             <path d="M 300 180 Q 280 250 220 270" stroke="${R.rightHip.color}" stroke-width="2" fill="none" opacity="0.5"/>
-            <path d="M 180 270 L 220 270" stroke="#666666" stroke-width="1.5" stroke-dasharray="4 3" fill="none" opacity="0.5"/>
+            <path d="M 180 270 L 220 270" style="stroke:rgb(var(--c-gray-500))" stroke-width="1.5" stroke-dasharray="4 3" fill="none" opacity="0.5"/>
 
             <!-- Sacrum (top center) -->
             <ellipse cx="200" cy="55" rx="60" ry="35"
@@ -61,7 +61,7 @@ export class PelvisAnatomy {
             <text x="200" y="52" text-anchor="middle" font-family="system-ui,sans-serif"
                 font-size="12" font-weight="600" fill="${R.sacrum.color}">${R.sacrum.label}</text>
             <text x="200" y="68" text-anchor="middle" font-family="monospace"
-                font-size="10" fill="#d1d5db">fragments ${R.sacrum.fragments}</text>
+                font-size="10" style="fill:rgb(var(--c-gray-300))">fragments ${R.sacrum.fragments}</text>
 
             <!-- Left Hip (bottom-left) -->
             <ellipse cx="110" cy="190" rx="50" ry="65"
@@ -70,7 +70,7 @@ export class PelvisAnatomy {
             <text x="110" y="187" text-anchor="middle" font-family="system-ui,sans-serif"
                 font-size="12" font-weight="600" fill="${R.leftHip.color}">${R.leftHip.label}</text>
             <text x="110" y="203" text-anchor="middle" font-family="monospace"
-                font-size="10" fill="#d1d5db">fragments ${R.leftHip.fragments}</text>
+                font-size="10" style="fill:rgb(var(--c-gray-300))">fragments ${R.leftHip.fragments}</text>
 
             <!-- Right Hip (bottom-right) -->
             <ellipse cx="290" cy="190" rx="50" ry="65"
@@ -79,19 +79,19 @@ export class PelvisAnatomy {
             <text x="290" y="187" text-anchor="middle" font-family="system-ui,sans-serif"
                 font-size="12" font-weight="600" fill="${R.rightHip.color}">${R.rightHip.label}</text>
             <text x="290" y="203" text-anchor="middle" font-family="monospace"
-                font-size="10" fill="#d1d5db">fragments ${R.rightHip.fragments}</text>
+                font-size="10" style="fill:rgb(var(--c-gray-300))">fragments ${R.rightHip.fragments}</text>
 
             <!-- Pubic symphysis connection at bottom -->
             <ellipse cx="200" cy="270" rx="25" ry="12"
-                fill="none" stroke="#666666" stroke-width="1" stroke-dasharray="4 3"/>
+                fill="none" style="stroke:rgb(var(--c-gray-500))" stroke-width="1" stroke-dasharray="4 3"/>
             <text x="200" y="295" text-anchor="middle" font-family="system-ui,sans-serif"
-                font-size="9" fill="#9ca3af">pubic symphysis</text>
+                font-size="9" style="fill:rgb(var(--c-gray-400))">pubic symphysis</text>
 
             <!-- SI joint labels -->
             <text x="145" y="110" text-anchor="middle" font-family="system-ui,sans-serif"
-                font-size="9" fill="#9ca3af">SI joint</text>
+                font-size="9" style="fill:rgb(var(--c-gray-400))">SI joint</text>
             <text x="255" y="110" text-anchor="middle" font-family="system-ui,sans-serif"
-                font-size="9" fill="#9ca3af">SI joint</text>
+                font-size="9" style="fill:rgb(var(--c-gray-400))">SI joint</text>
         `;
 
         wrapper.appendChild(svg);
@@ -109,7 +109,7 @@ export class PelvisAnatomy {
 
             const text = document.createElement('span');
             text.textContent = `${region.label} (${region.fragments})`;
-            text.style.cssText = 'font-size:11px;color:#d1d5db;';
+            text.style.cssText = 'font-size:11px;color:rgb(var(--c-gray-300));';
 
             item.appendChild(swatch);
             item.appendChild(text);
@@ -121,7 +121,7 @@ export class PelvisAnatomy {
         // Note
         const note = document.createElement('p');
         note.textContent = 'The pelvis forms a bony ring. Each region is independently labeled with up to 10 fragment IDs, yielding a 30-class semantic segmentation problem plus background.';
-        note.style.cssText = 'margin:4px 0 0;color:#9ca3af;font-size:11px;text-align:center;max-width:400px;line-height:1.5;';
+        note.style.cssText = 'margin:4px 0 0;color:rgb(var(--c-gray-400));font-size:11px;text-align:center;max-width:400px;line-height:1.5;';
         wrapper.appendChild(note);
 
         this.container.appendChild(wrapper);
