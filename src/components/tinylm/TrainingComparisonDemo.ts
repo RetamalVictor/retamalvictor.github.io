@@ -280,9 +280,26 @@ export class TrainingComparisonDemo {
         return data.map(([step, loss]) => [step, this.toPerplexity(loss)]);
     }
 
+    /** Canvas can't read CSS variables, so resolve the theme tokens here. */
+    private palette() {
+        const styles = getComputedStyle(document.documentElement);
+        const token = (name: string) => {
+            const channels = styles.getPropertyValue(name).trim();
+            return channels ? `rgb(${channels})` : '#888888';
+        };
+
+        return {
+            grid: token('--c-gray-700'),
+            axis: token('--c-gray-400'),
+            llama: token('--c-accent'),
+            gpt: token('--c-accent-2'),
+        };
+    }
+
     private drawChart(): void {
         if (!this.ctx || !this.canvas) return;
 
+        const C = this.palette();
         const ctx = this.ctx;
         const rect = this.canvas.getBoundingClientRect();
         const width = rect.width;
@@ -325,7 +342,7 @@ export class TrainingComparisonDemo {
         const yScale = (value: number) => margin.top + (1 - (value - minValue) / (maxValue - minValue)) * chartHeight;
 
         // Draw grid
-        ctx.strokeStyle = '#374151';
+        ctx.strokeStyle = C.grid;
         ctx.lineWidth = 0.5;
 
         const yTicks = 5;
@@ -337,7 +354,7 @@ export class TrainingComparisonDemo {
             ctx.stroke();
 
             const value = maxValue - (i / yTicks) * (maxValue - minValue);
-            ctx.fillStyle = '#9ca3af';
+            ctx.fillStyle = C.axis;
             ctx.font = '11px system-ui';
             ctx.textAlign = 'right';
             // Format based on metric
@@ -355,7 +372,7 @@ export class TrainingComparisonDemo {
         }
 
         // Axis labels
-        ctx.fillStyle = '#9ca3af';
+        ctx.fillStyle = C.axis;
         ctx.font = '12px system-ui';
         ctx.textAlign = 'center';
         ctx.fillText('Steps', width / 2, height - 5);
@@ -394,13 +411,13 @@ export class TrainingComparisonDemo {
 
         // Draw train first (behind) if enabled
         if (this.split === 'both') {
-            drawLine(llamaTrain, '#22d3d3', true);
-            drawLine(gptTrain, '#a78bfa', true);
+            drawLine(llamaTrain, C.llama, true);
+            drawLine(gptTrain, C.gpt, true);
         }
 
         // Draw validation (on top)
-        drawLine(llamaVal, '#22d3d3', false);
-        drawLine(gptVal, '#a78bfa', false);
+        drawLine(llamaVal, C.llama, false);
+        drawLine(gptVal, C.gpt, false);
     }
 
     private setupInteraction(): void {
@@ -446,9 +463,10 @@ export class TrainingComparisonDemo {
             const llamaY = yScale(llamaPoint[1]);
             const gptY = yScale(gptPoint[1]);
 
+            const colors = this.palette();
             const closest = Math.abs(llamaY - y) < Math.abs(gptY - y)
-                ? { arch: 'LLaMA', valPoint: llamaPoint, trainPoint: llamaTrainPoint, color: '#22d3d3' }
-                : { arch: 'GPT', valPoint: gptPoint, trainPoint: gptTrainPoint, color: '#a78bfa' };
+                ? { arch: 'LLaMA', valPoint: llamaPoint, trainPoint: llamaTrainPoint, color: colors.llama }
+                : { arch: 'GPT', valPoint: gptPoint, trainPoint: gptTrainPoint, color: colors.gpt };
 
             if (x > margin.left && x < rect.width - margin.right &&
                 y > margin.top && y < rect.height - margin.bottom) {

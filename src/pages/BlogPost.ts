@@ -8,6 +8,7 @@ import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { parseFrontmatter, extractSlugFromPath, type BlogPostMeta } from '../utils/frontmatter.js';
 import { seo } from '../utils/seo.js';
+import { refreshThemeToggles, themeToggleMarkup } from '../utils/theme.js';
 
 // Auto-import all markdown files from content/markdown/
 // This eliminates the need for manual imports when adding new posts
@@ -163,88 +164,86 @@ export class BlogPostPage {
         });
 
         this.container.innerHTML = `
-            <div class="min-h-screen bg-dark-bg">
+            <div class="min-h-screen">
                 <!-- Header -->
-                <header class="bg-dark-surface border-b border-dark-border">
-                    <div class="max-w-4xl mx-auto px-6 py-8">
-                        <div class="flex items-center justify-between mb-6">
-                            <button id="back-to-blog-btn" class="text-gray-400 hover:text-accent-cyan transition-colors flex items-center">
-                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                                </svg>
-                                Blog
-                            </button>
-
-                            <button id="back-home-btn" class="text-gray-400 hover:text-accent-cyan transition-colors text-sm">
-                                Home
-                            </button>
-                        </div>
-
-                        <h1 class="text-3xl md:text-4xl font-bold text-white mb-4">${this.blogPost.title}</h1>
-
-                        <div class="flex flex-wrap items-center gap-4 text-gray-400">
-                            <span>${this.formatDate(this.blogPost.date)}</span>
-                            <span>·</span>
-                            <span>${this.blogPost.readTime} read</span>
-                            <span>·</span>
-                            <span>📝 Article</span>
-                        </div>
-
-                        <div class="flex flex-wrap gap-2 mt-4">
-                            ${this.blogPost.tags.map(tag => `
-                                <span class="px-2 py-1 text-xs rounded bg-dark-border text-gray-400">
-                                    ${tag}
-                                </span>
-                            `).join('')}
+                <header class="sticky top-0 z-40">
+                    <div class="win-bar">
+                        <span class="win-title">victor-retamal.com/blog</span>
+                        <span class="win-controls" aria-hidden="true"><i></i><i></i><i></i></span>
+                    </div>
+                    <div class="bg-dark-surface border-b border-dark-border">
+                        <div class="max-w-4xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-2">
+                            <div class="flex items-center gap-2">
+                                <button id="back-to-blog-btn" class="btn-mini">&#8592; Blog</button>
+                                <button id="back-home-btn" class="btn-mini">Home</button>
+                            </div>
+                            ${themeToggleMarkup()}
                         </div>
                     </div>
                 </header>
 
                 <!-- Content -->
-                <article class="max-w-4xl mx-auto px-6 py-12">
-                    <div class="bg-dark-surface border-l-4 border-accent-cyan p-4 mb-8 rounded-r">
-                        <p class="text-gray-300 italic">${this.blogPost.summary}</p>
-                    </div>
+                <article class="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+                    <div class="win">
+                        <div class="win-bar">
+                            <span class="win-title">${this.blogPost.slug}.md</span>
+                            <span class="ml-auto font-normal tracking-normal normal-case opacity-80">${this.blogPost.readTime} read</span>
+                        </div>
+                        <div class="win-body">
+                            <p class="text-xs font-mono text-gray-500 mb-3">${this.formatDate(this.blogPost.date)}</p>
 
-                    <div id="blog-content" class="blog-content blog-content-dark">
-                        ${this.blogPost.content || '<p class="text-gray-400">Content loading...</p>'}
+                            <h1 class="text-3xl md:text-4xl font-black text-white leading-tight mb-4">${this.blogPost.title}</h1>
+
+                            <p class="text-gray-400 leading-relaxed border-l-4 border-accent-cyan pl-4">${this.blogPost.summary}</p>
+
+                            <div class="flex flex-wrap gap-1.5 mt-5">
+                                ${this.blogPost.tags.map(tag => `<span class="pill">${tag}</span>`).join('')}
+                            </div>
+
+                            <hr class="rule-dots my-7">
+
+                            <div id="blog-content" class="blog-content">
+                                ${this.blogPost.content || '<p class="text-gray-400">Content loading...</p>'}
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Post Navigation -->
-                    <nav class="mt-12 pt-8 border-t border-dark-border">
+                    <nav class="mt-12 pt-8 border-t-2 border-dotted border-dark-border">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             ${this.prevPost ? `
-                                <a href="/blog/${this.prevPost.slug}" class="prev-post-link group p-4 rounded-lg bg-dark-surface border border-dark-border hover:border-accent-cyan transition-all">
-                                    <div class="text-sm text-gray-500 mb-1 flex items-center">
-                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                                <a href="/blog/${this.prevPost.slug}" class="prev-post-link card group p-4">
+                                    <div class="text-[0.65rem] font-bold uppercase tracking-widest text-gray-500 mb-1 flex items-center gap-1">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"></path>
                                         </svg>
-                                        Previous Post
+                                        Previous
                                     </div>
-                                    <div class="text-white group-hover:text-accent-cyan transition-colors font-medium">${this.prevPost.title}</div>
+                                    <div class="text-white group-hover:text-accent-cyan transition-colors font-semibold">${this.prevPost.title}</div>
                                 </a>
                             ` : '<div></div>'}
                             ${this.nextPost ? `
-                                <a href="/blog/${this.nextPost.slug}" class="next-post-link group p-4 rounded-lg bg-dark-surface border border-dark-border hover:border-accent-cyan transition-all text-right">
-                                    <div class="text-sm text-gray-500 mb-1 flex items-center justify-end">
-                                        Next Post
-                                        <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                <a href="/blog/${this.nextPost.slug}" class="next-post-link card group p-4 text-right">
+                                    <div class="text-[0.65rem] font-bold uppercase tracking-widest text-gray-500 mb-1 flex items-center justify-end gap-1">
+                                        Next
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path>
                                         </svg>
                                     </div>
-                                    <div class="text-white group-hover:text-accent-cyan transition-colors font-medium">${this.nextPost.title}</div>
+                                    <div class="text-white group-hover:text-accent-cyan transition-colors font-semibold">${this.nextPost.title}</div>
                                 </a>
                             ` : '<div></div>'}
                         </div>
                         <div class="mt-6 text-center">
-                            <button id="back-to-blog-btn-bottom" class="text-gray-400 hover:text-accent-cyan transition-colors">
-                                ← View All Posts
-                            </button>
+                            <button id="back-to-blog-btn-bottom" class="btn-mini">&#8592; View all posts</button>
                         </div>
                     </nav>
                 </article>
             </div>
         `;
+
+        refreshThemeToggles();
+        this.removeDuplicateTitle();
 
         // Initialize math rendering if content contains math
         this.initializeMathRendering();
@@ -262,11 +261,16 @@ export class BlogPostPage {
         });
 
         this.container.innerHTML = `
-            <div class="min-h-screen bg-dark-bg flex items-center justify-center">
-                <div class="text-center">
-                    <h1 class="text-4xl font-bold text-white mb-4">Post Not Found</h1>
+            <div class="min-h-screen flex items-center justify-center p-6">
+                <div class="win max-w-md w-full text-center">
+                    <div class="win-bar">
+                        <span class="win-title">404.htm</span>
+                        <span class="win-controls" aria-hidden="true"><i></i><i></i><i></i></span>
+                    </div>
+                    <div class="win-body">
+                    <h1 class="text-3xl font-black text-white mb-3">Post not found</h1>
                     <p class="text-gray-400 mb-6">The blog post you're looking for doesn't exist.</p>
-                    <div class="space-x-4">
+                    <div class="flex flex-wrap gap-3 justify-center">
                         <button id="back-to-blog-btn" class="btn-primary">
                             Back to Blog
                         </button>
@@ -274,10 +278,25 @@ export class BlogPostPage {
                             Home
                         </button>
                     </div>
+                    </div>
                 </div>
             </div>
         `;
         this.setupEventListeners();
+    }
+
+    /**
+     * Posts usually repeat their title as the first heading of the markdown.
+     * The page header already shows it, so drop the duplicate.
+     */
+    private removeDuplicateTitle(): void {
+        const heading = document.getElementById('blog-content')?.querySelector('h1');
+        if (!heading || !this.blogPost) return;
+
+        const normalize = (text: string) => text.trim().replace(/\s+/g, ' ').toLowerCase();
+        if (normalize(heading.textContent || '') === normalize(this.blogPost.title)) {
+            heading.remove();
+        }
     }
 
     private formatDate(date: string): string {

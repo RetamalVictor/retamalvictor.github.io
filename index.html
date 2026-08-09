@@ -3,11 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
     <title>Victor Retamal - ML & Robotics Engineer</title>
+    <script>
+        // Apply the saved theme before first paint so the page never flashes.
+        (function () {
+            var theme = 'light';
+            try {
+                var stored = localStorage.getItem('theme');
+                if (stored === 'dark' || stored === 'light') theme = stored;
+            } catch (e) { /* storage unavailable */ }
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
     <meta name="description" content="Machine Learning Research Engineer specializing in computer vision, reinforcement learning, and multi-agent systems for robotics applications.">
     <meta name="keywords" content="machine learning, deep learning, computer vision, reinforcement learning, multi-agent systems, robotics, UAV, visual SLAM, transformers, neural networks">
     <meta name="author" content="Victor Retamal">
-    <link rel="icon" type="image/x-icon" href="./favicon.ico">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <meta property="og:title" content="Victor Retamal - ML & Robotics Engineer">
     <meta property="og:description" content="Machine Learning Research Engineer advancing autonomous systems through deep learning, computer vision, and multi-agent reinforcement learning">
     <meta property="og:type" content="website">

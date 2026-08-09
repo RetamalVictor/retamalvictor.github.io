@@ -3,7 +3,7 @@ posts:
     title: "From CT Scan to Fracture Map: A Practical Guide to 3D Medical Image Segmentation"
     date: "2026-05-02"
     tags: ["medical-imaging", "3d-segmentation", "deep-learning", "nnunet"]
-    summary: "How we built a pelvic fracture segmentation pipeline — and the single design decision that mattered more than the model. ABBC methodology, two-stage architecture with nnU-Net, and what actually matters when training on 3D medical data."
+    summary: "How I built a pelvic fracture segmentation pipeline — and the single design decision that mattered more than the model. ABBC methodology, two-stage architecture with nnU-Net, and what actually matters when training on 3D medical data."
     readTime: "25 min"
     notebook: ""
     featured: true

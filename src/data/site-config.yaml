@@ -14,7 +14,9 @@ personal:
   subtitle: "I build autonomous systems and write about my work."
   label: "ML Engineer"
   location: ""
-  email: "retamal1.victor@gmail.com"
+  # Kept encoded so the address never sits in plain text in the markup or the
+  # bundle. Decoded on click - see src/utils/contact.ts
+  email_encoded: "cmV0YW1hbDEudmljdG9yQGdtYWlsLmNvbQ=="
   phone: ""
   website: "https://victor-retamal.com"
 

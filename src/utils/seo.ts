@@ -66,14 +66,19 @@ class SEOManager {
         url: string;
         image?: string;
         type?: string;
+        noindex?: boolean;
     }): void {
-        const { title, description, url, image = DEFAULT_IMAGE, type = 'website' } = options;
+        const { title, description, url, image = DEFAULT_IMAGE, type = 'website', noindex = false } = options;
 
         // Document title
         document.title = title;
 
         // Meta description
         this.setMetaTag('description', description);
+
+        // Indexing - set on every page so it resets when navigating away from
+        // an unlisted one
+        this.setMetaTag('robots', noindex ? 'noindex, nofollow' : 'index, follow');
 
         // Canonical URL
         this.setLinkTag('canonical', url);
@@ -143,13 +148,17 @@ class SEOManager {
     }
 
     /**
-     * SEO for services page
+     * SEO for services page.
+     * The page is currently unlisted: it is reachable by direct link but is
+     * not in the navigation, the sitemap, or the pre-render list, so it is
+     * marked noindex to keep it out of search results.
      */
     services(): void {
         this.updateAll({
             title: 'Services - Victor Retamal',
             description: 'ML engineering, robotics, and consulting services. Sim-to-real infrastructure, multi-agent RL, medical imaging, and computer vision for edge deployment.',
             url: `${SITE_URL}/services`,
+            noindex: true,
         });
 
         this.setJsonLd('services-jsonld', {

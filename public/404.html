@@ -3,9 +3,23 @@
 <head>
     <meta charset="utf-8">
     <title>Redirecting...</title>
+    <style>
+        /* Match the site background so the redirect does not flash white */
+        html { background: #eaf1fb; color: #33587e; }
+        body { font-family: Verdana, Geneva, Tahoma, sans-serif; font-size: 12px; padding: 24px; }
+        html[data-theme="dark"] { background: #0a0a0f; color: #9ca3af; }
+    </style>
     <script>
-        // GitHub Pages SPA redirect for custom domain
-        (function() {
+        (function () {
+            // Keep the flash in the visitor's theme
+            try {
+                var stored = localStorage.getItem('theme');
+                if (stored === 'dark' || stored === 'light') {
+                    document.documentElement.setAttribute('data-theme', stored);
+                }
+            } catch (e) { /* storage unavailable */ }
+
+            // GitHub Pages SPA redirect for custom domain
             var path = window.location.pathname;
             var search = window.location.search;
 
@@ -19,6 +33,6 @@
     </script>
 </head>
 <body>
-    <p>Redirecting...</p>
+    <p>Redirecting&hellip;</p>
 </body>
 </html>
