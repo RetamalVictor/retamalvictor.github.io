@@ -63,6 +63,7 @@ class Portfolio {
         this.router.addRoute('/', this.renderHomePage.bind(this), pages.home);
         this.router.addRoute('/blog', this.renderBlogPage.bind(this), pages.blog);
         this.router.addRoute('/blog/:slug', this.renderBlogPostPage.bind(this), pages.blog_post);
+        // Unlisted: reachable by direct link, but not in the nav or the sitemap
         this.router.addRoute('/services', this.renderServicesPage.bind(this), pages.services);
 
         // Initialize navigation module

@@ -28,10 +28,11 @@ function getRoutes() {
   const yaml = fs.readFileSync(path.join(ROOT, 'src/data/blog-posts.yaml'), 'utf-8');
   const slugs = [...yaml.matchAll(/slug:\s*"([^"]+)"/g)].map(m => m[1]);
 
+  // /services is intentionally absent: the page still resolves client-side,
+  // but it is unlisted, so it stays out of the pre-render and the sitemap.
   return [
     '/',
     '/blog',
-    '/services',
     ...slugs.map(s => `/blog/${s}`),
   ];
 }
@@ -80,9 +81,8 @@ function generateSitemap(routes) {
 
   const entries = routes.map(route => {
     const priority =
-      route === '/'        ? '1.0' :
-      route === '/blog'    ? '0.9' :
-      route === '/services' ? '0.8' : '0.7';
+      route === '/'     ? '1.0' :
+      route === '/blog' ? '0.9' : '0.7';
     const changefreq = route === '/' ? 'weekly' : 'monthly';
 
     return [
