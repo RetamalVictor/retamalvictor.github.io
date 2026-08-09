@@ -24,16 +24,25 @@ const SITE_URL = 'https://victor-retamal.com';
 // Route discovery
 // ---------------------------------------------------------------------------
 
-function getRoutes() {
+/**
+ * Posts, in the order they appear in the YAML (newest first), with the date
+ * each was published so the sitemap can carry a truthful lastmod.
+ */
+function getPosts() {
   const yaml = fs.readFileSync(path.join(ROOT, 'src/data/blog-posts.yaml'), 'utf-8');
   const slugs = [...yaml.matchAll(/slug:\s*"([^"]+)"/g)].map(m => m[1]);
+  const dates = [...yaml.matchAll(/date:\s*"([^"]+)"/g)].map(m => m[1]);
 
+  return slugs.map((slug, index) => ({ slug, date: dates[index] || null }));
+}
+
+function getRoutes() {
   // /services is intentionally absent: the page still resolves client-side,
   // but it is unlisted, so it stays out of the pre-render and the sitemap.
   return [
     '/',
     '/blog',
-    ...slugs.map(s => `/blog/${s}`),
+    ...getPosts().map(post => `/blog/${post.slug}`),
   ];
 }
 
@@ -41,7 +50,7 @@ function getRoutes() {
 // Minimal static file server with SPA fallback
 // ---------------------------------------------------------------------------
 
-function createServer() {
+function createServer(fallbackHtml) {
   const MIME = {
     '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript',
     '.css': 'text/css', '.json': 'application/json',
@@ -65,9 +74,12 @@ function createServer() {
       res.writeHead(200, { 'Content-Type': 'text/html' });
       fs.createReadStream(path.join(filePath, 'index.html')).pipe(res);
     } else {
-      // SPA fallback — serve root index.html for any unmatched path
+      // SPA fallback. This must be the pristine shell, not whatever is
+      // currently on disk: by the time posts are rendered, dist/index.html
+      // is the finished home page, and serving that would leak the home
+      // page's head - structured data included - into every post.
       res.writeHead(200, { 'Content-Type': 'text/html' });
-      fs.createReadStream(path.join(DIST, 'index.html')).pipe(res);
+      res.end(fallbackHtml);
     }
   });
 }
@@ -78,6 +90,17 @@ function createServer() {
 
 function generateSitemap(routes) {
   const today = new Date().toISOString().split('T')[0];
+  const posts = getPosts();
+
+  // A post's lastmod is the day it was published, not the day we happened to
+  // build. The listing pages move whenever the newest post does.
+  const postDates = new Map(posts.map(post => [`/blog/${post.slug}`, post.date]));
+  const newestPost = posts.map(post => post.date).filter(Boolean).sort().pop();
+
+  const lastmodFor = route => {
+    if (route === '/' || route === '/blog') return newestPost || today;
+    return postDates.get(route) || today;
+  };
 
   const entries = routes.map(route => {
     const priority =
@@ -88,7 +111,7 @@ function generateSitemap(routes) {
     return [
       '  <url>',
       `    <loc>${SITE_URL}${route}</loc>`,
-      `    <lastmod>${today}</lastmod>`,
+      `    <lastmod>${lastmodFor(route)}</lastmod>`,
       `    <changefreq>${changefreq}</changefreq>`,
       `    <priority>${priority}</priority>`,
       '  </url>',
@@ -120,7 +143,10 @@ async function prerender() {
   console.log(`\nPre-rendering ${routes.length} routes…\n`);
 
   // Start local server
-  const server = createServer();
+  // The shell as vite built it, before any route overwrites index.html
+  const fallbackHtml = fs.readFileSync(path.join(DIST, 'index.html'), 'utf-8');
+
+  const server = createServer(fallbackHtml);
   await new Promise(resolve => server.listen(PORT, resolve));
 
   const browser = await puppeteer.launch({
@@ -133,8 +159,6 @@ async function prerender() {
     ],
   });
 
-  // Keep original index.html as fallback for failed renders
-  const fallbackHtml = fs.readFileSync(path.join(DIST, 'index.html'), 'utf-8');
   let ok = 0;
 
   for (const route of routes) {

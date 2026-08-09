@@ -7,7 +7,7 @@ const SITE_NAME = 'Victor Retamal';
 const DEFAULT_IMAGE = `${SITE_URL}/images/og-image.png`;
 const DEFAULT_IMAGE_WIDTH = '1200';
 const DEFAULT_IMAGE_HEIGHT = '630';
-const TWITTER_HANDLE = '@vretamal';
+const TWITTER_HANDLE = '@Victor_Retamal_';
 
 interface BlogPostSEO {
     title: string;
@@ -18,6 +18,9 @@ interface BlogPostSEO {
 }
 
 class SEOManager {
+    /** Structured data added by the current page, cleared on navigation */
+    private jsonLdIds = new Set<string>();
+
     /**
      * Set or update a meta tag by name attribute
      */
@@ -70,6 +73,14 @@ class SEOManager {
     }): void {
         const { title, description, url, image = DEFAULT_IMAGE, type = 'website', noindex = false } = options;
 
+        // Structured data belongs to a single page
+        this.clearJsonLd();
+
+        // Article metadata must not survive onto a non-article page
+        if (type !== 'article') {
+            document.querySelectorAll('meta[property^="article:"]').forEach(node => node.remove());
+        }
+
         // Document title
         document.title = title;
 
@@ -108,8 +119,35 @@ class SEOManager {
     home(): void {
         this.updateAll({
             title: 'Victor Retamal - ML & Robotics Engineer',
-            description: 'Machine Learning Research Engineer specializing in computer vision, reinforcement learning, and multi-agent systems for robotics applications.',
+            description: 'ML and robotics engineer working on computer vision, reinforcement learning and multi-agent systems for autonomous robots.',
             url: SITE_URL,
+        });
+
+        this.setJsonLd('person-jsonld', {
+            '@context': 'https://schema.org',
+            ...this.person(),
+            description: 'ML and robotics engineer working on sim-to-real pipelines, multi-agent reinforcement learning, computer vision and medical imaging.',
+            knowsAbout: [
+                'Machine Learning',
+                'Robotics',
+                'Reinforcement Learning',
+                'Computer Vision',
+                'Multi-Agent Systems',
+                'Medical Imaging',
+            ],
+            alumniOf: {
+                '@type': 'EducationalOrganization',
+                name: 'Vrije Universiteit Amsterdam',
+            },
+        });
+
+        this.setJsonLd('website-jsonld', {
+            '@context': 'https://schema.org',
+            '@type': 'WebSite',
+            name: SITE_NAME,
+            url: SITE_URL,
+            inLanguage: 'en',
+            author: this.person(),
         });
     }
 
@@ -122,6 +160,21 @@ class SEOManager {
             description: 'Thoughts on machine learning, robotics, and engineering. Technical articles about deep learning, computer vision, and autonomous systems.',
             url: `${SITE_URL}/blog`,
         });
+
+        this.setJsonLd('blog-jsonld', {
+            '@context': 'https://schema.org',
+            '@type': 'Blog',
+            name: 'Victor Retamal - Blog',
+            description: 'Technical writing on machine learning, robotics and engineering.',
+            url: `${SITE_URL}/blog`,
+            inLanguage: 'en',
+            author: this.person(),
+        });
+
+        this.setJsonLd('breadcrumb-jsonld', this.breadcrumbs([
+            { name: 'Home', url: SITE_URL },
+            { name: 'Blog', url: `${SITE_URL}/blog` },
+        ]));
     }
 
     /**
@@ -142,9 +195,33 @@ class SEOManager {
         if (post.date) {
             this.setMetaProperty('article:published_time', post.date);
         }
-        if (post.tags && post.tags.length > 0) {
-            this.setMetaTag('keywords', post.tags.join(', '));
-        }
+        this.setMetaProperty('article:author', SITE_NAME);
+
+        this.setJsonLd('blogposting-jsonld', {
+            '@context': 'https://schema.org',
+            '@type': 'BlogPosting',
+            headline: post.title,
+            description: post.summary,
+            url,
+            mainEntityOfPage: { '@type': 'WebPage', '@id': url },
+            inLanguage: 'en',
+            image: DEFAULT_IMAGE,
+            ...(post.date ? { datePublished: post.date, dateModified: post.date } : {}),
+            ...(post.tags?.length ? { keywords: post.tags.join(', ') } : {}),
+            author: this.person(),
+            publisher: this.person(),
+            isPartOf: {
+                '@type': 'Blog',
+                name: 'Victor Retamal - Blog',
+                url: `${SITE_URL}/blog`,
+            },
+        });
+
+        this.setJsonLd('breadcrumb-jsonld', this.breadcrumbs([
+            { name: 'Home', url: SITE_URL },
+            { name: 'Blog', url: `${SITE_URL}/blog` },
+            { name: post.title, url },
+        ]));
     }
 
     /**
@@ -204,6 +281,49 @@ class SEOManager {
             document.head.appendChild(script);
         }
         script.textContent = JSON.stringify(data);
+        this.jsonLdIds.add(id);
+    }
+
+    /**
+     * Drop structured data from the page we are leaving. Without this a
+     * BlogPosting would still be describing the home page after navigating
+     * back to it.
+     */
+    private clearJsonLd(): void {
+        // Every block goes, not just the ones this instance added: a page
+        // served through the SPA fallback can arrive with structured data
+        // already baked into its head by the pre-renderer.
+        document.querySelectorAll('script[type="application/ld+json"]').forEach(node => node.remove());
+        this.jsonLdIds.clear();
+    }
+
+    /** The person behind the site, reused as author and publisher. */
+    private person(): Record<string, unknown> {
+        return {
+            '@type': 'Person',
+            name: SITE_NAME,
+            url: SITE_URL,
+            jobTitle: 'ML & Robotics Engineer',
+            sameAs: [
+                'https://github.com/RetamalVictor',
+                'https://www.linkedin.com/in/victor-retamal/',
+                'https://x.com/Victor_Retamal_',
+                'https://scholar.google.com/citations?user=rSJjk7EAAAAJ',
+            ],
+        };
+    }
+
+    private breadcrumbs(trail: Array<{ name: string; url: string }>): Record<string, unknown> {
+        return {
+            '@context': 'https://schema.org',
+            '@type': 'BreadcrumbList',
+            itemListElement: trail.map((crumb, index) => ({
+                '@type': 'ListItem',
+                position: index + 1,
+                name: crumb.name,
+                item: crumb.url,
+            })),
+        };
     }
 
 }

@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build && node scripts/prerender.mjs",
+    "build": "tsc && vite build && node scripts/og-image.mjs && node scripts/prerender.mjs",
     "build:no-prerender": "tsc && vite build",
     "build:ci": "CI=true npm run build",
     "preview": "vite preview",
