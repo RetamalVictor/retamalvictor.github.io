@@ -1,0 +1,272 @@
+{
+  "note": "Weights for the MAPF-GNN browser demo. float32, little-endian, row-major; every matrix is stored so the consumer computes x @ W. BatchNorm is folded into the preceding convolution.",
+  "dtype": "float32",
+  "fov": [
+    5,
+    5
+  ],
+  "pad": 3,
+  "sensing_range": 4,
+  "max_neighbours": 4,
+  "actions": {
+    "names": [
+      "idle",
+      "right",
+      "up",
+      "left",
+      "down"
+    ],
+    "dx": [
+      0,
+      1,
+      0,
+      -1,
+      0
+    ],
+    "dy": [
+      0,
+      0,
+      1,
+      0,
+      -1
+    ]
+  },
+  "defaults": {
+    "temperature": 3.0,
+    "horizon_factor": 3,
+    "agents": 40,
+    "board": 40,
+    "obstacle_fraction": 0.02
+  },
+  "models": {
+    "comm": {
+      "file": "comm.bin",
+      "arch": "gcn",
+      "source": "results/gnn_k3_a10b20/best_model.pt",
+      "trained_agents": 10,
+      "trained_board": 20,
+      "channels": [
+        2,
+        16,
+        16,
+        16
+      ],
+      "encoder_dim": 64,
+      "node_dim": 128,
+      "filter_number": 3,
+      "parameters": 55829,
+      "tensors": [
+        {
+          "name": "conv1.w",
+          "shape": [
+            16,
+            2,
+            3,
+            3
+          ],
+          "offset": 0,
+          "count": 288
+        },
+        {
+          "name": "conv1.b",
+          "shape": [
+            16
+          ],
+          "offset": 288,
+          "count": 16
+        },
+        {
+          "name": "conv2.w",
+          "shape": [
+            16,
+            16,
+            3,
+            3
+          ],
+          "offset": 304,
+          "count": 2304
+        },
+        {
+          "name": "conv2.b",
+          "shape": [
+            16
+          ],
+          "offset": 2608,
+          "count": 16
+        },
+        {
+          "name": "conv3.w",
+          "shape": [
+            16,
+            16,
+            3,
+            3
+          ],
+          "offset": 2624,
+          "count": 2304
+        },
+        {
+          "name": "conv3.b",
+          "shape": [
+            16
+          ],
+          "offset": 4928,
+          "count": 16
+        },
+        {
+          "name": "enc.w",
+          "shape": [
+            400,
+            64
+          ],
+          "offset": 4944,
+          "count": 25600
+        },
+        {
+          "name": "enc.b",
+          "shape": [
+            64
+          ],
+          "offset": 30544,
+          "count": 64
+        },
+        {
+          "name": "gnn.w",
+          "shape": [
+            192,
+            128
+          ],
+          "offset": 30608,
+          "count": 24576
+        },
+        {
+          "name": "act.w",
+          "shape": [
+            128,
+            5
+          ],
+          "offset": 55184,
+          "count": 640
+        },
+        {
+          "name": "act.b",
+          "shape": [
+            5
+          ],
+          "offset": 55824,
+          "count": 5
+        }
+      ]
+    },
+    "nocomm": {
+      "file": "nocomm.bin",
+      "arch": "baseline",
+      "source": "results/baseline_a10b20/best_model.pt",
+      "trained_agents": 10,
+      "trained_board": 20,
+      "channels": [
+        2,
+        16,
+        16,
+        16
+      ],
+      "encoder_dim": 64,
+      "node_dim": null,
+      "filter_number": null,
+      "parameters": 30933,
+      "tensors": [
+        {
+          "name": "conv1.w",
+          "shape": [
+            16,
+            2,
+            3,
+            3
+          ],
+          "offset": 0,
+          "count": 288
+        },
+        {
+          "name": "conv1.b",
+          "shape": [
+            16
+          ],
+          "offset": 288,
+          "count": 16
+        },
+        {
+          "name": "conv2.w",
+          "shape": [
+            16,
+            16,
+            3,
+            3
+          ],
+          "offset": 304,
+          "count": 2304
+        },
+        {
+          "name": "conv2.b",
+          "shape": [
+            16
+          ],
+          "offset": 2608,
+          "count": 16
+        },
+        {
+          "name": "conv3.w",
+          "shape": [
+            16,
+            16,
+            3,
+            3
+          ],
+          "offset": 2624,
+          "count": 2304
+        },
+        {
+          "name": "conv3.b",
+          "shape": [
+            16
+          ],
+          "offset": 4928,
+          "count": 16
+        },
+        {
+          "name": "enc.w",
+          "shape": [
+            400,
+            64
+          ],
+          "offset": 4944,
+          "count": 25600
+        },
+        {
+          "name": "enc.b",
+          "shape": [
+            64
+          ],
+          "offset": 30544,
+          "count": 64
+        },
+        {
+          "name": "act.w",
+          "shape": [
+            64,
+            5
+          ],
+          "offset": 30608,
+          "count": 320
+        },
+        {
+          "name": "act.b",
+          "shape": [
+            5
+          ],
+          "offset": 30928,
+          "count": 5
+        }
+      ]
+    }
+  }
+}
