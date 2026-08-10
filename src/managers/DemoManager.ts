@@ -3,7 +3,7 @@ import { VisualServoDemo } from '../components/VisualServoDemo.js';
 /**
  * Types for the home page demo tabs
  */
-export type DemoType = 'ibvs' | 'ternary' | 'drone-racing' | 'depth';
+export type DemoType = 'ibvs' | 'ternary' | 'drone-racing' | 'depth' | 'mapf';
 
 /**
  * Interface for demo instances
@@ -22,6 +22,7 @@ export const DEMO_HINTS: Record<DemoType, string> = {
     'ternary': 'Enter a prompt',
     'drone-racing': 'Use mouse to orbit',
     'depth': 'Allow camera access',
+    'mapf': 'Drag the sliders',
 };
 
 /**
@@ -154,6 +155,16 @@ export class DemoManager {
                     modelPath: '/assets/models/depth'
                 });
                 break;
+
+            case 'mapf':
+                // Lazy load MapfDemo
+                const { MapfDemo } = await import('../components/mapf/index.js');
+                this.currentInstance = new MapfDemo({
+                    containerId: this.containerId,
+                    modelPath: '/assets/models/mapf',
+                    compact: true
+                });
+                break;
         }
     }
 
@@ -181,8 +192,10 @@ export class DemoManager {
         const hint = document.getElementById('demo-hint');
         if (hint) {
             hint.textContent = DEMO_HINTS[demoType];
-            // Hide hint for ternary (it has its own UI)
-            hint.style.display = demoType === 'ternary' ? 'none' : 'block';
+            // Demos that ship their own labelled controls do not need the
+            // floating hint, and it would sit on top of their header.
+            const selfExplaining = demoType === 'ternary' || demoType === 'mapf';
+            hint.style.display = selfExplaining ? 'none' : 'block';
         }
     }
 

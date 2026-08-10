@@ -27,6 +27,13 @@ export interface MapfDemoConfig {
     modelPath: string;
     defaultAgents?: number;
     defaultTemperature?: number;
+    /**
+     * Fill the container's height instead of sizing the boards by their aspect
+     * ratio, and drop the chrome that duplicates what the host already shows.
+     * For the home page hero, which is a fixed-height box with its own
+     * "how it works" panel.
+     */
+    compact?: boolean;
 }
 
 /** The article's fleet sizes, plus headroom past where the story is told. */
@@ -61,6 +68,7 @@ interface Panel {
 export class MapfDemo {
     private readonly container: HTMLElement;
     private readonly config: MapfDemoConfig;
+    private readonly compact: boolean;
 
     private manifest: DemoManifest | null = null;
     private panels: Panel[] = [];
@@ -87,6 +95,7 @@ export class MapfDemo {
 
         this.container = container;
         this.config = config;
+        this.compact = config.compact ?? false;
         this.agents = config.defaultAgents ?? 40;
         this.temperature = config.defaultTemperature ?? 3;
 
@@ -275,12 +284,14 @@ export class MapfDemo {
                 ? `${alpha.toFixed(2)} over ${panel.episodes}`
                 : '—';
 
+            // Kept to one line in compact mode: the host's reset button floats
+            // over the bottom-right corner, and a wrapped stats line runs into it.
             const parts = [
                 `<span class="${home === env.numAgents ? 'text-[rgb(var(--c-green))]' : ''}">${home}/${env.numAgents} home</span>`,
-                `step ${env.time}/${this.horizon}`,
-                `all home: ${rate}`,
+                this.compact ? `${env.time}/${this.horizon}` : `step ${env.time}/${this.horizon}`,
+                this.compact ? `α ${rate.replace(' over ', '/')}` : `all home: ${rate}`,
             ];
-            if (panel.key === 'comm') {
+            if (panel.key === 'comm' && !this.compact) {
                 parts.push(`${env.meanNeighbours().toFixed(1)} neighbours`);
             }
             panel.stats.innerHTML = parts.join('<span class="opacity-40"> · </span>');
@@ -319,12 +330,15 @@ export class MapfDemo {
             this.newEpisode();
         });
 
-        const hood = this.query<HTMLButtonElement>('#mapf-hood');
-        const hoodPanel = this.query<HTMLElement>('#mapf-hood-panel');
-        hood.addEventListener('click', () => {
-            const hidden = hoodPanel.classList.toggle('hidden');
-            hood.textContent = hidden ? 'Under the hood ▾' : 'Hide details ▴';
-        });
+        // Absent in compact mode, where the host page has its own explainer.
+        const hood = this.container.querySelector<HTMLButtonElement>('#mapf-hood');
+        const hoodPanel = this.container.querySelector<HTMLElement>('#mapf-hood-panel');
+        if (hood && hoodPanel) {
+            hood.addEventListener('click', () => {
+                const hidden = hoodPanel.classList.toggle('hidden');
+                hood.textContent = hidden ? 'Under the hood ▾' : 'Hide details ▴';
+            });
+        }
     }
 
     private describeTemperature(): string {
@@ -357,32 +371,26 @@ export class MapfDemo {
         const board = boardForAgents(this.agents);
         const total = Object.values(models).reduce((sum, model) => sum + model.parameters, 0);
 
+        // In compact mode the boards take whatever height is left rather than
+        // setting it, so the whole thing fits a fixed-height host.
+        const c = this.compact;
+
         const panel = (key: string, title: string, subtitle: string) => `
-            <div class="bg-[rgb(var(--c-surface))] p-3">
-                <div class="flex items-baseline justify-between gap-2 mb-2">
-                    <span class="text-xs font-semibold uppercase tracking-wide">${title}</span>
-                    <span class="text-[10px] text-[rgb(var(--c-gray-500))]">${subtitle}</span>
+            <div class="bg-[rgb(var(--c-surface))] ${c ? 'p-2 flex flex-col min-h-0' : 'p-3'}">
+                <div class="flex items-baseline justify-between gap-2 ${c ? 'mb-1' : 'mb-2'}">
+                    <span class="text-[11px] font-semibold uppercase tracking-wide">${title}</span>
+                    ${c ? '' : `<span class="text-[10px] text-[rgb(var(--c-gray-500))]">${subtitle}</span>`}
                 </div>
-                <canvas id="mapf-canvas-${key}" class="w-full aspect-square block"></canvas>
-                <div id="mapf-stats-${key}" class="mt-2 text-[11px] font-mono text-[rgb(var(--c-gray-400))]"></div>
+                <canvas id="mapf-canvas-${key}" class="w-full block ${c ? 'flex-1 min-h-0' : 'aspect-square'}"></canvas>
+                <div id="mapf-stats-${key}" class="${c ? 'mt-1 text-[10px]' : 'mt-2 text-[11px]'} font-mono text-[rgb(var(--c-gray-400))]"></div>
             </div>`;
 
-        this.container.innerHTML = `
-        <div class="rounded-lg border border-[rgb(var(--c-border))] bg-[rgb(var(--c-surface))] overflow-hidden shadow-xl">
+        const hood = c ? '' : `
+            <button id="mapf-hood" class="text-xs text-[rgb(var(--c-gray-500))] hover:text-[rgb(var(--c-accent))] transition-colors">
+                Under the hood ▾
+            </button>`;
 
-            <div class="px-4 py-2 border-b border-[rgb(var(--c-border))] bg-[rgb(var(--c-bg))] flex items-center justify-between gap-3 flex-wrap">
-                <div class="flex items-center gap-2 min-w-0">
-                    <span class="text-[rgb(var(--c-accent))] text-sm">●</span>
-                    <span class="text-sm font-medium">Multi-robot path finding</span>
-                    <span class="text-xs text-[rgb(var(--c-gray-500))]">
-                        trained on ${comm.trainedAgents} robots · runs on any number
-                    </span>
-                </div>
-                <button id="mapf-hood" class="text-xs text-[rgb(var(--c-gray-500))] hover:text-[rgb(var(--c-accent))] transition-colors">
-                    Under the hood ▾
-                </button>
-            </div>
-
+        const hoodPanel = c ? '' : `
             <div id="mapf-hood-panel" class="hidden px-4 py-3 border-b border-[rgb(var(--c-border))] bg-[rgb(var(--c-bg))] text-xs text-[rgb(var(--c-gray-400))] space-y-1.5">
                 <p>
                     Each robot sees a ${manifest.fov[0]}×${manifest.fov[1]} patch of the board and a marker
@@ -401,36 +409,53 @@ export class MapfDemo {
                     running in this tab. Behaviour cloned from an optimal centralised planner that cannot itself
                     get past about 20 robots.
                 </p>
-            </div>
+            </div>`;
 
-            <div class="px-4 py-3 border-b border-[rgb(var(--c-border))] flex flex-wrap items-end gap-x-6 gap-y-3">
-                <label class="flex flex-col gap-1 min-w-[10rem] flex-1">
-                    <span class="text-[11px] uppercase tracking-wide text-[rgb(var(--c-gray-500))]">Fleet size</span>
-                    <input id="mapf-fleet" type="range" min="0" max="${FLEET_SIZES.length - 1}" step="1" class="w-full accent-[rgb(var(--c-accent))]">
-                    <span id="mapf-fleet-value" class="text-[11px] font-mono text-[rgb(var(--c-gray-400))]">${this.agents} robots · ${board}²</span>
-                </label>
-
-                <label class="flex flex-col gap-1 min-w-[12rem] flex-1">
-                    <span class="text-[11px] uppercase tracking-wide text-[rgb(var(--c-gray-500))]">Temperature</span>
-                    <input id="mapf-temperature" type="range" min="0" max="5" step="0.25" class="w-full accent-[rgb(var(--c-accent))]">
-                    <span id="mapf-temperature-value" class="text-[11px] font-mono text-[rgb(var(--c-gray-400))]">${this.describeTemperature()}</span>
-                </label>
-
-                <div class="flex items-center gap-2">
-                    <button id="mapf-play" class="px-3 py-1.5 text-xs rounded border border-[rgb(var(--c-border))] hover:border-[rgb(var(--c-accent))] hover:text-[rgb(var(--c-accent))] transition-colors">Pause</button>
-                    <button id="mapf-new" class="px-3 py-1.5 text-xs rounded border border-[rgb(var(--c-border))] hover:border-[rgb(var(--c-accent))] hover:text-[rgb(var(--c-accent))] transition-colors">New instance</button>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-px bg-[rgb(var(--c-border))]">
-                ${panel('nocomm', 'No communication', 'each robot decides alone')}
-                ${panel('comm', 'Communication', 'one message to the four nearest')}
-            </div>
-
+        const footer = c ? '' : `
             <div class="px-4 py-2 border-t border-[rgb(var(--c-border))] bg-[rgb(var(--c-bg))] text-[11px] text-[rgb(var(--c-gray-500))]">
                 Same obstacles, same starts, same goals, same random draws — the only difference is the graph.
                 Try 20 robots (identical), then 100. Then drag the temperature to zero and watch both freeze.
+            </div>`;
+
+        this.container.innerHTML = `
+        <div class="rounded-lg border border-[rgb(var(--c-border))] bg-[rgb(var(--c-surface))] overflow-hidden ${c ? 'h-full w-full flex flex-col' : 'shadow-xl'}">
+
+            <div class="${c ? 'px-3 py-1.5' : 'px-4 py-2'} border-b border-[rgb(var(--c-border))] bg-[rgb(var(--c-bg))] flex items-center justify-between gap-3 flex-wrap flex-shrink-0">
+                <div class="flex items-center gap-2 min-w-0">
+                    <span class="text-[rgb(var(--c-accent))] text-sm">●</span>
+                    <span class="text-sm font-medium">Multi-robot path finding</span>
+                    <span class="text-xs text-[rgb(var(--c-gray-500))]">
+                        trained on ${comm.trainedAgents} robots · runs on any number
+                    </span>
+                </div>
+                ${hood}
             </div>
+            ${hoodPanel}
+
+            <div class="${c ? 'px-3 py-2 gap-x-4 gap-y-2' : 'px-4 py-3 gap-x-6 gap-y-3'} border-b border-[rgb(var(--c-border))] flex flex-wrap items-end flex-shrink-0">
+                <label class="flex flex-col gap-1 min-w-[9rem] flex-1">
+                    <span class="text-[10px] uppercase tracking-wide text-[rgb(var(--c-gray-500))]">Fleet size</span>
+                    <input id="mapf-fleet" type="range" min="0" max="${FLEET_SIZES.length - 1}" step="1" class="w-full accent-[rgb(var(--c-accent))]">
+                    <span id="mapf-fleet-value" class="text-[10px] font-mono text-[rgb(var(--c-gray-400))]">${this.agents} robots · ${board}²</span>
+                </label>
+
+                <label class="flex flex-col gap-1 min-w-[10rem] flex-1">
+                    <span class="text-[10px] uppercase tracking-wide text-[rgb(var(--c-gray-500))]">Temperature</span>
+                    <input id="mapf-temperature" type="range" min="0" max="5" step="0.25" class="w-full accent-[rgb(var(--c-accent))]">
+                    <span id="mapf-temperature-value" class="text-[10px] font-mono text-[rgb(var(--c-gray-400))]">${this.describeTemperature()}</span>
+                </label>
+
+                <div class="flex items-center gap-2">
+                    <button id="mapf-play" class="px-2.5 py-1 text-xs rounded border border-[rgb(var(--c-border))] hover:border-[rgb(var(--c-accent))] hover:text-[rgb(var(--c-accent))] transition-colors">Pause</button>
+                    <button id="mapf-new" class="px-2.5 py-1 text-xs rounded border border-[rgb(var(--c-border))] hover:border-[rgb(var(--c-accent))] hover:text-[rgb(var(--c-accent))] transition-colors">New</button>
+                </div>
+            </div>
+
+            <div class="grid ${c ? 'grid-cols-2 flex-1 min-h-0' : 'grid-cols-1 sm:grid-cols-2'} gap-px bg-[rgb(var(--c-border))]">
+                ${panel('nocomm', 'No communication', 'each robot decides alone')}
+                ${panel('comm', 'Communication', 'one message to the four nearest')}
+            </div>
+            ${footer}
         </div>`;
     }
 

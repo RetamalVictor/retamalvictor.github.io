@@ -748,6 +748,136 @@ export const INFO_PANEL_CONTENT: Record<DemoType, InfoPanelContent> = {
             </div>
 
         `
+    },
+
+    'mapf': {
+        title: 'Decentralised Robot Fleet',
+        content: `
+            <!-- Overview -->
+            <div class="info-section">
+                <h3 class="text-accent-purple font-medium mb-2">Overview</h3>
+                <p class="text-gray-400 leading-relaxed">
+                    Every robot has its own goal and sees only a <strong class="text-white">5&times;5 patch</strong>
+                    around itself &mdash; never the whole map, never another robot's plan. A
+                    <strong class="text-white">graph neural network</strong> lets it exchange one feature vector
+                    with nearby robots before choosing a move.
+                </p>
+                <p class="text-gray-400 leading-relaxed mt-2">
+                    Both panels get the same obstacles, starts, goals and random draws. The only difference is
+                    whether the policy may use the graph.
+                </p>
+            </div>
+
+            <!-- Training -->
+            <div class="info-section">
+                <h3 class="text-accent-purple font-medium mb-2">How it was trained</h3>
+                <p class="text-gray-400 mb-3">
+                    Behaviour cloning from <strong class="text-white">Conflict-Based Search</strong>, an optimal
+                    centralised planner. CBS is exact but its cost explodes with fleet size &mdash; it is
+                    comfortable to about 20 robots and falls apart by 30.
+                </p>
+                <p class="text-gray-400">
+                    The network is trained on <strong class="text-white">10 robots</strong>. Every weight is shared
+                    across robots and every observation is local, so the fleet size appears nowhere in the model.
+                    That is the whole reason the same weights run on 200.
+                </p>
+            </div>
+
+            <!-- Architecture -->
+            <div class="info-section">
+                <h3 class="text-accent-purple font-medium mb-2">Architecture</h3>
+                <div class="bg-dark-bg rounded-lg p-3 font-mono text-xs space-y-2">
+                    <div class="text-gray-500">// per robot</div>
+                    <div class="text-gray-300">CNN(2&rarr;16&rarr;16&rarr;16) &rarr; 400 &rarr; <span class="text-accent-cyan">64</span></div>
+                    <div class="text-gray-500 mt-2">// across the fleet</div>
+                    <div class="text-gray-300">Z = concat<sub>k</sub>( <span class="text-accent-purple">&Atilde;</span><sup>k</sup> H ), k = 0..2</div>
+                    <div class="text-gray-300">H' = relu( Z &middot; W ) &rarr; <span class="text-accent-cyan">128</span> &rarr; 5 actions</div>
+                </div>
+                <div class="bg-dark-bg rounded-lg p-3 text-xs space-y-1 mt-3">
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Graph</span>
+                        <span class="text-white font-mono">4 nearest within 4 cells</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Parameters</span>
+                        <span class="text-white font-mono">55,829 + 30,933</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Weights</span>
+                        <span class="text-white font-mono">340 KB, float32</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Backend</span>
+                        <span class="text-yellow-400 font-mono">Plain TypeScript</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Temperature -->
+            <div class="info-section">
+                <h3 class="text-accent-purple font-medium mb-2">Why the temperature slider matters</h3>
+                <p class="text-gray-400 mb-3">
+                    At <strong class="text-white">temperature 0</strong> the policy takes its argmax. The
+                    environment is deterministic, so two robots that want the same cell make the same choice,
+                    collide, revert, and do it again &mdash; forever. Measured over 200 failed episodes,
+                    <strong class="text-white">98% were a single joint state repeating</strong>. No horizon
+                    escapes a fixed point.
+                </p>
+                <div class="bg-dark-bg rounded-lg p-3 text-xs space-y-1">
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">argmax</span>
+                        <span class="text-red-400 font-mono">&alpha; = 0.015</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">sample, T = 3</span>
+                        <span class="text-green-400 font-mono">&alpha; = 0.980</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">sample, T = 5</span>
+                        <span class="text-red-400 font-mono">&alpha; = 0.020</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">uniform random</span>
+                        <span class="text-red-400 font-mono">&alpha; = 0.000</span>
+                    </div>
+                </div>
+                <p class="text-gray-500 text-xs mt-2">
+                    &alpha; is the fraction of episodes where <em>every</em> robot gets home, at 40 robots.
+                    Uniform random scores zero, so the policy does the work &mdash; the noise only breaks the
+                    symmetry that freezes it. Too much and the policy's own preference is drowned out.
+                </p>
+            </div>
+
+            <!-- Scaling -->
+            <div class="info-section">
+                <h3 class="text-accent-purple font-medium mb-2">What communication is worth</h3>
+                <p class="text-gray-400 mb-3">
+                    Less than you would think, until suddenly it is everything. The board grows with the fleet so
+                    robots-per-cell stays fixed:
+                </p>
+                <div class="bg-dark-bg rounded-lg p-3 text-xs space-y-1">
+                    <div class="flex justify-between text-gray-500">
+                        <span>robots</span><span>no comms &nbsp;&middot;&nbsp; comms</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400 font-mono">20</span>
+                        <span class="text-white font-mono">0.95 &nbsp;&middot;&nbsp; 0.94</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400 font-mono">40</span>
+                        <span class="text-white font-mono">0.94 &nbsp;&middot;&nbsp; 0.93</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400 font-mono">100</span>
+                        <span class="font-mono"><span class="text-red-400">0.21</span> &nbsp;&middot;&nbsp; <span class="text-green-400">0.60</span></span>
+                    </div>
+                </div>
+                <p class="text-gray-500 text-xs mt-2">
+                    A reactive policy plus a tie-break really is enough at small scale. Set the fleet to 20 and
+                    the panels are indistinguishable; set it to 100 and watch the left one come apart.
+                </p>
+            </div>
+        `
     }
 };
 
