@@ -57,10 +57,12 @@ export class MapfEnv {
 
     time = 0;
 
+    /** Positions before the last step. The renderer interpolates from these. */
+    readonly prevX: Int32Array;
+    readonly prevY: Int32Array;
+
     private readonly startX: Int32Array;
     private readonly startY: Int32Array;
-    private readonly prevX: Int32Array;
-    private readonly prevY: Int32Array;
     private readonly newX: Int32Array;
     private readonly newY: Int32Array;
     private readonly distances: Float32Array;
@@ -116,6 +118,8 @@ export class MapfEnv {
         this.time = 0;
         this.posX.set(this.startX);
         this.posY.set(this.startY);
+        this.prevX.set(this.startX);
+        this.prevY.set(this.startY);
 
         // The board carries obstacles only. The Python stamps robots inside
         // updateBoard(), which runs during step, so the very first field of view
