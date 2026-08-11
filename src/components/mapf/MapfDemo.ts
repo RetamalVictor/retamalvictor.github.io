@@ -1,17 +1,22 @@
 /**
- * MapfDemo — two fleets, one instance, one difference.
+ * MapfDemo — a hundred robots, no plan, five cells of vision each.
  *
- * Both panels get identical starts, goals, obstacles and random streams. The
- * only thing that differs is whether the policy is allowed to exchange a feature
- * vector with its neighbours. Everything the demo claims is therefore visible
- * rather than asserted: at twenty robots the panels are indistinguishable, and
- * somewhere past a hundred the left one falls apart.
+ * Every robot sees a 5×5 patch and a bearing to its goal, exchanges one feature
+ * vector with every robot inside its radio range, and picks a move. The weights
+ * are shared and the fleet size appears nowhere in them, which is why ten
+ * robots' worth of training drives two hundred.
  *
- * The temperature slider is the other half. At zero the policy takes its argmax,
- * and since the environment is deterministic, two robots that want the same cell
- * will collide, revert, and do it again forever — the fleet freezes and no
- * amount of waiting helps. A little noise breaks the tie. Too much drowns out
- * the policy and the fleet wanders. Both failure modes are one drag apart.
+ * This was a side-by-side against a non-communicating policy. That comparison
+ * turned out to be mostly measuring how little the baseline had been trained
+ * on: retrained on the same data it goes from 0.21 to 0.79 at a hundred robots,
+ * against 0.94 here. A race that flattering to one side is not worth running,
+ * and one board at twice the size shows the mesh far better than two did.
+ *
+ * The temperature slider is the part worth playing with. At zero the policy
+ * takes its argmax, and since the environment is deterministic, two robots that
+ * want the same cell collide, revert, and do it again forever — the fleet
+ * freezes and no amount of waiting helps. A little noise breaks the tie. Too
+ * much drowns out the policy. Both failure modes are one drag apart.
  */
 
 import { VisibilityManager } from '../../utils/VisibilityManager';
@@ -204,9 +209,14 @@ export class MapfDemo {
     // ── setup ────────────────────────────────────────────────────────────
 
     private buildPanels(models: Record<string, Model>): void {
+        // One board. The demo used to race a non-communicating policy alongside
+        // this one, but that comparison was largely measuring how little the
+        // baseline had been trained on: retrained on the same data it goes from
+        // 0.21 to 0.79 at a hundred robots, against 0.94 here. A side-by-side
+        // that flattering to one side is not worth showing, and a single board
+        // twice the size shows the thing itself far better.
         const descriptions: Array<[string, string, string]> = [
-            ['nocomm', 'No communication', 'each robot decides alone'],
-            ['comm', 'Communication', 'one message to the four nearest'],
+            ['comm', 'Communication', 'one message to every robot in range'],
         ];
 
         this.panels = descriptions
@@ -555,21 +565,18 @@ export class MapfDemo {
     }
 
     /**
-     * Labels come from a sweep in the source repository (results/sensing_sweep.json),
-     * at 100 robots: alpha is 0.54 at range 2, flat at 0.60 from 3 to 6, then
-     * 0.54 at 8, 0.39 at 10 and 0.34 at 14 — worse than at range 2.
-     *
-     * Widening does not add neighbours, because only the four nearest are kept.
-     * It swaps near ones for far ones, and a message from a robot too distant to
-     * matter is worse than no message.
+     * The policy is trained at this range with no neighbour cap, so the graph
+     * really does grow with the slider — about 4.3 links per robot at the
+     * trained setting. Narrowing it starves the aggregation; widening it well
+     * past training is a distribution the network never saw.
      */
     private describeSensing(): string {
         const r = this.sensingRange;
+        const trained = this.manifest?.sensing_range ?? 8;
         const note = r <= 2 ? 'barely connected'
-            : r === 4 ? 'as trained'
-            : r <= 6 ? 'still fine'
-            : r <= 9 ? 'links reaching too far'
-            : 'far links crowd out near ones';
+            : r < trained - 1 ? 'fewer neighbours than trained'
+            : r <= trained + 1 ? 'as trained'
+            : 'wider than trained';
         return `${r} cells — ${note}`;
     }
 
@@ -601,30 +608,27 @@ export class MapfDemo {
     private renderShell(manifest: DemoManifest, models: Record<string, Model>): void {
         const comm = models.comm;
         const board = boardForAgents(this.agents);
-        const total = Object.values(models).reduce((sum, model) => sum + model.parameters, 0);
 
         // In compact mode the boards take whatever height is left rather than
         // setting it, so the whole thing fits a fixed-height host.
         const c = this.compact;
 
-        const panel = (key: string, title: string, subtitle: string) => `
-            <div class="bg-[rgb(var(--c-surface))] ${c ? 'p-2 flex flex-col min-h-0' : 'p-3'}">
-                <div class="flex items-baseline justify-between gap-2 ${c ? 'mb-1' : 'mb-2'}">
-                    <span class="text-[11px] font-semibold uppercase tracking-wide">${title}</span>
-                    ${c ? '' : `<span class="text-[10px] text-[rgb(var(--c-gray-500))]">${subtitle}</span>`}
-                </div>
-                <canvas id="mapf-canvas-${key}" class="w-full block ${c ? 'flex-1 min-h-0' : 'aspect-square'}"></canvas>
-                <div class="flex items-center justify-between gap-2 ${c ? 'mt-1' : 'mt-2'}">
-                    <div class="flex items-baseline gap-1.5 flex-shrink-0">
-                        <span id="mapf-score-${key}" class="${c ? 'text-base' : 'text-xl'} font-bold leading-none tabular-nums">—</span>
-                        <span class="text-[9px] uppercase tracking-wide text-[rgb(var(--c-gray-500))]">all home</span>
-                    </div>
-                    <!-- The host floats a reset button over this corner in compact mode. -->
-                    <div id="mapf-history-${key}" class="flex gap-[2px] flex-wrap justify-end ${c ? 'pr-8' : ''}"></div>
-                </div>
-                <div id="mapf-stats-${key}" class="${c ? 'mt-0.5 text-[10px]' : 'mt-1 text-[11px]'} font-mono text-[rgb(var(--c-gray-400))]"></div>
-            </div>`;
+        const boardCanvas = (key: string) => `
+            <canvas id="mapf-canvas-${key}" class="w-full block ${c ? 'h-full' : 'aspect-square max-h-[62vh] mx-auto'}"></canvas>`;
 
+        const readout = (key: string) => `
+            <div class="flex items-center justify-between gap-3 ${c ? '' : 'mt-3'}">
+                <div class="flex items-baseline gap-1.5 flex-shrink-0">
+                    <span id="mapf-score-${key}" class="${c ? 'text-lg' : 'text-2xl'} font-bold leading-none tabular-nums">—</span>
+                    <span class="text-[9px] uppercase tracking-wide text-[rgb(var(--c-gray-500))]">every robot home</span>
+                </div>
+                <div id="mapf-history-${key}" class="flex gap-[2px] flex-wrap justify-end"></div>
+            </div>
+            <div id="mapf-stats-${key}" class="mt-0.5 ${c ? 'text-[10px]' : 'text-[11px]'} font-mono text-[rgb(var(--c-gray-400))]"></div>`;
+
+        // One fragment, two arrangements. The hero is a short, wide box: with a
+        // single board, stacking four sliders above it leaves the board 114
+        // pixels tall. Beside it they cost nothing.
         const hood = c ? '' : `
             <button id="mapf-hood" class="text-xs text-[rgb(var(--c-gray-500))] hover:text-[rgb(var(--c-accent))] transition-colors">
                 Under the hood ▾
@@ -638,25 +642,43 @@ export class MapfDemo {
                     robot's plan. A three-layer CNN turns that into 64 numbers.
                 </p>
                 <p>
-                    The right-hand policy then aggregates over the communication graph: an edge to each of the
-                    four nearest robots within ${manifest.sensing_range} cells, ${comm.filterNumber} hops of
+                    It then aggregates over the communication graph — an edge to <em>every</em> robot within
+                    ${manifest.sensing_range} cells, ${comm.filterNumber} hops of
                     <span class="font-mono">D<sup>-½</sup>(A+I)D<sup>-½</sup></span>, and a linear head onto five
                     actions. The weights are shared by every robot and the fleet size appears nowhere in them,
                     which is the entire reason a policy trained on ${comm.trainedAgents} runs on ${FLEET_SIZES[FLEET_SIZES.length - 1]}.
                 </p>
                 <p>
-                    ${total.toLocaleString()} parameters across both policies, ${Math.round(total * 4 / 1024)} KB,
+                    ${comm.parameters.toLocaleString()} parameters, ${Math.round(comm.parameters * 4 / 1024)} KB,
                     running in this tab. Behaviour cloned from an optimal centralised planner that cannot itself
                     get past about 20 robots.
                 </p>
             </div>`;
 
-        // Without a key the boards are a hundred identical dots. Everything the
-        // demo is saying is encoded in colour, so the key is not optional.
+        // Without a key the board is a few hundred identical dots. Everything
+        // the demo is saying is encoded in colour, so the key is not optional.
         const swatch = (style: string, label: string) =>
             `<span class="flex items-center gap-1 whitespace-nowrap">${style}${label}</span>`;
         const dot = (token: string, opacity = 1, size = 7) =>
             `<i class="inline-block rounded-full" style="width:${size}px;height:${size}px;background:rgb(var(--${token}));opacity:${opacity}"></i>`;
+
+        const slider = (id: string, label: string, attrs: string, value: string) => `
+            <label class="flex flex-col gap-1 ${c ? '' : 'min-w-[9rem] flex-1'}">
+                <span class="text-[10px] uppercase tracking-wide text-[rgb(var(--c-gray-500))]">${label}</span>
+                <input id="mapf-${id}" type="range" ${attrs} class="w-full accent-[rgb(var(--c-accent))]">
+                <span id="mapf-${id}-value" class="text-[10px] font-mono text-[rgb(var(--c-gray-400))]">${value}</span>
+            </label>`;
+
+        const controls = `
+            ${slider('fleet', 'Fleet size', `min="0" max="${FLEET_SIZES.length - 1}" step="1"`,
+                     `${this.agents} robots · ${board}²`)}
+            ${slider('obstacles', 'Obstacles', 'min="0" max="15" step="1"', this.describeObstacles())}
+            ${slider('sensing', 'Radio range', 'min="2" max="14" step="1"', this.describeSensing())}
+            ${slider('temperature', 'Temperature', 'min="0" max="5" step="0.25"', this.describeTemperature())}
+            <div class="flex items-center gap-2">
+                <button id="mapf-play" class="px-2.5 py-1 text-xs rounded border border-[rgb(var(--c-border))] hover:border-[rgb(var(--c-accent))] hover:text-[rgb(var(--c-accent))] transition-colors">Pause</button>
+                <button id="mapf-new" class="px-2.5 py-1 text-xs rounded border border-[rgb(var(--c-border))] hover:border-[rgb(var(--c-accent))] hover:text-[rgb(var(--c-accent))] transition-colors">New</button>
+            </div>`;
 
         const legend = `
             <div class="${c ? 'px-3 py-1' : 'px-4 py-2'} border-t border-[rgb(var(--c-border))] bg-[rgb(var(--c-bg))]
@@ -671,9 +693,9 @@ export class MapfDemo {
 
         const footer = c ? '' : `
             <div class="px-4 py-2 border-t border-[rgb(var(--c-border))] bg-[rgb(var(--c-bg))] text-[11px] text-[rgb(var(--c-gray-500))]">
-                An episode counts only when <em>every</em> robot is home, so the last few stragglers decide it —
-                which is why arrived robots fade out. Same obstacles, starts, goals and random draws on both
-                sides; the only difference is the graph. Try 20 robots (identical), then 100.
+                No robot can see more than five cells around itself, and none of them has a plan. An episode
+                counts only when <em>every</em> robot is home, so the last few stragglers decide it — which is
+                why arrived robots fade out. Drag the temperature to zero to watch the fleet freeze solid.
             </div>`;
 
         this.container.innerHTML = `
@@ -691,43 +713,26 @@ export class MapfDemo {
             </div>
             ${hoodPanel}
 
-            <div class="${c ? 'px-3 py-2 gap-x-4 gap-y-2' : 'px-4 py-3 gap-x-6 gap-y-3'} border-b border-[rgb(var(--c-border))] flex flex-wrap items-end flex-shrink-0">
-                <label class="flex flex-col gap-1 min-w-[9rem] flex-1">
-                    <span class="text-[10px] uppercase tracking-wide text-[rgb(var(--c-gray-500))]">Fleet size</span>
-                    <input id="mapf-fleet" type="range" min="0" max="${FLEET_SIZES.length - 1}" step="1" class="w-full accent-[rgb(var(--c-accent))]">
-                    <span id="mapf-fleet-value" class="text-[10px] font-mono text-[rgb(var(--c-gray-400))]">${this.agents} robots · ${board}²</span>
-                </label>
-
-                <label class="flex flex-col gap-1 min-w-[9rem] flex-1">
-                    <span class="text-[10px] uppercase tracking-wide text-[rgb(var(--c-gray-500))]">Obstacles</span>
-                    <input id="mapf-obstacles" type="range" min="0" max="15" step="1" class="w-full accent-[rgb(var(--c-accent))]">
-                    <span id="mapf-obstacles-value" class="text-[10px] font-mono text-[rgb(var(--c-gray-400))]">${this.describeObstacles()}</span>
-                </label>
-
-                <label class="flex flex-col gap-1 min-w-[9rem] flex-1">
-                    <span class="text-[10px] uppercase tracking-wide text-[rgb(var(--c-gray-500))]">Radio range</span>
-                    <input id="mapf-sensing" type="range" min="2" max="14" step="1" class="w-full accent-[rgb(var(--c-accent))]">
-                    <span id="mapf-sensing-value" class="text-[10px] font-mono text-[rgb(var(--c-gray-400))]">${this.describeSensing()}</span>
-                </label>
-
-                <label class="flex flex-col gap-1 min-w-[9rem] flex-1">
-                    <span class="text-[10px] uppercase tracking-wide text-[rgb(var(--c-gray-500))]">Temperature</span>
-                    <input id="mapf-temperature" type="range" min="0" max="5" step="0.25" class="w-full accent-[rgb(var(--c-accent))]">
-                    <span id="mapf-temperature-value" class="text-[10px] font-mono text-[rgb(var(--c-gray-400))]">${this.describeTemperature()}</span>
-                </label>
-
-                <div class="flex items-center gap-2">
-                    <button id="mapf-play" class="px-2.5 py-1 text-xs rounded border border-[rgb(var(--c-border))] hover:border-[rgb(var(--c-accent))] hover:text-[rgb(var(--c-accent))] transition-colors">Pause</button>
-                    <button id="mapf-new" class="px-2.5 py-1 text-xs rounded border border-[rgb(var(--c-border))] hover:border-[rgb(var(--c-accent))] hover:text-[rgb(var(--c-accent))] transition-colors">New</button>
+            ${c ? `
+            <div class="flex-1 min-h-0 flex">
+                <div class="w-[11.5rem] flex-shrink-0 border-r border-[rgb(var(--c-border))] flex flex-col">
+                    <!-- The score sits above the scroll area: it is the one number
+                         worth watching, and it must not be the thing that gets cut. -->
+                    <div class="px-3 pt-2 pb-1.5 border-b border-[rgb(var(--c-border))]">${readout('comm')}</div>
+                    <div class="px-3 py-2 flex flex-col gap-2 overflow-y-auto min-h-0">${controls}</div>
                 </div>
+                <div class="flex-1 min-h-0 p-2">${boardCanvas('comm')}</div>
             </div>
-
-            <div class="grid ${c ? 'grid-cols-2 flex-1 min-h-0' : 'grid-cols-1 sm:grid-cols-2'} gap-px bg-[rgb(var(--c-border))]">
-                ${panel('nocomm', 'No communication', 'each robot decides alone')}
-                ${panel('comm', 'Communication', 'one message to the four nearest')}
+            ${legend}` : `
+            <div class="px-4 py-3 gap-x-6 gap-y-3 border-b border-[rgb(var(--c-border))] flex flex-wrap items-end">
+                ${controls}
+            </div>
+            <div class="p-3">
+                ${boardCanvas('comm')}
+                ${readout('comm')}
             </div>
             ${legend}
-            ${footer}
+            ${footer}`}
         </div>`;
     }
 

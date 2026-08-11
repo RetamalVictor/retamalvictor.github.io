@@ -42,6 +42,13 @@ export class MapfEnv {
     readonly numAgents: number;
     /** Assignable: the demo exposes it, and the graph is rebuilt every step. */
     sensingRange: number;
+    /**
+     * How many neighbours a robot may aggregate over; 0 means every robot in
+     * range. Capping it limits message bandwidth but also makes a wider sensing
+     * range pointless — it swaps close neighbours for distant ones instead of
+     * adding any.
+     */
+    maxNeighbours: number;
     readonly pad: number;
     /** Side of the field-of-view patch, `pad * 2 - 1`. */
     readonly side: number;
@@ -88,11 +95,14 @@ export class MapfEnv {
     private readonly newY: Int32Array;
     private readonly distances: Float32Array;
     private readonly occupancy: Int32Array;
+    /** Scratch for the k-nearest selection; unused when uncapped. */
+    private readonly nearest: Float32Array;
 
     constructor(config: EnvConfig, instance: Instance) {
         this.board = instance.board;
         this.numAgents = instance.starts.length;
         this.sensingRange = config.sensingRange;
+        this.maxNeighbours = config.maxNeighbours;
         this.pad = config.pad;
         this.side = config.pad * 2 - 1;
 
@@ -119,6 +129,7 @@ export class MapfEnv {
         this.adjacency = new Float32Array(n * n);
         this.distances = new Float32Array(n * n);
         this.occupancy = new Int32Array(area);
+        this.nearest = new Float32Array(Math.max(1, config.maxNeighbours));
         this.fov = new Float32Array(n * 2 * this.side * this.side);
 
         this.load(instance);
@@ -240,18 +251,20 @@ export class MapfEnv {
     }
 
     /**
-     * Nearest-four communication graph within the sensing range.
+     * Communication graph: the nearest `maxNeighbours` robots within range, or
+     * every robot in range when the cap is zero.
      *
-     * A robot with fewer than four neighbours keeps all of them, and ties at the
-     * fourth distance are all kept — both follow from comparing against the
-     * fourth-smallest distance rather than taking a fixed-size top-k.
+     * A robot with fewer neighbours than the cap keeps all of them, and ties at
+     * the cut-off distance are all kept — both follow from comparing against the
+     * k-th smallest distance rather than taking a fixed-size top-k.
      *
-     * The result is *not* symmetric: `j` can be among `i`'s four nearest while
-     * `i` is not among `j`'s.
+     * The result is *not* symmetric: `j` can be among `i`'s nearest while `i`
+     * is not among `j`'s.
      */
     private computeGraph(): void {
         const n = this.numAgents;
         const range = this.sensingRange;
+        const cap = this.maxNeighbours;
         this.adjacency.fill(0);
 
         for (let i = 0; i < n; i++) {
@@ -268,22 +281,41 @@ export class MapfEnv {
             this.distances[i * n + i] = 0;
         }
 
+        // Uncapped: everything in range is a neighbour, which is what the degree
+        // normalisation inside the graph filter exists to make safe.
+        if (!cap || cap >= n) {
+            for (let i = 0; i < n; i++) {
+                const row = i * n;
+                for (let j = 0; j < n; j++) {
+                    if (this.distances[row + j] > 0) this.adjacency[row + j] = 1;
+                }
+            }
+            return;
+        }
+
         for (let i = 0; i < n; i++) {
             const row = i * n;
-            // Four smallest strictly-positive distances. Distances of zero mean
-            // "out of range" or "self", never "adjacent".
-            let t0 = Infinity, t1 = Infinity, t2 = Infinity, t3 = Infinity;
+            // Keep the k smallest strictly-positive distances, by insertion into
+            // a k-slot buffer. Distances of zero mean "out of range" or "self",
+            // never "adjacent". Slots left at infinity mean the robot has fewer
+            // than k neighbours, so the threshold drops nothing.
+            const best = this.nearest;
+            best.fill(Infinity);
+            const last = cap - 1;
             for (let j = 0; j < n; j++) {
                 const d = this.distances[row + j];
-                if (d <= 0) continue;
-                if (d < t0) { t3 = t2; t2 = t1; t1 = t0; t0 = d; }
-                else if (d < t1) { t3 = t2; t2 = t1; t1 = d; }
-                else if (d < t2) { t3 = t2; t2 = d; }
-                else if (d < t3) { t3 = d; }
+                if (d <= 0 || d >= best[last]) continue;
+                let slot = last;
+                while (slot > 0 && best[slot - 1] > d) {
+                    best[slot] = best[slot - 1];
+                    slot--;
+                }
+                best[slot] = d;
             }
+            const threshold = best[last];
             for (let j = 0; j < n; j++) {
                 const d = this.distances[row + j];
-                if (d > 0 && d <= t3) this.adjacency[row + j] = 1;
+                if (d > 0 && d <= threshold) this.adjacency[row + j] = 1;
             }
         }
     }

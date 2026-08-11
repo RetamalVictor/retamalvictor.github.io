@@ -6,8 +6,8 @@
     5
   ],
   "pad": 3,
-  "sensing_range": 4,
-  "max_neighbours": 4,
+  "sensing_range": 8,
+  "max_neighbours": 0,
   "actions": {
     "names": [
       "idle",
@@ -42,7 +42,7 @@
     "comm": {
       "file": "comm.bin",
       "arch": "gcn",
-      "source": "results/gnn_k3_a10b20/best_model.pt",
+      "source": "results/gnn_k3_dense_r8/best_model.pt",
       "trained_agents": 10,
       "trained_board": 20,
       "channels": [
@@ -161,7 +161,7 @@
     "nocomm": {
       "file": "nocomm.bin",
       "arch": "baseline",
-      "source": "results/baseline_a10b20/best_model.pt",
+      "source": "results/baseline_dense/best_model.pt",
       "trained_agents": 10,
       "trained_board": 20,
       "channels": [
