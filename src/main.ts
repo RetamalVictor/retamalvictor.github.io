@@ -100,6 +100,20 @@ class Portfolio {
             this.attachLinkNavigation();
         }
 
+        // Navigating to the blog and back rebuilds the hero, so the element the
+        // demo mounted into is replaced by a fresh one still carrying its
+        // "Loading 3D scene" placeholder. Guarding purely on `!this.demoManager`
+        // meant it was never rebuilt: the placeholder sat there for good, while
+        // the previous demo kept running against a node detached from the page.
+        if (this.demoManager && !this.demoManager.isMounted()) {
+            this.demoManager.destroy();
+            this.demoManager = null;
+            this.infoPanel?.destroy();
+            this.infoPanel = null;
+            this.expandableDemo?.destroy();
+            this.expandableDemo = null;
+        }
+
         // Initialize interactive features (guarded against re-init)
         if (!this.demoManager) {
             this.setupThreeViewers();

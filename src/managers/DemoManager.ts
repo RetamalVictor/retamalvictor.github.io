@@ -56,6 +56,8 @@ export class DemoManager {
     private onDemoChange: DemoChangeCallback | null = null;
     /** Heavy demos the reader has already accepted the download for. */
     private confirmed = new Set<DemoType>();
+    /** The element this manager actually mounted into. */
+    private mountedOn: HTMLElement | null = null;
 
     constructor(containerId: string) {
         this.containerId = containerId;
@@ -73,9 +75,25 @@ export class DemoManager {
 
         // Initialize default demo (Drone Racing)
         container.innerHTML = '';
+        this.mountedOn = container;
         await this.createDemo(this.activeDemo, container);
 
         this.setupTabs();
+    }
+
+    /**
+     * Is this manager still attached to the element currently on the page?
+     *
+     * Navigating away and back rebuilds the hero, so the element this mounted
+     * into is replaced by a fresh one carrying its "Loading 3D scene"
+     * placeholder. A manager holding the old node will never paint again, and
+     * worse, keeps its demo running against a detached element that nobody can
+     * see and no visibility observer will pause.
+     */
+    public isMounted(): boolean {
+        return this.mountedOn !== null
+            && this.mountedOn.isConnected
+            && this.mountedOn === document.getElementById(this.containerId);
     }
 
     /**
@@ -307,5 +325,6 @@ export class DemoManager {
      */
     public destroy(): void {
         this.destroyCurrentInstance();
+        this.mountedOn = null;
     }
 }
