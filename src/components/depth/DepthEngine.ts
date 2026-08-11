@@ -8,18 +8,42 @@
 // Import WebGPU build which includes both WebGPU and WASM backends
 import * as ort from 'onnxruntime-web/webgpu';
 
+import { isMemoryConstrained } from '../../utils/deviceCapability';
+
 export interface DepthEngineConfig {
+    file: string;
+    label: string;
+    sizeMB: number;
     inputSize: number;
     inputName: string;
     outputName: string;
     normalizeMean: number[];
     normalizeStd: number[];
+    /**
+     * True when the model predicts distance rather than the inverse of it.
+     *
+     * MiDaS emits inverse depth, so near is a large number. FastDepth emits
+     * metric depth, so near is a small one. Everything downstream normalises
+     * between the minimum and maximum and then applies a colour map, so
+     * negating the raw output is enough to put both on the same footing —
+     * without it, the light model renders with near and far swapped.
+     */
+    invertDepth: boolean;
 }
+
+/** What `config.json` in the model directory holds. */
+interface DepthModelManifest {
+    variants: Record<'full' | 'light', DepthEngineConfig>;
+}
+
+export type DepthVariant = 'full' | 'light';
 
 export interface DepthEngineStats {
     modelSizeMB: number;
     backend: 'webgpu' | 'wasm';
     lastLatencyMs: number;
+    /** Which model is loaded, for the UI to report honestly. */
+    modelLabel: string;
 }
 
 /** Callback for backend status updates */
@@ -41,9 +65,10 @@ export class DepthEngine {
     private constructor(config: DepthEngineConfig) {
         this.config = config;
         this.stats = {
-            modelSizeMB: 0,
+            modelSizeMB: config.sizeMB,
             backend: 'wasm',
-            lastLatencyMs: 0
+            lastLatencyMs: 0,
+            modelLabel: config.label
         };
 
         // Create reusable canvas for resizing
@@ -61,20 +86,36 @@ export class DepthEngine {
      * @param modelPath - Path to model directory
      * @param onBackend - Callback when backend is determined (for UI warnings)
      */
-    static async create(modelPath: string, onBackend?: BackendCallback): Promise<DepthEngine> {
-        // Load config
+    static async create(
+        modelPath: string,
+        onBackend?: BackendCallback,
+        variant?: DepthVariant
+    ): Promise<DepthEngine> {
         const configResponse = await fetch(`${modelPath}/config.json`);
-        const config: DepthEngineConfig = await configResponse.json();
+        const manifest: DepthModelManifest = await configResponse.json();
+
+        // A phone gets the 5.5 MB model. MiDaS is 66 MB of ONNX, and the
+        // runtime keeps its own copy in the WASM heap while it optimises the
+        // graph, which is enough to lose the tab in mobile Safari. FastDepth is
+        // visibly coarser — it was trained on indoor scenes — but a working
+        // demo beats a reload.
+        const chosen = variant ?? (isMemoryConstrained() ? 'light' : 'full');
+        const config = manifest.variants[chosen];
+        if (!config) throw new Error(`Depth model config has no "${chosen}" variant`);
 
         const engine = new DepthEngine(config);
+        const modelUrl = `${modelPath}/${config.file}`;
 
-        const modelUrl = `${modelPath}/midas_v21_small_256.onnx`;
-
-        // First, get model size
+        // Model size for the stats readout, from the headers.
+        //
+        // This used to fetch the whole model into a Blob just to read .size,
+        // and then hand the *URL* to InferenceSession.create, which downloads
+        // it all over again: 128 MB of transfer for a 64 MB model, with both
+        // copies briefly alive. On a phone that is enough to lose the tab.
         try {
-            const modelResponse = await fetch(modelUrl);
-            const modelBlob = await modelResponse.blob();
-            engine.stats.modelSizeMB = modelBlob.size / (1024 * 1024);
+            const head = await fetch(modelUrl, { method: 'HEAD' });
+            const length = head.headers.get('content-length');
+            if (length) engine.stats.modelSizeMB = Number(length) / (1024 * 1024);
         } catch (e) {
             console.warn('[DepthEngine] Could not determine model size:', e);
         }
@@ -164,6 +205,13 @@ export class DepthEngine {
         // Get depth output
         const depthTensor = results[this.config.outputName];
         const depthData = depthTensor.data as Float32Array;
+
+        // Put every model on the same convention: larger means nearer, as MiDaS
+        // already reports. Consumers normalise between min and max before
+        // colouring, so negation is enough and cannot divide by zero.
+        if (this.config.invertDepth) {
+            for (let i = 0; i < depthData.length; i++) depthData[i] = -depthData[i];
+        }
 
         // Update stats
         this.stats.lastLatencyMs = performance.now() - startTime;

@@ -1,4 +1,6 @@
 import { VisualServoDemo } from '../components/VisualServoDemo.js';
+// Shared with the depth demo, which uses it to pick which model to fetch.
+import { isMemoryConstrained } from '../utils/deviceCapability.js';
 
 /**
  * Types for the home page demo tabs
@@ -30,6 +32,20 @@ export const DEMO_HINTS: Record<DemoType, string> = {
 export type DemoChangeCallback = (demoType: DemoType) => void;
 
 /**
+ * Roughly what a demo downloads on a device we consider constrained.
+ *
+ * Depth is absent deliberately: it now serves a 5.5 MB model to phones and
+ * keeps the 66 MB one for everything else, so there is nothing to warn about.
+ * The ternary demo has only one model and it is 39 MB.
+ */
+const DEMO_DOWNLOAD_MB: Partial<Record<DemoType, number>> = {
+    'ternary': 39,
+};
+
+/** Above this, ask before downloading on a device that may not survive it. */
+const CONFIRM_ABOVE_MB = 20;
+
+/**
  * Manages demo lifecycle: switching, reset, destroy
  */
 export class DemoManager {
@@ -37,6 +53,8 @@ export class DemoManager {
     private activeDemo: DemoType = 'drone-racing';
     private currentInstance: DemoInstance | null = null;
     private onDemoChange: DemoChangeCallback | null = null;
+    /** Heavy demos the reader has already accepted the download for. */
+    private confirmed = new Set<DemoType>();
 
     constructor(containerId: string) {
         this.containerId = containerId;
@@ -119,6 +137,52 @@ export class DemoManager {
      * Create the demo instance based on type
      */
     private async createDemo(demoType: DemoType, container: HTMLElement): Promise<void> {
+        container.innerHTML = '';
+
+        const download = DEMO_DOWNLOAD_MB[demoType] ?? 0;
+        if (download >= CONFIRM_ABOVE_MB && isMemoryConstrained() && !this.confirmed.has(demoType)) {
+            this.renderDownloadGate(demoType, download, container);
+            return;
+        }
+
+        await this.instantiate(demoType, container);
+    }
+
+    /**
+     * Ask before pulling a large model onto a phone.
+     *
+     * Loading it unasked is how the tab dies: the reader taps a tab expecting a
+     * demo and gets a reload instead, with nothing to explain it. Given the
+     * choice they can still go ahead — it is their data and their battery.
+     */
+    private renderDownloadGate(demoType: DemoType, megabytes: number, container: HTMLElement): void {
+        container.innerHTML = `
+            <div class="h-full flex items-center justify-center p-6 text-center">
+                <div class="max-w-xs">
+                    <div class="text-sm text-gray-300 mb-1">This demo downloads ${megabytes} MB</div>
+                    <p class="text-xs text-gray-500 mb-4">
+                        It runs a neural network in the page. On a phone that is enough memory
+                        to reload the tab.
+                    </p>
+                    <button id="demo-load-anyway"
+                            class="px-4 py-2 rounded-lg text-sm border border-accent-cyan/40 text-accent-cyan
+                                   hover:bg-accent-cyan/10 transition-colors">
+                        Load it anyway
+                    </button>
+                </div>
+            </div>`;
+
+        container.querySelector('#demo-load-anyway')?.addEventListener('click', () => {
+            this.confirmed.add(demoType);
+            container.innerHTML = '<div class="h-full flex items-center justify-center text-gray-500 text-sm"><div class="animate-pulse">Loading…</div></div>';
+            this.instantiate(demoType, container).catch(error => {
+                console.error(`Failed to load ${demoType} demo:`, error);
+                container.innerHTML = '<div class="text-center text-red-400 p-8">Failed to load demo</div>';
+            });
+        });
+    }
+
+    private async instantiate(demoType: DemoType, container: HTMLElement): Promise<void> {
         container.innerHTML = '';
 
         switch (demoType) {
