@@ -70,11 +70,16 @@ export class DepthEngine {
 
         const modelUrl = `${modelPath}/midas_v21_small_256.onnx`;
 
-        // First, get model size
+        // Model size for the stats readout, from the headers.
+        //
+        // This used to fetch the whole model into a Blob just to read .size,
+        // and then hand the *URL* to InferenceSession.create, which downloads
+        // it all over again: 128 MB of transfer for a 64 MB model, with both
+        // copies briefly alive. On a phone that is enough to lose the tab.
         try {
-            const modelResponse = await fetch(modelUrl);
-            const modelBlob = await modelResponse.blob();
-            engine.stats.modelSizeMB = modelBlob.size / (1024 * 1024);
+            const head = await fetch(modelUrl, { method: 'HEAD' });
+            const length = head.headers.get('content-length');
+            if (length) engine.stats.modelSizeMB = Number(length) / (1024 * 1024);
         } catch (e) {
             console.warn('[DepthEngine] Could not determine model size:', e);
         }
