@@ -36,7 +36,11 @@
     "horizon_factor": 3,
     "agents": 100,
     "board": 63,
-    "obstacle_fraction": 0.02
+    "obstacle_fraction": 0.02,
+    "trained_obstacles": [
+      0.02,
+      0.15
+    ]
   },
   "models": {
     "comm": {

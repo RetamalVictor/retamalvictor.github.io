@@ -44,6 +44,8 @@ export interface DemoManifest {
         agents: number;
         board: number;
         obstacle_fraction: number;
+        /** [min, max] obstacle density the policy was trained across. */
+        trained_obstacles?: [number, number];
     };
     models: Record<string, ModelManifest>;
 }

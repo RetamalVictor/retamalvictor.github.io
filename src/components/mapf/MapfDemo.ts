@@ -640,25 +640,29 @@ export class MapfDemo {
     }
 
     /**
-     * The policy was cloned from demonstrations on boards with 2% obstacles, so
-     * anything above that is out-of-distribution and says so.
+     * Say honestly whether this density is one the policy has seen.
+     *
+     * The range comes from the manifest, derived at export from the dataset
+     * directories the model was actually trained on. It used to be hardcoded to
+     * "2% or it is out of distribution", which was true of the previous model
+     * and became a lie the moment the curriculum grew to span 2-15%.
      */
     private describeObstacles(): string {
         const board = boardForAgents(this.agents);
         const count = Math.round(board * board * this.obstacleFraction);
         const percent = Math.round(this.obstacleFraction * 100);
-        const note = percent === 0 ? ' — open board'
-            : percent <= 2 ? ' — as trained'
-            : ' — beyond training';
-        return `${percent}% · ${count} cells${note}`;
+        const range = this.manifest?.defaults.trained_obstacles;
+
+        let note: string;
+        if (percent === 0) note = 'open board';
+        else if (!range) note = `${count} cells`;
+        else if (this.obstacleFraction < range[0]) note = 'sparser than trained';
+        else if (this.obstacleFraction > range[1]) note = 'denser than trained';
+        else note = `within training ${Math.round(range[0] * 100)}–${Math.round(range[1] * 100)}%`;
+
+        return `${percent}% · ${count} cells — ${note}`;
     }
 
-    /**
-     * The policy is trained at this range with no neighbour cap, so the graph
-     * really does grow with the slider — about 4.3 links per robot at the
-     * trained setting. Narrowing it starves the aggregation; widening it well
-     * past training is a distribution the network never saw.
-     */
     private describeSensing(): string {
         const r = this.sensingRange;
         const trained = this.manifest?.sensing_range ?? 8;
