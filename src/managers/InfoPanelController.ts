@@ -8,6 +8,95 @@ export interface InfoPanelContent {
     content: string;
 }
 
+/* ---------------------------------------------------------------------------
+   Small builders for the MAPF panel.
+
+   That panel is mostly structure - grids, pipelines, comparison rows - and
+   written out longhand it is several hundred lines of near-identical markup
+   that nobody will keep consistent.
+   --------------------------------------------------------------------------- */
+
+/** One 5x5 observation channel. 9 marks the robot itself. */
+function cells(values: number[]): string {
+    const style: Record<number, string> = {
+        0: 'bg-dark-surface text-gray-700',
+        1: 'bg-accent-cyan/20 text-accent-cyan',
+        2: 'bg-gray-500/40 text-gray-300',
+        3: 'bg-accent-purple/30 text-accent-purple',
+        9: 'bg-accent-cyan text-dark-bg font-bold',
+    };
+    return values
+        .map(v => `<div class="w-4 h-4 flex items-center justify-center rounded-[2px] ${style[v]}">${v === 9 ? '&bull;' : v || ''}</div>`)
+        .join('');
+}
+
+/** One layer of the network: what it is, what comes out, and an aside. */
+function stage(name: string, shape: string, note: string): string {
+    return `
+        <div class="flex items-baseline justify-between gap-2 py-1 border-b border-dark-border/50 last:border-0">
+            <span class="text-gray-300">${name}</span>
+            <span class="flex items-baseline gap-2 flex-shrink-0">
+                ${note ? `<span class="text-gray-600 text-[10px]">${note}</span>` : ''}
+                <span class="text-accent-cyan font-mono">${shape}</span>
+            </span>
+        </div>`;
+}
+
+/** One numbered stage of the training pipeline. */
+function step(index: string, title: string, detail: string, accent: string): string {
+    return `
+        <div class="flex gap-2 items-start">
+            <span class="${accent} font-mono font-bold flex-shrink-0">${index}</span>
+            <div>
+                <div class="text-white font-medium">${title}</div>
+                <div class="text-gray-400">${detail}</div>
+            </div>
+        </div>`;
+}
+
+/** The labelled arrow between two pipeline stages. */
+function arrow(label: string): string {
+    return `
+        <div class="flex gap-2 items-center py-1 pl-1">
+            <span class="text-gray-600">&darr;</span>
+            <span class="text-gray-500 text-[10px]">${label}</span>
+        </div>`;
+}
+
+/** A label and a value on one line. */
+function row(label: string, value: string, accent: string): string {
+    return `
+        <div class="flex justify-between">
+            <span class="text-gray-400">${label}</span>
+            <span class="${accent} font-mono">&alpha; = ${value}</span>
+        </div>`;
+}
+
+/** A fleet size and the two success rates, with the decisive one called out. */
+function versus(robots: string, nocomm: string, comm: string, decisive: boolean): string {
+    const left = decisive ? 'text-red-400' : 'text-white';
+    const right = decisive ? 'text-green-400' : 'text-white';
+    return `
+        <div class="flex justify-between">
+            <span class="text-gray-400 font-mono">${robots}</span>
+            <span class="font-mono">
+                <span class="${left}">${nocomm}</span> &nbsp;&middot;&nbsp; <span class="${right}">${comm}</span>
+            </span>
+        </div>`;
+}
+
+/** A communication radius, how many links it yields, and what it scores. */
+function range(label: string, links: string, alpha: string, note: string): string {
+    const tone = Number(alpha) >= 0.55 ? 'text-green-400'
+        : Number(alpha) >= 0.45 ? 'text-white'
+        : 'text-red-400';
+    return `
+        <div class="flex justify-between">
+            <span class="text-gray-400 font-mono">${label}${note ? `<span class="text-gray-600 ml-1">${note}</span>` : ''}</span>
+            <span class="font-mono"><span class="text-gray-500">${links}</span> &nbsp;&middot;&nbsp; <span class="${tone}">${alpha}</span></span>
+        </div>`;
+}
+
 /**
  * Info panel content for each demo type
  */
@@ -747,6 +836,169 @@ export const INFO_PANEL_CONTENT: Record<DemoType, InfoPanelContent> = {
                 </div>
             </div>
 
+        `
+    },
+
+    'mapf': {
+        title: 'Decentralised Robot Fleet',
+        content: `
+            <!-- What a robot knows -->
+            <div class="info-section">
+                <h3 class="text-accent-purple font-medium mb-2">What one robot knows</h3>
+                <p class="text-gray-400 mb-3">
+                    Not the map. Not anyone's plan. Two 5&times;5 grids:
+                </p>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-dark-bg rounded-lg p-3">
+                        <div class="text-[10px] uppercase tracking-wide text-gray-500 mb-2">channel 0 &mdash; what is around</div>
+                        <div class="grid grid-cols-5 gap-[2px] w-max mx-auto font-mono text-[9px] leading-none">
+                            ${cells([0,0,2,0,0, 0,0,0,0,1, 0,0,9,0,0, 1,0,0,0,0, 0,2,0,0,0])}
+                        </div>
+                        <div class="text-[10px] text-gray-500 mt-2 text-center">obstacle 2 &middot; robot 1 &middot; free 0</div>
+                    </div>
+                    <div class="bg-dark-bg rounded-lg p-3">
+                        <div class="text-[10px] uppercase tracking-wide text-gray-500 mb-2">channel 1 &mdash; which way home</div>
+                        <div class="grid grid-cols-5 gap-[2px] w-max mx-auto font-mono text-[9px] leading-none">
+                            ${cells([0,0,0,0,3, 0,0,0,0,0, 0,0,9,0,0, 0,0,0,0,0, 0,0,0,0,0])}
+                        </div>
+                        <div class="text-[10px] text-gray-500 mt-2 text-center">goal pinned to the edge</div>
+                    </div>
+                </div>
+                <p class="text-gray-500 text-xs mt-2">
+                    The goal is almost never inside the window, so it is projected onto the rim: the robot is
+                    told a <em>direction</em>, not a position.
+                </p>
+            </div>
+
+            <!-- Network -->
+            <div class="info-section">
+                <h3 class="text-accent-purple font-medium mb-2">The network</h3>
+                <div class="bg-dark-bg rounded-lg p-3 text-xs">
+                    <div class="text-[10px] uppercase tracking-wide text-accent-cyan mb-2">per robot, alone</div>
+                    ${stage('input', '2 &times; 5 &times; 5', '')}
+                    ${stage('conv 3&times;3 &times; 3', '16 &times; 5 &times; 5', '+ BatchNorm, ReLU')}
+                    ${stage('flatten &rarr; linear', '64', 'its view, compressed')}
+
+                    <div class="text-[10px] uppercase tracking-wide text-accent-purple mt-3 mb-2">across the fleet</div>
+                    ${stage('graph filter, K=3', '128', '3 hops over neighbours')}
+                    ${stage('linear head', '5', 'idle, &uarr; &darr; &larr; &rarr;')}
+                </div>
+                <div class="bg-dark-bg rounded-lg p-3 font-mono text-[11px] space-y-1 mt-3">
+                    <div class="text-gray-500">// the only line where robots meet</div>
+                    <div class="text-gray-300">&Atilde; = D<sup>-&frac12;</sup>(A + I)D<sup>-&frac12;</sup></div>
+                    <div class="text-gray-300">Z = [ H | &Atilde;H | &Atilde;<sup>2</sup>H ] &middot; W</div>
+                </div>
+                <p class="text-gray-500 text-xs mt-2">
+                    <strong class="text-gray-400">A</strong> is the graph you see drawn: an edge to each of the
+                    four nearest robots within 4 cells. Weights are shared by every robot and the fleet size
+                    appears nowhere in them &mdash; which is why 10 robots' worth of training runs 200.
+                </p>
+            </div>
+
+            <!-- Training framework -->
+            <div class="info-section">
+                <h3 class="text-accent-purple font-medium mb-2">How it was trained</h3>
+                <div class="bg-dark-bg rounded-lg p-3 text-xs space-y-0">
+                    ${step('1', 'Conflict-Based Search', 'Optimal, centralised, sees everything. Solves 10-robot instances.', 'text-accent-cyan')}
+                    ${arrow('1,181 solved instances &rarr; 30,727 state&ndash;action pairs')}
+                    ${step('2', 'Behaviour cloning', 'Copy the expert&rsquo;s move from each robot&rsquo;s own 5&times;5 view.', 'text-accent-cyan')}
+                    ${arrow('a policy that is fine until it meets a jam it never saw')}
+                    ${step('3', 'Online expert (DAgger)', 'Roll out, find where it froze, ask CBS from <em>that</em> state, retrain.', 'text-accent-purple')}
+                    ${arrow('loop &mdash; failures fell 56% &rarr; 45% &rarr; 38% over three rounds')}
+                </div>
+                <p class="text-gray-500 text-xs mt-2">
+                    Step 3 is the interesting one. Cloning only ever shows the policy states the <em>expert</em>
+                    visits; the states it actually gets itself into are exactly the ones it has no data for.
+                </p>
+                <div class="bg-dark-bg rounded-lg p-3 text-xs space-y-1 mt-3">
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Expert&rsquo;s ceiling</span>
+                        <span class="text-white font-mono">~20 robots</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Trained on</span>
+                        <span class="text-white font-mono">10 robots, 20&times;20</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Runs on</span>
+                        <span class="text-green-400 font-mono">200 robots, 89&times;89</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Parameters</span>
+                        <span class="text-white font-mono">55,829 &middot; 340 KB</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Temperature -->
+            <div class="info-section">
+                <h3 class="text-accent-purple font-medium mb-2">Why sampling, not argmax</h3>
+                <p class="text-gray-400 mb-3">
+                    Shared weights mean two robots facing symmetric situations make the <em>same</em> choice.
+                    They collide, both revert, and repeat &mdash; forever. Of 200 failed episodes,
+                    <strong class="text-white">98% were one joint state repeating</strong>. No horizon escapes
+                    a fixed point; only noise does.
+                </p>
+                <div class="bg-dark-bg rounded-lg p-3 text-xs space-y-1">
+                    ${row('argmax', '0.015', 'text-red-400')}
+                    ${row('sample, T = 3', '0.980', 'text-green-400')}
+                    ${row('sample, T = 5', '0.020', 'text-red-400')}
+                    ${row('uniform random', '0.000', 'text-red-400')}
+                </div>
+                <p class="text-gray-500 text-xs mt-2">
+                    Uniform random scores zero, so the policy is doing the work &mdash; the noise only breaks
+                    the tie. Too much of it and the policy&rsquo;s own preference is drowned out. Drag the slider
+                    to either end and both failure modes are one gesture apart.
+                </p>
+            </div>
+
+            <!-- Scaling -->
+            <div class="info-section">
+                <h3 class="text-accent-purple font-medium mb-2">What communication is worth</h3>
+                <div class="bg-dark-bg rounded-lg p-3 text-xs space-y-1">
+                    <div class="flex justify-between text-gray-500 text-[10px] uppercase tracking-wide">
+                        <span>robots</span><span>no comms &nbsp;&middot;&nbsp; comms</span>
+                    </div>
+                    ${versus('20', '0.95', '0.94', false)}
+                    ${versus('40', '0.94', '0.93', false)}
+                    ${versus('100', '0.21', '0.60', true)}
+                </div>
+                <p class="text-gray-500 text-xs mt-2">
+                    Nothing, until suddenly everything. A reactive policy plus a tie-break really is enough at
+                    small scale &mdash; set the fleet to 20 and the two panels are the same demo twice.
+                    That is the finding, not a bug.
+                </p>
+            </div>
+
+            <!-- Radio range -->
+            <div class="info-section">
+                <h3 class="text-accent-purple font-medium mb-2">How far should the radio reach?</h3>
+                <p class="text-gray-400 mb-3">
+                    The obvious guess is &ldquo;further is better&rdquo;. It is wrong, and the slider lets you
+                    watch it be wrong. Measured at 100 robots:
+                </p>
+                <div class="bg-dark-bg rounded-lg p-3 text-xs space-y-1">
+                    <div class="flex justify-between text-gray-500 text-[10px] uppercase tracking-wide">
+                        <span>range</span><span>links &nbsp;&middot;&nbsp; &alpha;</span>
+                    </div>
+                    ${range('2 cells', '0.24', '0.54', '')}
+                    ${range('4 cells', '1.18', '0.60', 'as trained')}
+                    ${range('6 cells', '2.52', '0.61', '')}
+                    ${range('10 cells', '3.87', '0.39', '')}
+                    ${range('14 cells', '4.07', '0.34', 'worse than 2')}
+                </div>
+                <p class="text-gray-500 text-xs mt-2">
+                    Only the <strong class="text-gray-400">four nearest</strong> neighbours are kept, so a wider
+                    radio does not add links &mdash; it swaps close ones for distant ones. A message from a robot
+                    too far away to collide with you is worse than no message, and the aggregate drifts away from
+                    anything the network was trained on.
+                </p>
+                <p class="text-gray-500 text-xs mt-2">
+                    More hops do not help either, for the same reason: at 1.4 links per robot, K=3 already reaches
+                    2.6 robots and K=5 would reach 3.1 &mdash; two thirds more parameters to hear half a robot
+                    more.
+                </p>
+            </div>
         `
     }
 };

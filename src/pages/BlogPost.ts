@@ -433,6 +433,24 @@ export class BlogPostPage {
             });
         }
 
+        // Multi-robot path finding: two policies race the same instance
+        const mapfContainer = document.getElementById('mapf-demo');
+        if (mapfContainer) {
+            import('../components/mapf').then(({ MapfDemo }) => {
+                try {
+                    const demo = new MapfDemo({
+                        containerId: 'mapf-demo',
+                        modelPath: '/assets/models/mapf',
+                    });
+                    this.embeddedDemos.push(demo);
+                } catch (error) {
+                    console.error('Failed to initialize MAPF demo:', error);
+                }
+            }).catch(error => {
+                console.error('Failed to load MAPF demo module:', error);
+            });
+        }
+
         // CT Fracture Segmentation post components
         const stlContainer = document.getElementById('stl-viewer-demo');
         if (stlContainer) {

@@ -10,6 +10,7 @@
     "build:ci": "CI=true npm run build",
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
+    "test:mapf": "npx --yes tsx src/components/mapf/test/parity.ts",
     "prepare": "husky",
     "lint-staged": "lint-staged"
   },
