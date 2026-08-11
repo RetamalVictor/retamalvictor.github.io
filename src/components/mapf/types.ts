@@ -85,6 +85,26 @@ export interface EnvConfig {
     maxNeighbours: number;
 }
 
+/**
+ * What the demo needs from a renderer.
+ *
+ * The 2D and 3D views are interchangeable behind this. Nothing about the
+ * simulation changes between them: the planner, the graph and the policy are
+ * all flat, and the third dimension is decoration.
+ */
+export interface BoardRenderer {
+    resize(): void;
+    /** The instance changed; rebuild anything cached per episode. */
+    invalidate(): void;
+    /**
+     * @param focus which robot's links to draw; negative draws every link.
+     *   One robot's neighbourhood is far easier to read than four hundred
+     *   overlapping lines, and it is the same graph either way.
+     */
+    draw(env: import('./env').MapfEnv, alpha: number, focus: number): void;
+    dispose(): void;
+}
+
 /** Board cell contents. Matches the Python environment's encoding. */
 export const CELL_FREE = 0;
 export const CELL_AGENT = 1;

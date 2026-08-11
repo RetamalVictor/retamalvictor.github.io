@@ -28,9 +28,15 @@ export const STUCK_STEPS = 3;
 interface Palette {
     background: string;
     grid: string;
+    /** Outline around the playing surface, so it reads as a distinct object. */
+    frame: string;
+    /** Behind the board, where the canvas is not square. */
+    surround: string;
     obstacle: string;
     goal: string;
     edge: string;
+    edgeFocus: string;
+    radio: string;
     moving: string;
     arrived: string;
     stuck: string;
@@ -86,6 +92,17 @@ export class GridRenderer {
     }
 
     /**
+     * Nothing to release: Canvas2D holds no GPU objects of its own.
+     *
+     * Deliberately does not zero the backdrop. A renderer can be disposed while
+     * the animation frame is mid-flight, and a stray draw against a 0x0 source
+     * throws where it should simply be ignored.
+     */
+    dispose(): void {
+        this.backdropKey = '';
+    }
+
+    /**
      * Canvas cannot read CSS variables, so the tokens are resolved here. Reading
      * a custom property forces style resolution, which is far too expensive to
      * do per frame, so the result is cached and keyed on the theme itself rather
@@ -103,11 +120,20 @@ export class GridRenderer {
         };
 
         this.palette = {
+            // The board is a surface in its own right, not more page. It takes
+            // the page background while the panel around it is the surface
+            // colour, so the two read as different things, and the grid is drawn
+            // in the accent rather than the border colour — a border-coloured
+            // grid on a border-coloured edge is just more background.
             background: token('--c-bg'),
-            grid: token('--c-border', 0.55),
+            grid: token('--c-accent', 0.16),
+            frame: token('--c-border'),
+            surround: token('--c-surface'),
             obstacle: token('--c-gray-400', 0.55),
-            goal: token('--c-accent-2', 0.4),
+            goal: token('--c-accent-2', 0.55),
             edge: token('--c-accent', 0.45),
+            edgeFocus: token('--c-accent'),
+            radio: token('--c-accent', 0.5),
             moving: token('--c-accent'),
             arrived: token('--c-green'),
             stuck: token('--c-amber'),
@@ -120,9 +146,9 @@ export class GridRenderer {
      * @param alpha how far between the previous and current cell to draw,
      *   in [0, 1]. Robots move on a grid but sliding them between cells reads
      *   as motion rather than as a slideshow.
-     * @param showEdges draw the communication graph
+     * @param focus which robot's links to draw; negative draws all of them.
      */
-    draw(env: MapfEnv, alpha: number, showEdges: boolean): void {
+    draw(env: MapfEnv, alpha: number, focus: number): void {
         const ctx = this.ctx;
         if (!ctx || this.width === 0) return;
 
@@ -150,19 +176,31 @@ export class GridRenderer {
             this.ys[i] = baseY - (env.prevY[i] + (env.posY[i] - env.prevY[i]) * alpha) * cell;
         }
 
-        if (showEdges) {
-            this.buildEdges(env);
-            ctx.strokeStyle = colors.edge;
-            ctx.lineWidth = Math.max(0.4, cell * 0.06);
+        const single = focus >= 0 && focus < n;
+        if (single) {
+            // The radio disc, so the link rule is visible rather than implied:
+            // an edge to every robot inside this circle.
+            ctx.strokeStyle = colors.radio;
+            ctx.setLineDash([3, 3]);
+            ctx.lineWidth = 1;
             ctx.beginPath();
-            for (let e = 0; e < this.edgeCount; e++) {
-                const i = this.edges[e * 2];
-                const j = this.edges[e * 2 + 1];
-                ctx.moveTo(this.xs[i], this.ys[i]);
-                ctx.lineTo(this.xs[j], this.ys[j]);
-            }
+            ctx.arc(this.xs[focus], this.ys[focus], env.sensingRange * cell, 0, Math.PI * 2);
             ctx.stroke();
+            ctx.setLineDash([]);
         }
+
+        this.buildEdges(env);
+        ctx.strokeStyle = single ? colors.edgeFocus : colors.edge;
+        ctx.lineWidth = Math.max(single ? 1 : 0.4, cell * (single ? 0.1 : 0.06));
+        ctx.beginPath();
+        for (let e = 0; e < this.edgeCount; e++) {
+            const i = this.edges[e * 2];
+            const j = this.edges[e * 2 + 1];
+            if (single && i !== focus && j !== focus) continue;
+            ctx.moveTo(this.xs[i], this.ys[i]);
+            ctx.lineTo(this.xs[j], this.ys[j]);
+        }
+        ctx.stroke();
 
         // Three fills rather than 3N, and drawn arrived-first so the robots that
         // still matter sit on top.
@@ -172,13 +210,20 @@ export class GridRenderer {
         // have not. Those four are impossible to pick out of a hundred identical
         // dots, so arrived robots are drawn small and faded and the rest stay
         // full strength. What is left to do is then what you see.
-        const radius = Math.max(1.1, cell * 0.34);
+        // Robots are the subject, so they get the strongest mark on the board:
+        // a floor of two pixels so a large fleet does not dissolve into specks,
+        // and a ring in the board colour so neighbouring robots stay countable
+        // where they cluster.
+        const radius = Math.max(2, cell * 0.44);
         const twoPi = Math.PI * 2;
+        ctx.lineWidth = Math.max(0.5, cell * 0.09);
+        ctx.strokeStyle = colors.background;
+
         for (let pass = 0; pass < 3; pass++) {
             const done = pass === 0;
             ctx.fillStyle = done ? colors.arrived : pass === 1 ? colors.moving : colors.stuck;
-            ctx.globalAlpha = done ? 0.45 : 1;
-            const r = done ? radius * 0.55 : radius;
+            ctx.globalAlpha = done ? 0.4 : 1;
+            const r = done ? radius * 0.5 : radius;
             ctx.beginPath();
             for (let i = 0; i < n; i++) {
                 const arrived = env.posX[i] === env.goalX[i] && env.posY[i] === env.goalY[i];
@@ -188,6 +233,9 @@ export class GridRenderer {
                 ctx.arc(this.xs[i], this.ys[i], r, 0, twoPi);
             }
             ctx.fill();
+            // Only the active robots are outlined; the arrived ones are meant
+            // to recede.
+            if (!done && radius > 2.5) ctx.stroke();
         }
         ctx.globalAlpha = 1;
     }
@@ -218,8 +266,13 @@ export class GridRenderer {
         ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
 
         const board = env.board;
-        ctx.fillStyle = colors.background;
+        // The canvas is rarely square, so paint the letterbox in the panel
+        // colour first and the board on top of it. Leaving it unpainted on an
+        // opaque context shows through as black.
+        ctx.fillStyle = colors.surround;
         ctx.fillRect(0, 0, this.width, this.height);
+        ctx.fillStyle = colors.background;
+        ctx.fillRect(offsetX, offsetY, size, size);
 
         // Below about six pixels a cell, grid lines turn the board into a solid
         // block of ink and hide the robots.
@@ -237,20 +290,32 @@ export class GridRenderer {
             ctx.stroke();
         }
 
+        ctx.strokeStyle = colors.frame;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(offsetX + 0.5, offsetY + 0.5, size - 1, size - 1);
+
+        // Inset and faded. Filling the whole cell makes obstacles the heaviest
+        // mark on the board — at a hundred robots they were three times the
+        // visual weight of the robots, which are the actual subject.
         ctx.fillStyle = colors.obstacle;
+        const inset = cell * 0.16;
+        const block = cell - inset * 2;
         for (let y = 0; y < board; y++) {
-            const top = offsetY + (board - 1 - y) * cell;
+            const top = offsetY + (board - 1 - y) * cell + inset;
             for (let x = 0; x < board; x++) {
                 if (!env.obstacles[y * board + x]) continue;
-                ctx.fillRect(offsetX + x * cell, top, cell, cell);
+                ctx.fillRect(offsetX + x * cell + inset, top, block, block);
             }
         }
 
         // Every goal, including those already reached: a robot's circle is twice
         // the marker's radius, so an occupied goal is hidden underneath it.
-        ctx.fillStyle = colors.goal;
-        const marker = Math.max(0.8, cell * 0.16);
+        // Rings, not dots: a goal at robot size would be mistaken for a robot,
+        // and at the old size it was invisible.
+        const marker = Math.max(1.6, cell * 0.34);
         const twoPi = Math.PI * 2;
+        ctx.strokeStyle = colors.goal;
+        ctx.lineWidth = Math.max(0.8, cell * 0.1);
         ctx.beginPath();
         for (let i = 0; i < env.numAgents; i++) {
             const cx = offsetX + (env.goalX[i] + 0.5) * cell;
@@ -258,7 +323,7 @@ export class GridRenderer {
             ctx.moveTo(cx + marker, cy);
             ctx.arc(cx, cy, marker, 0, twoPi);
         }
-        ctx.fill();
+        ctx.stroke();
     }
 
     /**

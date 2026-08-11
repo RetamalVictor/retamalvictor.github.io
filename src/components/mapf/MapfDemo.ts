@@ -25,7 +25,7 @@ import { Policy } from './policy';
 import { FleetRng, Rng } from './random';
 import { GridRenderer, STUCK_STEPS } from './render2d';
 import { loadAssets } from './weights';
-import type { DemoManifest, Instance, Model } from './types';
+import type { BoardRenderer, DemoManifest, Instance, Model } from './types';
 
 export interface MapfDemoConfig {
     containerId: string;
@@ -96,7 +96,7 @@ interface Panel {
     subtitle: string;
     model: Model;
     canvas: HTMLCanvasElement;
-    renderer: GridRenderer;
+    renderer: BoardRenderer;
     stats: HTMLElement;
     score: HTMLElement;
     history: HTMLElement;
@@ -124,6 +124,11 @@ export class MapfDemo {
     private temperature: number;
     private obstacleFraction = 0.02;
     private sensingRange = 4;
+    /** The third dimension is decoration; the simulation is flat either way. */
+    private view: '2d' | '3d' = '2d';
+    private switchingView = false;
+    /** Robot whose links are drawn; negative shows every link. */
+    private focus = -1;
     private running = true;
     /** Scrolled into view and the tab in the foreground. */
     private visible = true;
@@ -297,6 +302,7 @@ export class MapfDemo {
         this.finishedAt = 0;
         this.accumulator = 0;
         this.pending.length = 0;
+        if (this.focus >= 0) this.focus = this.pickFocus();
         // A fleet-size change makes the old measurement meaningless.
         this.stepCostMs = 0;
     }
@@ -331,9 +337,74 @@ export class MapfDemo {
         }
     }
 
+    /**
+     * Which robot to follow when showing a single neighbourhood.
+     *
+     * The best-connected one near the middle of the board: a robot on the rim
+     * with one link demonstrates nothing, and one in the thick of it shows the
+     * rule — an edge to everything inside the radio disc.
+     */
+    private pickFocus(): number {
+        const panel = this.panels[0];
+        if (!panel) return -1;
+        const env = panel.env;
+        const n = env.numAgents;
+        const middle = env.board / 2;
+
+        let best = -1;
+        let bestScore = -Infinity;
+        for (let i = 0; i < n; i++) {
+            let degree = 0;
+            const row = i * n;
+            for (let j = 0; j < n; j++) degree += env.adjacency[row + j];
+            const dx = env.posX[i] - middle;
+            const dy = env.posY[i] - middle;
+            const score = degree - Math.sqrt(dx * dx + dy * dy) / env.board;
+            if (score > bestScore) { bestScore = score; best = i; }
+        }
+        return best;
+    }
+
     /** Record that someone is still here, deferring the idle stop. */
     private touch(): void {
         this.lastInteraction = performance.now();
+    }
+
+    /**
+     * Swap the 2D and 3D views.
+     *
+     * A canvas can only ever hold one kind of context, so the element itself has
+     * to be replaced — asking for WebGL on a canvas that has handed out a 2D
+     * context returns null. The simulation is untouched: the same environment
+     * and the same policy keep running, and only the thing drawing them changes.
+     */
+    private async setView(view: '2d' | '3d'): Promise<void> {
+        if (this.switchingView || view === this.view || this.destroyed) return;
+        this.switchingView = true;
+
+        const button = this.container.querySelector<HTMLButtonElement>('#mapf-view');
+        if (button) button.textContent = view === '3d' ? '…' : '2D';
+
+        try {
+            for (const panel of this.panels) {
+                const fresh = panel.canvas.cloneNode(false) as HTMLCanvasElement;
+                panel.canvas.replaceWith(fresh);
+                panel.renderer.dispose();
+                panel.canvas = fresh;
+                panel.renderer = view === '3d'
+                    ? await (await import('./render3d')).createRenderer3D(fresh)
+                    : new GridRenderer(fresh);
+                panel.renderer.resize();
+            }
+            this.view = view;
+        } catch (error) {
+            // three.js failed to load, or WebGL is unavailable. Stay where we are.
+            console.error('MAPF demo: could not switch view', error);
+        }
+
+        if (button) button.textContent = this.view === '3d' ? '2D' : '3D';
+        this.switchingView = false;
+        this.render(1);
     }
 
     private setRunning(running: boolean, interacted = true): void {
@@ -348,8 +419,11 @@ export class MapfDemo {
     }
 
     private render(alpha: number): void {
+        // Swapping views replaces the canvas and its renderer across an await;
+        // drawing into the half-swapped pair is a guaranteed error.
+        if (this.switchingView) return;
         for (const panel of this.panels) {
-            panel.renderer.draw(panel.env, alpha, panel.key === 'comm');
+            panel.renderer.draw(panel.env, alpha, this.focus);
         }
         this.updateStats();
     }
@@ -383,8 +457,10 @@ export class MapfDemo {
         const next = this.pending.pop();
         if (next) this.stepPanel(next);
 
-        for (const panel of this.panels) {
-            panel.renderer.draw(panel.env, Math.min(1, this.accumulator / interval), panel.key === 'comm');
+        if (!this.switchingView) {
+            for (const panel of this.panels) {
+                panel.renderer.draw(panel.env, Math.min(1, this.accumulator / interval), this.focus);
+            }
         }
 
         if (now - this.statsAt >= STATS_INTERVAL_MS) {
@@ -539,6 +615,19 @@ export class MapfDemo {
             this.setRunning(true);
         });
 
+        const focusButton = this.query<HTMLButtonElement>('#mapf-focus');
+        focusButton.addEventListener('click', () => {
+            this.touch();
+            this.focus = this.focus >= 0 ? -1 : this.pickFocus();
+            focusButton.textContent = this.focus >= 0 ? 'All links' : '1 robot';
+            this.render(1);
+        });
+
+        this.query<HTMLButtonElement>('#mapf-view').addEventListener('click', () => {
+            this.touch();
+            void this.setView(this.view === '2d' ? '3d' : '2d');
+        });
+
         // Absent in compact mode, where the host page has its own explainer.
         const hood = this.container.querySelector<HTMLButtonElement>('#mapf-hood');
         const hoodPanel = this.container.querySelector<HTMLElement>('#mapf-hood-panel');
@@ -624,7 +713,7 @@ export class MapfDemo {
                 </div>
                 <div id="mapf-history-${key}" class="flex gap-[2px] flex-wrap justify-end"></div>
             </div>
-            <div id="mapf-stats-${key}" class="mt-0.5 ${c ? 'text-[10px]' : 'text-[11px]'} font-mono text-[rgb(var(--c-gray-400))]"></div>`;
+            <div id="mapf-stats-${key}" class="mt-0.5 ${c ? 'text-[9px] leading-tight' : 'text-[11px]'} font-mono text-[rgb(var(--c-gray-400))]"></div>`;
 
         // One fragment, two arrangements. The hero is a short, wide box: with a
         // single board, stacking four sliders above it leaves the board 114
@@ -663,10 +752,10 @@ export class MapfDemo {
             `<i class="inline-block rounded-full" style="width:${size}px;height:${size}px;background:rgb(var(--${token}));opacity:${opacity}"></i>`;
 
         const slider = (id: string, label: string, attrs: string, value: string) => `
-            <label class="flex flex-col gap-1 ${c ? '' : 'min-w-[9rem] flex-1'}">
-                <span class="text-[10px] uppercase tracking-wide text-[rgb(var(--c-gray-500))]">${label}</span>
+            <label class="flex flex-col ${c ? 'gap-0.5' : 'gap-1'} ${c ? '' : 'min-w-[9rem] flex-1'}">
+                <span class="text-[10px] uppercase tracking-wide leading-none text-[rgb(var(--c-gray-500))]">${label}</span>
                 <input id="mapf-${id}" type="range" ${attrs} class="w-full accent-[rgb(var(--c-accent))]">
-                <span id="mapf-${id}-value" class="text-[10px] font-mono text-[rgb(var(--c-gray-400))]">${value}</span>
+                <span id="mapf-${id}-value" class="text-[10px] leading-tight font-mono text-[rgb(var(--c-gray-400))]">${value}</span>
             </label>`;
 
         const controls = `
@@ -675,9 +764,11 @@ export class MapfDemo {
             ${slider('obstacles', 'Obstacles', 'min="0" max="15" step="1"', this.describeObstacles())}
             ${slider('sensing', 'Radio range', 'min="2" max="14" step="1"', this.describeSensing())}
             ${slider('temperature', 'Temperature', 'min="0" max="5" step="0.25"', this.describeTemperature())}
-            <div class="flex items-center gap-2">
+            <div class="flex items-center flex-wrap gap-1.5">
                 <button id="mapf-play" class="px-2.5 py-1 text-xs rounded border border-[rgb(var(--c-border))] hover:border-[rgb(var(--c-accent))] hover:text-[rgb(var(--c-accent))] transition-colors">Pause</button>
                 <button id="mapf-new" class="px-2.5 py-1 text-xs rounded border border-[rgb(var(--c-border))] hover:border-[rgb(var(--c-accent))] hover:text-[rgb(var(--c-accent))] transition-colors">New</button>
+                <button id="mapf-view" class="px-2.5 py-1 text-xs rounded border border-[rgb(var(--c-border))] hover:border-[rgb(var(--c-accent))] hover:text-[rgb(var(--c-accent))] transition-colors">3D</button>
+                <button id="mapf-focus" class="px-2.5 py-1 text-xs rounded border border-[rgb(var(--c-border))] hover:border-[rgb(var(--c-accent))] hover:text-[rgb(var(--c-accent))] transition-colors">1 robot</button>
             </div>`;
 
         const legend = `
@@ -719,7 +810,7 @@ export class MapfDemo {
                     <!-- The score sits above the scroll area: it is the one number
                          worth watching, and it must not be the thing that gets cut. -->
                     <div class="px-3 pt-2 pb-1.5 border-b border-[rgb(var(--c-border))]">${readout('comm')}</div>
-                    <div class="px-3 py-2 flex flex-col gap-2 overflow-y-auto min-h-0">${controls}</div>
+                    <div class="px-3 py-1.5 flex flex-col gap-1 overflow-y-auto overflow-x-hidden min-h-0">${controls}</div>
                 </div>
                 <div class="flex-1 min-h-0 p-2">${boardCanvas('comm')}</div>
             </div>
