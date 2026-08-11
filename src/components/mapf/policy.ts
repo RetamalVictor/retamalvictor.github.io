@@ -21,6 +21,7 @@ export class Policy {
 
     private readonly convA: Float32Array;
     private readonly convB: Float32Array;
+    private readonly padScratch: Float32Array;
     private readonly encoded: Float32Array;
     private readonly hops: Float32Array;
     private readonly hopScratch: Float32Array;
@@ -40,6 +41,7 @@ export class Policy {
         const widest = Math.max(...model.channels);
         this.convA = new Float32Array(widest * plane);
         this.convB = new Float32Array(widest * plane);
+        this.padScratch = new Float32Array(widest * (side + 2) * (side + 2));
 
         const encoderDim = model.encoderDim;
         this.encoded = new Float32Array(numAgents * encoderDim);
@@ -117,7 +119,17 @@ export class Policy {
         }
     }
 
-    /** 3x3 cross-correlation, stride 1, padding 1, followed by ReLU. */
+    /**
+     * 3x3 cross-correlation, stride 1, padding 1, followed by ReLU.
+     *
+     * The input is copied into an explicitly zero-padded buffer first. That
+     * costs one pass over a tiny array and removes both bounds checks from the
+     * innermost loop, which is where essentially all of the model's time goes —
+     * the two 16-channel convolutions alone are about two thirds of it.
+     *
+     * Loops are ordered so the weight is hoisted and the inner work is five
+     * contiguous multiply-accumulates over the output row.
+     */
     private conv3x3(
         input: Float32Array,
         output: Float32Array,
@@ -128,28 +140,45 @@ export class Policy {
     ): void {
         const side = this.side;
         const plane = side * side;
+        const padded = side + 2;
+        const paddedPlane = padded * padded;
+        const buffer = this.padScratch;
+
+        buffer.fill(0, 0, inChannels * paddedPlane);
+        for (let c = 0; c < inChannels; c++) {
+            const from = c * plane;
+            const to = c * paddedPlane + padded + 1;
+            for (let y = 0; y < side; y++) {
+                const src = from + y * side;
+                const dst = to + y * padded;
+                for (let x = 0; x < side; x++) buffer[dst + x] = input[src + x];
+            }
+        }
 
         for (let o = 0; o < outChannels; o++) {
             const outBase = o * plane;
-            const b = bias[o];
-            for (let y = 0; y < side; y++) {
-                for (let x = 0; x < side; x++) {
-                    let sum = b;
-                    for (let c = 0; c < inChannels; c++) {
-                        const inBase = c * plane;
-                        const wBase = (o * inChannels + c) * 9;
-                        for (let ky = 0; ky < 3; ky++) {
-                            const yy = y + ky - 1;
-                            if (yy < 0 || yy >= side) continue;
-                            for (let kx = 0; kx < 3; kx++) {
-                                const xx = x + kx - 1;
-                                if (xx < 0 || xx >= side) continue;
-                                sum += weight[wBase + ky * 3 + kx] * input[inBase + yy * side + xx];
-                            }
+            output.fill(bias[o], outBase, outBase + plane);
+
+            for (let c = 0; c < inChannels; c++) {
+                const wBase = (o * inChannels + c) * 9;
+                const cBase = c * paddedPlane;
+                for (let k = 0; k < 9; k++) {
+                    const w = weight[wBase + k];
+                    if (w === 0) continue;
+                    const ky = (k / 3) | 0;
+                    const kx = k - ky * 3;
+                    for (let y = 0; y < side; y++) {
+                        const src = cBase + (y + ky) * padded + kx;
+                        const dst = outBase + y * side;
+                        for (let x = 0; x < side; x++) {
+                            output[dst + x] += w * buffer[src + x];
                         }
                     }
-                    output[outBase + y * side + x] = sum > 0 ? sum : 0;
                 }
+            }
+
+            for (let i = outBase; i < outBase + plane; i++) {
+                if (output[i] < 0) output[i] = 0;
             }
         }
     }

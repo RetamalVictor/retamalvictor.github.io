@@ -32,10 +32,16 @@ export const ACTION_DX = [0, 1, 0, -1, 0];
 export const ACTION_DY = [0, 0, 1, 0, -1];
 export const NUM_ACTIONS = 5;
 
+let nextInstanceId = 0;
+
 export class MapfEnv {
+    /** Distinguishes one episode's instance from the next, for render caches. */
+    instanceId = nextInstanceId++;
+
     readonly board: number;
     readonly numAgents: number;
-    readonly sensingRange: number;
+    /** Assignable: the demo exposes it, and the graph is rebuilt every step. */
+    sensingRange: number;
     readonly pad: number;
     /** Side of the field-of-view patch, `pad * 2 - 1`. */
     readonly side: number;
@@ -55,7 +61,22 @@ export class MapfEnv {
     /** `N x 2 x side x side`, the policy input. */
     readonly fov: Float32Array;
 
+    /**
+     * Consecutive steps a robot has failed to move while not on its goal.
+     *
+     * A single stationary step means nothing — idling is a legal action and
+     * robots take it constantly. Repeated failure to move is the signature of
+     * the deadlock this whole demo is about, so it is counted rather than
+     * inferred from one frame.
+     */
+    readonly stalled: Int32Array;
+
     time = 0;
+    /**
+     * Bumped on every reset and step. The renderer caches per-step work — the
+     * edge list above all — and uses this to know when to rebuild it.
+     */
+    version = 0;
 
     /** Positions before the last step. The renderer interpolates from these. */
     readonly prevX: Int32Array;
@@ -94,11 +115,33 @@ export class MapfEnv {
         this.prevY = new Int32Array(n);
         this.newX = new Int32Array(n);
         this.newY = new Int32Array(n);
+        this.stalled = new Int32Array(n);
         this.adjacency = new Float32Array(n * n);
         this.distances = new Float32Array(n * n);
         this.occupancy = new Int32Array(area);
         this.fov = new Float32Array(n * 2 * this.side * this.side);
 
+        this.load(instance);
+    }
+
+    /**
+     * Swap in a new instance without reallocating.
+     *
+     * An episode lasts a few seconds, and rebuilding the environment for each
+     * one means an N-by-N distance matrix, an N-by-N adjacency and the field-of-
+     * view buffers all becoming garbage on a timer. Reusing them turns a
+     * periodic collection — visible as a dropped frame — into nothing at all.
+     */
+    load(instance: Instance): void {
+        if (instance.board !== this.board) {
+            throw new Error(`instance board ${instance.board} does not match ${this.board}`);
+        }
+        if (instance.starts.length !== this.numAgents) {
+            throw new Error('instance fleet size does not match this environment');
+        }
+
+        this.instanceId = nextInstanceId++;
+        this.obstacles.fill(0);
         for (const [x, y] of instance.obstacles) {
             this.obstacles[y * this.board + x] = 1;
         }
@@ -116,10 +159,12 @@ export class MapfEnv {
 
     reset(): void {
         this.time = 0;
+        this.version++;
         this.posX.set(this.startX);
         this.posY.set(this.startY);
         this.prevX.set(this.startX);
         this.prevY.set(this.startY);
+        this.stalled.fill(0);
 
         // The board carries obstacles only. The Python stamps robots inside
         // updateBoard(), which runs during step, so the very first field of view
@@ -175,6 +220,11 @@ export class MapfEnv {
             }
         }
 
+        for (let i = 0; i < n; i++) {
+            const moved = this.posX[i] !== this.prevX[i] || this.posY[i] !== this.prevY[i];
+            this.stalled[i] = moved || this.atGoal(i) ? 0 : this.stalled[i] + 1;
+        }
+
         // Clear every vacated cell first, then stamp the new ones.
         for (let i = 0; i < n; i++) {
             this.cells[this.prevY[i] * board + this.prevX[i]] = CELL_FREE;
@@ -184,6 +234,7 @@ export class MapfEnv {
         }
 
         this.time++;
+        this.version++;
         this.computeGraph();
         this.computeFov();
     }
@@ -306,6 +357,13 @@ export class MapfEnv {
     numAtGoal(): number {
         let count = 0;
         for (let i = 0; i < this.numAgents; i++) if (this.atGoal(i)) count++;
+        return count;
+    }
+
+    /** Robots that have been unable to move for `threshold` consecutive steps. */
+    numStuck(threshold: number): number {
+        let count = 0;
+        for (let i = 0; i < this.numAgents; i++) if (this.stalled[i] >= threshold) count++;
         return count;
     }
 

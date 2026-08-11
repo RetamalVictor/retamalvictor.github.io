@@ -22,6 +22,7 @@ import type { DemoManifest } from '../types';
 const ASSETS = join(process.cwd(), 'public', 'assets', 'models', 'mapf');
 const FLEETS = [10, 20, 40, 60, 100, 200, 350, 500];
 const STEPS = 30;
+const REPEATS = 5;
 
 function readBuffer(name: string): ArrayBuffer {
     const raw = readFileSync(join(ASSETS, name));
@@ -67,13 +68,21 @@ for (const agents of FLEETS) {
             env.step(policy.selectActions(0, null));
         }
 
-        const env2 = new MapfEnv(envConfig, instance);
-        const start = performance.now();
-        for (let i = 0; i < STEPS; i++) {
-            policy.forward(env2.fov, env2.adjacency);
-            env2.step(policy.selectActions(0, null));
+        // Several short runs, best one wins. A single run at small fleet sizes
+        // is a handful of milliseconds, where a GC pause or a background task
+        // shows up as a larger effect than the thing being measured — enough to
+        // make 60 robots look faster than 40.
+        let best = Infinity;
+        for (let repeat = 0; repeat < REPEATS; repeat++) {
+            const env2 = new MapfEnv(envConfig, instance);
+            const start = performance.now();
+            for (let i = 0; i < STEPS; i++) {
+                policy.forward(env2.fov, env2.adjacency);
+                env2.step(policy.selectActions(0, null));
+            }
+            best = Math.min(best, (performance.now() - start) / STEPS);
         }
-        timings[name] = (performance.now() - start) / STEPS;
+        timings[name] = best;
     }
 
     const both = timings.comm + timings.nocomm;

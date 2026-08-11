@@ -34,8 +34,8 @@
   "defaults": {
     "temperature": 3.0,
     "horizon_factor": 3,
-    "agents": 40,
-    "board": 40,
+    "agents": 100,
+    "board": 63,
     "obstacle_fraction": 0.02
   },
   "models": {
