@@ -1,7 +1,27 @@
 {
-  "inputSize": 256,
-  "inputName": "input_image",
-  "outputName": "output_depth",
-  "normalizeMean": [0, 0, 0],
-  "normalizeStd": [1, 1, 1]
+  "note": "Two depth models. Which one loads depends on the device: a phone gets the small one, because 66 MB of ONNX plus the runtime's own copy of it is enough to lose a tab in mobile Safari.",
+  "variants": {
+    "full": {
+      "file": "midas_v21_small_256.onnx",
+      "label": "MiDaS v2.1 small",
+      "sizeMB": 66,
+      "inputSize": 256,
+      "inputName": "input_image",
+      "outputName": "output_depth",
+      "normalizeMean": [0, 0, 0],
+      "normalizeStd": [1, 1, 1],
+      "invertDepth": false
+    },
+    "light": {
+      "file": "fast-depth.onnx",
+      "label": "FastDepth",
+      "sizeMB": 5.5,
+      "inputSize": 224,
+      "inputName": "input",
+      "outputName": "output",
+      "normalizeMean": [0, 0, 0],
+      "normalizeStd": [1, 1, 1],
+      "invertDepth": true
+    }
+  }
 }

@@ -24,6 +24,8 @@ interface DemoState {
     fps: number;
     latencyMs: number;
     modelSizeMB: number;
+    /** Which model is loaded — phones get a smaller, coarser one. */
+    modelLabel: string;
     backend: 'webgpu' | 'wasm';
     viewMode: ViewMode;
     errorMessage?: string;
@@ -74,6 +76,7 @@ export class DepthDemo {
             fps: 0,
             latencyMs: 0,
             modelSizeMB: 0,
+            modelLabel: '',
             backend: 'wasm',
             viewMode: '2d'
         };
@@ -103,6 +106,7 @@ export class DepthDemo {
 
             const stats = this.engine.getStats();
             this.state.modelSizeMB = stats.modelSizeMB;
+            this.state.modelLabel = stats.modelLabel;
             this.state.backend = stats.backend;
 
             // Request camera access
@@ -301,7 +305,7 @@ export class DepthDemo {
     }
 
     private render(): void {
-        const { status, errorMessage, modelSizeMB, backend } = this.state;
+        const { status, errorMessage, modelSizeMB, modelLabel, backend } = this.state;
 
         if (status === 'loading' || status === 'requesting-camera') {
             this.container.innerHTML = `
@@ -402,7 +406,7 @@ export class DepthDemo {
                         <span class="text-gray-500">Latency: <span id="depth-latency" class="text-accent-cyan font-mono">0</span>ms</span>
                     </div>
                     <div class="flex gap-4">
-                        <span class="text-gray-500">Model: <span class="text-gray-400 font-mono">${modelSizeMB.toFixed(1)}MB</span></span>
+                        <span class="text-gray-500">Model: <span class="text-gray-400 font-mono">${modelLabel || 'model'} ${modelSizeMB.toFixed(1)}MB</span></span>
                         <span class="text-gray-500">Backend: <span class="${backend === 'webgpu' ? 'text-green-400' : 'text-yellow-400'} font-mono">${backend.toUpperCase()}</span></span>
                     </div>
                 </div>

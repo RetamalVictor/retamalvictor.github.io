@@ -1,4 +1,6 @@
 import { VisualServoDemo } from '../components/VisualServoDemo.js';
+// Shared with the depth demo, which uses it to pick which model to fetch.
+import { isMemoryConstrained } from '../utils/deviceCapability.js';
 
 /**
  * Types for the home page demo tabs
@@ -30,38 +32,18 @@ export const DEMO_HINTS: Record<DemoType, string> = {
 export type DemoChangeCallback = (demoType: DemoType) => void;
 
 /**
- * Roughly what a demo has to download before it can start.
+ * Roughly what a demo downloads on a device we consider constrained.
  *
- * The two model-backed demos are heavy enough to lose a tab on a phone: the
- * depth model is 64 MB of ONNX on top of a ~23 MB WebAssembly runtime, and the
- * runtime keeps its own copy in the WASM heap while the graph is optimised.
- * iPhone 12 and iPhone 14 Safari both die on it.
+ * Depth is absent deliberately: it now serves a 5.5 MB model to phones and
+ * keeps the 66 MB one for everything else, so there is nothing to warn about.
+ * The ternary demo has only one model and it is 39 MB.
  */
 const DEMO_DOWNLOAD_MB: Partial<Record<DemoType, number>> = {
-    'depth': 64,
     'ternary': 39,
 };
 
 /** Above this, ask before downloading on a device that may not survive it. */
 const CONFIRM_ABOVE_MB = 20;
-
-/**
- * Is this a device where a large model is a real risk?
- *
- * Either signal is enough, and deliberately so. `deviceMemory` is the direct
- * answer, but Safari does not implement it — which is exactly the browser that
- * needs this most — and phones that do implement it happily report 8 GB while
- * still killing a tab that allocates a few hundred megabytes. So a phone counts
- * as constrained on its shape alone: a coarse pointer with a short side under
- * 500 CSS pixels, which covers phones and leaves tablets and laptops alone.
- */
-function isMemoryConstrained(): boolean {
-    const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
-    if (typeof memory === 'number' && memory <= 4) return true;
-    if (typeof window.matchMedia !== 'function') return false;
-    return window.matchMedia('(pointer: coarse)').matches
-        && Math.min(window.screen.width, window.screen.height) <= 500;
-}
 
 /**
  * Manages demo lifecycle: switching, reset, destroy
