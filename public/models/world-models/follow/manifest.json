@@ -1,0 +1,402 @@
+{
+  "format": "rssm-agent-v1",
+  "world_model": "runs/rssm/follow",
+  "actor": "runs/ac/follow",
+  "config": {
+    "hidden": 128,
+    "latent_dim": 16,
+    "action_dim": 2,
+    "obs_size": 32,
+    "obs_channels": 3,
+    "min_sigma": 0.1,
+    "embed_dim": 256,
+    "encoder_ladder": [
+      32,
+      64,
+      128
+    ],
+    "decoder_ladder": [
+      32,
+      64,
+      128
+    ],
+    "max_action": 0.3,
+    "actor_min_sigma": 0.1
+  },
+  "tensors": [
+    {
+      "name": "core/hn/bias",
+      "shape": [
+        128
+      ],
+      "offset": 0
+    },
+    {
+      "name": "core/hn/kernel",
+      "shape": [
+        128,
+        128
+      ],
+      "offset": 512
+    },
+    {
+      "name": "core/hr/kernel",
+      "shape": [
+        128,
+        128
+      ],
+      "offset": 66048
+    },
+    {
+      "name": "core/hz/kernel",
+      "shape": [
+        128,
+        128
+      ],
+      "offset": 131584
+    },
+    {
+      "name": "core/in/bias",
+      "shape": [
+        128
+      ],
+      "offset": 197120
+    },
+    {
+      "name": "core/in/kernel",
+      "shape": [
+        18,
+        128
+      ],
+      "offset": 197632
+    },
+    {
+      "name": "core/ir/bias",
+      "shape": [
+        128
+      ],
+      "offset": 206848
+    },
+    {
+      "name": "core/ir/kernel",
+      "shape": [
+        18,
+        128
+      ],
+      "offset": 207360
+    },
+    {
+      "name": "core/iz/bias",
+      "shape": [
+        128
+      ],
+      "offset": 216576
+    },
+    {
+      "name": "core/iz/kernel",
+      "shape": [
+        18,
+        128
+      ],
+      "offset": 217088
+    },
+    {
+      "name": "decoder/ConvTranspose_0/bias",
+      "shape": [
+        64
+      ],
+      "offset": 226304
+    },
+    {
+      "name": "decoder/ConvTranspose_0/kernel",
+      "shape": [
+        4,
+        4,
+        128,
+        64
+      ],
+      "offset": 226560
+    },
+    {
+      "name": "decoder/ConvTranspose_1/bias",
+      "shape": [
+        32
+      ],
+      "offset": 750848
+    },
+    {
+      "name": "decoder/ConvTranspose_1/kernel",
+      "shape": [
+        4,
+        4,
+        64,
+        32
+      ],
+      "offset": 750976
+    },
+    {
+      "name": "decoder/ConvTranspose_2/bias",
+      "shape": [
+        3
+      ],
+      "offset": 882048
+    },
+    {
+      "name": "decoder/ConvTranspose_2/kernel",
+      "shape": [
+        4,
+        4,
+        32,
+        3
+      ],
+      "offset": 882060
+    },
+    {
+      "name": "decoder/Dense_0/bias",
+      "shape": [
+        256
+      ],
+      "offset": 888204
+    },
+    {
+      "name": "decoder/Dense_0/kernel",
+      "shape": [
+        144,
+        256
+      ],
+      "offset": 889228
+    },
+    {
+      "name": "decoder/Dense_1/bias",
+      "shape": [
+        2048
+      ],
+      "offset": 1036684
+    },
+    {
+      "name": "decoder/Dense_1/kernel",
+      "shape": [
+        256,
+        2048
+      ],
+      "offset": 1044876
+    },
+    {
+      "name": "encoder/Conv_0/bias",
+      "shape": [
+        32
+      ],
+      "offset": 3142028
+    },
+    {
+      "name": "encoder/Conv_0/kernel",
+      "shape": [
+        4,
+        4,
+        3,
+        32
+      ],
+      "offset": 3142156
+    },
+    {
+      "name": "encoder/Conv_1/bias",
+      "shape": [
+        64
+      ],
+      "offset": 3148300
+    },
+    {
+      "name": "encoder/Conv_1/kernel",
+      "shape": [
+        4,
+        4,
+        32,
+        64
+      ],
+      "offset": 3148556
+    },
+    {
+      "name": "encoder/Conv_2/bias",
+      "shape": [
+        128
+      ],
+      "offset": 3279628
+    },
+    {
+      "name": "encoder/Conv_2/kernel",
+      "shape": [
+        4,
+        4,
+        64,
+        128
+      ],
+      "offset": 3280140
+    },
+    {
+      "name": "encoder/Dense_0/bias",
+      "shape": [
+        256
+      ],
+      "offset": 3804428
+    },
+    {
+      "name": "encoder/Dense_0/kernel",
+      "shape": [
+        2048,
+        256
+      ],
+      "offset": 3805452
+    },
+    {
+      "name": "post_head/Dense_0/bias",
+      "shape": [
+        128
+      ],
+      "offset": 5902604
+    },
+    {
+      "name": "post_head/Dense_0/kernel",
+      "shape": [
+        384,
+        128
+      ],
+      "offset": 5903116
+    },
+    {
+      "name": "post_head/Dense_1/bias",
+      "shape": [
+        16
+      ],
+      "offset": 6099724
+    },
+    {
+      "name": "post_head/Dense_1/kernel",
+      "shape": [
+        128,
+        16
+      ],
+      "offset": 6099788
+    },
+    {
+      "name": "post_head/Dense_2/bias",
+      "shape": [
+        16
+      ],
+      "offset": 6107980
+    },
+    {
+      "name": "post_head/Dense_2/kernel",
+      "shape": [
+        128,
+        16
+      ],
+      "offset": 6108044
+    },
+    {
+      "name": "prior_head/Dense_0/bias",
+      "shape": [
+        128
+      ],
+      "offset": 6116236
+    },
+    {
+      "name": "prior_head/Dense_0/kernel",
+      "shape": [
+        128,
+        128
+      ],
+      "offset": 6116748
+    },
+    {
+      "name": "prior_head/Dense_1/bias",
+      "shape": [
+        16
+      ],
+      "offset": 6182284
+    },
+    {
+      "name": "prior_head/Dense_1/kernel",
+      "shape": [
+        128,
+        16
+      ],
+      "offset": 6182348
+    },
+    {
+      "name": "prior_head/Dense_2/bias",
+      "shape": [
+        16
+      ],
+      "offset": 6190540
+    },
+    {
+      "name": "prior_head/Dense_2/kernel",
+      "shape": [
+        128,
+        16
+      ],
+      "offset": 6190604
+    },
+    {
+      "name": "actor/Dense_0/bias",
+      "shape": [
+        128
+      ],
+      "offset": 6198796
+    },
+    {
+      "name": "actor/Dense_0/kernel",
+      "shape": [
+        144,
+        128
+      ],
+      "offset": 6199308
+    },
+    {
+      "name": "actor/Dense_1/bias",
+      "shape": [
+        128
+      ],
+      "offset": 6273036
+    },
+    {
+      "name": "actor/Dense_1/kernel",
+      "shape": [
+        128,
+        128
+      ],
+      "offset": 6273548
+    },
+    {
+      "name": "actor/Dense_2/bias",
+      "shape": [
+        2
+      ],
+      "offset": 6339084
+    },
+    {
+      "name": "actor/Dense_2/kernel",
+      "shape": [
+        128,
+        2
+      ],
+      "offset": 6339092
+    },
+    {
+      "name": "actor/Dense_3/bias",
+      "shape": [
+        2
+      ],
+      "offset": 6340116
+    },
+    {
+      "name": "actor/Dense_3/kernel",
+      "shape": [
+        128,
+        2
+      ],
+      "offset": 6340124
+    }
+  ],
+  "bytes": 6341148
+}

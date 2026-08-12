@@ -451,6 +451,52 @@ export class BlogPostPage {
             });
         }
 
+        // World models: the bouncing ball environment, running live
+        const ballEnvContainer = document.getElementById('ball-env-demo');
+        if (ballEnvContainer) {
+            import('../components/world-models').then(({ BallEnvDemo }) => {
+                try {
+                    const demo = new BallEnvDemo({ containerId: 'ball-env-demo' });
+                    this.embeddedDemos.push(demo);
+                } catch (error) {
+                    console.error('Failed to initialize ball env demo:', error);
+                }
+            }).catch(error => {
+                console.error('Failed to load ball env demo module:', error);
+            });
+        }
+
+        // World models: the trained agent chasing a cursor-placed goal,
+        // beside the model's dream of the same moment
+        const chaseContainer = document.getElementById('chase-hero');
+        if (chaseContainer) {
+            import('../components/world-models').then(({ ChaseHero }) => {
+                try {
+                    const demo = new ChaseHero({ containerId: 'chase-hero' });
+                    this.embeddedDemos.push(demo);
+                } catch (error) {
+                    console.error('Failed to initialize chase hero:', error);
+                }
+            }).catch(error => {
+                console.error('Failed to load chase hero module:', error);
+            });
+        }
+
+        // World models: two balls, one wall, and the end of a shared timeline
+        const divergenceContainer = document.getElementById('divergence-demo');
+        if (divergenceContainer) {
+            import('../components/world-models').then(({ DivergenceDemo }) => {
+                try {
+                    const demo = new DivergenceDemo({ containerId: 'divergence-demo' });
+                    this.embeddedDemos.push(demo);
+                } catch (error) {
+                    console.error('Failed to initialize divergence demo:', error);
+                }
+            }).catch(error => {
+                console.error('Failed to load divergence demo module:', error);
+            });
+        }
+
         // CT Fracture Segmentation post components
         const stlContainer = document.getElementById('stl-viewer-demo');
         if (stlContainer) {

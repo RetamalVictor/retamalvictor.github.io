@@ -11,6 +11,8 @@
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
     "test:mapf": "npx --yes tsx src/components/mapf/test/parity.ts",
+    "test:world-models": "npx --yes tsx src/components/world-models/test/parity.ts",
+    "test:agent": "npx --yes tsx src/components/world-models/test/agent-parity.ts",
     "prepare": "husky",
     "lint-staged": "lint-staged"
   },
