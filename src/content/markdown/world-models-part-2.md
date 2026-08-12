@@ -16,7 +16,7 @@ That is the end of this post, running live, and both networks are the trained we
 
 The white ball is steered by the policy this post builds, which receives those 32x32 pixels and nothing else, never the simulator's state. Put the goal wherever you like. It was trained on goals that cruise and bounce, so a goal that teleports under your cursor is a situation it never saw, and it copes.
 
-The strip underneath is the part worth staring at. Those frames are not rendered by anything. Starting from what the model currently believes, it imagines the next sixteen steps with no further pixels arriving, and the decoder paints each one. That imagination is not a readout: it is the environment the policy was trained in. All 5,000 actor updates happened inside it, and the policy never saw a real transition until it was evaluated.
+The strip underneath is the strange part. Those frames are not rendered by anything. Starting from what the model currently believes, it imagines the next sixteen steps with no further pixels arriving, and the decoder paints each one. That imagination was the policy's entire training environment: all 5,000 actor updates happened inside it, and the policy never saw a real transition until it was evaluated.
 
 [Part 1](/blog/world-models-part-1) ended with a zero. A linear probe reading velocity out of my VAE's 16-dimensional latent scored $R^2 = 0.00$, and I argued that no amount of training could have fixed it: the renderer is a function of position alone, so a single frame carries exactly zero information about motion. Velocity lives in the difference between frames, and a VAE never sees two frames at once.
 
@@ -24,9 +24,9 @@ This post gives a model two frames at once. Then thirty-three of them. Then it d
 
 The first way freezes the encoder from part 1 and trains a recurrent network on its latents, which is the Ha and Schmidhuber *World Models* recipe from 2018. That takes the zero to **0.81**. The second way throws the seam away and trains everything against one loss, which is Dreamer's RSSM, and takes it to **0.96**.
 
-The numbers are not the interesting part. The interesting parts are a model that posts the best one-step error in the entire experiment and then leaves the space of ball images altogether by its thirtieth prediction, and a comparison that looks like an eleven-fold win until you subtract the decoders.
+More interesting than either number: a model that posts the best one-step error in the entire experiment and then leaves the space of ball images altogether by its thirtieth prediction, and a comparison that looks like an eleven-fold win until you subtract the decoders.
 
-**What this post assumes:** part 1's VAE, its probe protocol, and the dataset splits. **What you'll be able to do afterwards:** derive calibrated reference levels for a pixel-error curve so the numbers mean something; explain why teacher-forced training and open-loop evaluation sample from different input distributions; implement KL balancing and test that it does what you think; and say precisely what joint training buys, in $R^2$, in pixels, and in the parts where it buys nothing.
+**What this post assumes:** part 1's VAE, its probe protocol, and the dataset splits. **What you'll be able to do afterwards:** derive calibrated reference levels for a pixel-error curve so the numbers mean something; explain why teacher-forced training and open-loop evaluation sample from different input distributions; implement KL balancing and test that it does what you think; and measure what joint training buys, in $R^2$, in pixels, and in the parts where it buys nothing.
 
 ---
 
@@ -39,7 +39,7 @@ The defining property of the recipe is not the GRU. It is the **seam**.
 <figure class="wm-fig wm-swap">
   <img class="wm-light" src="/images/world-models/diagrams/ha-pipeline-light.png" alt="Phase 1 trains a VAE on single frames. Phase 2 freezes the encoder and trains a GRU on latent sequences, with a crossed-out arrow showing that the dynamics loss never reaches the encoder.">
   <img class="wm-dark" src="/images/world-models/diagrams/ha-pipeline-dark.png" alt="Phase 1 trains a VAE on single frames. Phase 2 freezes the encoder and trains a GRU on latent sequences, with a crossed-out arrow showing that the dynamics loss never reaches the encoder.">
-  <figcaption><strong>Figure 1.</strong> Ha and Schmidhuber's split: V, then M. The crossed arrow is the whole design.</figcaption>
+  <figcaption><strong>Figure 1.</strong> Ha and Schmidhuber's split: V trained first, then M on its frozen output.</figcaption>
 </figure>
 
 Two training phases, deliberately separate. Phase 1 trains the VAE on single frames; phase 2 freezes it, encodes every trajectory into latent sequences, and trains a recurrent model on those. The crossed arrow in figure 1 is the design: the dynamics loss never reaches the encoder. Whatever information reconstruction happened to preserve is all the dynamics model will ever get, and however the encoder happened to arrange that information is the coordinate system the dynamics model has to work in.
@@ -101,13 +101,13 @@ and for a ball with momentum that expectation depends on position *and* velocity
 
 Subsequences of 33 frames (32 transitions), sampled uniformly from the training episodes, batch 64, adam at $10^{-3}$, 20k steps, one `lax.scan` over time. The speed cap is 2 pixels per step and the dataset's mean speed is 1.41, so a crossing of the 32-pixel box takes somewhere between 16 and 23 steps. Thirty-two transitions contain a couple of bounces, which is long enough that the model cannot get away with linear extrapolation.
 
-Two implementation choices worth naming:
+Two implementation choices shape everything downstream:
 
-**$h_0 = 0$, and the first four transitions are excluded from the loss.** With no history the velocity is genuinely unknowable, so those steps would only teach the model to hedge, predicting a blurry average over directions it has no way to distinguish. Masking them is not cheating; it is refusing to train on a question with no answer. The same warm-up of 4 is used at evaluation time, for both models in this post, so the protocols line up exactly.
+**$h_0 = 0$, and the first four transitions are excluded from the loss.** With no history the velocity is genuinely unknowable, so those steps would only teach the model to hedge, predicting a blurry average over directions it has no way to distinguish. Masking them just refuses to train on a question that has no answer. The same warm-up of 4 is used at evaluation time, for both models in this post, so the protocols line up exactly.
 
 **Training is teacher forced.** At every step the GRU receives the *true* $z_{t-1}$, never its own prediction.
 
-That last one is standard, and it sets up the most useful failure in this post, so hold it in view:
+That last one is standard, and it sets up the most useful failure in this post:
 
 <figure class="wm-fig wm-swap">
   <img class="wm-light" src="/images/world-models/diagrams/teacher-openloop-light.png" alt="Two unrolled GRU chains. In training every input is a real encoded frame. In open-loop evaluation the model's own predictions feed back in as inputs after a four-step warm-up.">
@@ -147,7 +147,7 @@ Nothing in that demo is a neural network. It is the environment from part 1, run
 
 The evaluation is an **open-loop rollout**: warm up on 4 real transitions, then run the model forward on its own mean predictions for 30 steps, decoding each predicted latent, and measure pixel MSE against the real continuation. `rollout.py` implements it once and both models in this post call it, so "drift at horizon $k$" is the same quantity for both by construction.
 
-But a pixel MSE of 0.018 means nothing until you know what the scale is. Two reference levels make every number readable, and both are worth deriving.
+But a pixel MSE of 0.018 means nothing until you know what the scale is. Two reference levels make every number readable.
 
 **Level 1, blind but honest.** A model that gives up and paints the dataset's mean image has per-pixel error equal to the pixel variance:
 
@@ -163,7 +163,7 @@ There is a third level, and it is specific to each pipeline rather than to the d
 
 $$\text{floor} = 0.28 / 1024 \approx 0.00027 \text{ per pixel}$$
 
-That is the best a perfect dynamics model could do on this pipeline. Hold onto it, because the RSSM's floor is completely different and the comparison at the end is meaningless without both.
+That is the best a perfect dynamics model could do on this pipeline. The RSSM's floor will turn out to be completely different, and the comparison at the end is meaningless without both.
 
 It also heads off a units trap that would otherwise make this whole section look like a regression against part 1: that post's headline reconstruction number was 0.28, this one's headline drift number is 0.0004, and they are neither the same quantity nor the same exam. One is summed over 1024 pixels and graded with the answer in hand. The other is per pixel, on a frame the model has never seen.
 
@@ -185,7 +185,7 @@ Bold marks the best value in each column, and one number in that table is bad en
 
 Three of the four curves rise and flatten between the dashed lines. The fourth keeps going. Taking those in order.
 
-### The result this half existed for
+### The zero moves
 
 Velocity is linearly readable: 0.74 to 0.81 across all four variants, against exactly 0.00 from the encoder alone. The recurrence integrates motion, as the objective argument said it had to.
 
@@ -193,11 +193,11 @@ The one-step number deserves a second look too. `direct-mean` predicts the next 
 
 Position is the sneaky one: $h$ probes at 0.979 where the raw latent managed 0.75. The GRU beats its own input. Two mechanisms and one caveat. Filtering first: each frame's encoding is a noisy measurement of position, and a recurrence that has integrated many of them can average, with estimation error falling roughly like $1/T$, which is Kalman logic with the matrices learned rather than derived. Untangling second: part 1 showed position is present but curled in the latent, and a GRU that must *use* position to predict re-represents it in coordinates of its own, where 128 dimensions give the representation room to lie flat.
 
-The caveat: a 128-dimensional feature vector flatters a linear probe relative to a 16-dimensional one on capacity alone. The 0.979-against-0.75 comparison mixes "better organized" with "more room to be organized in", and I cannot separate them with this experiment. It is precisely why $h$ stays pinned at 128 for the RSSM, where the comparison is between two 128-dimensional states and the confound cancels.
+The caveat: a 128-dimensional feature vector flatters a linear probe relative to a 16-dimensional one on capacity alone. The 0.979-against-0.75 comparison mixes "better organized" with "more room to be organized in", and I cannot separate them with this experiment. That is why $h$ stays pinned at 128 for the RSSM, where the comparison is between two 128-dimensional states and the confound cancels.
 
 ### The switch that detonates
 
-**Residual prediction, trained on means, posts the best one-step error in the grid, and then explodes.** By horizon 30 it sits at 0.139, more than six times above the hallucination ceiling. On a log axis it is the orange curve that never flattens.
+Residual prediction, trained on means, posts the best one-step error in the grid, and then explodes. By horizon 30 it sits at 0.139, more than six times above the hallucination ceiling. On a log axis it is the orange curve that never flattens.
 
 <figure class="wm-fig">
   <img src="/images/world-models/gru-filmstrip-residual-mean.png" alt="Two rows of eight frames at increasing horizons. The top row is real. The bottom row matches early, then develops a vertical smear at the left edge and an oversized over-bright blob by the last frames.">
@@ -208,17 +208,17 @@ Through $k=6$ the two rows are indistinguishable. By $k=22$ there is a vertical 
 
 The mechanism is the oldest one in numerical integration. Open loop, the residual model computes $\hat{z}_{t+1} = \hat{z}_t + \mu_\Delta$, a running sum. Every step's small bias accumulates, nothing pulls the sum back toward the set of latents the decoder has seen, and the state random-walks out of the data distribution. The direct model's update is $\hat{z}_{t+1} = \mu(h_t)$, whose output *is* a fresh prediction of a plausible latent at every step, so errors saturate at "plausible but wrong" instead of compounding to "impossible".
 
-Same objective. Nearly identical teacher-forced scores (-20.7 against -21.6 NLL). Completely different failure geometry. **One-step metrics cannot see this**, which is the practical lesson: if you are going to roll a model out for 30 steps, you have to measure it at 30 steps.
+Same objective. Nearly identical teacher-forced scores (-20.7 against -21.6 NLL). Completely different failure geometry. One-step metrics cannot see this, which is the practical lesson: if you are going to roll a model out for 30 steps, you have to measure it at 30 steps.
 
 ### The switch that rescues it
 
-**Training on samples costs you the short game and wins the long one.** The sample-trained runs are about 9 times worse at horizon 1, because the encoder's posterior noise $z = \mu + \sigma\epsilon$ is an error floor no model can beat, but both plateau *below* every mean-trained run by horizon 30, and `residual-sample` goes from 0.139 to 0.0177, best in the grid.
+Training on samples costs you the short game and wins the long one. The sample-trained runs are about 9 times worse at horizon 1, because the encoder's posterior noise $z = \mu + \sigma\epsilon$ is an error floor no model can beat, but both plateau *below* every mean-trained run by horizon 30, and `residual-sample` goes from 0.139 to 0.0177, best in the grid.
 
 Figure 2 is the explanation. Teacher forcing trains the model on inputs from the real data distribution; open loop feeds it its own slightly-wrong outputs, which are inputs it has never seen, *unless* it trained on noisy latents, in which case "slightly wrong" has been in-distribution all along. Noise injection at training time buys robustness exactly where open-loop rollouts spend it.
 
 It is not a coincidence that Dreamer, the architecture in the second half of this post, feeds its dynamics model samples rather than means. I had read that as an implementation detail for years. The grid says it is load-bearing.
 
-One column in that table is a trap, and I want to name it rather than quietly not print it. The NLLs are only comparable *within* a latent source: sampled targets carry the posterior's irreducible entropy, so their likelihood floor sits about 40 nats above the mean-trained runs'. The mean-trained models are not "better" at -21.6 versus +19.4; they are being graded on an easier exam. Metrics with different floors are not one leaderboard.
+One column in that table is misleading, and I would rather explain it than quietly not print it. The NLLs are only comparable *within* a latent source: sampled targets carry the posterior's irreducible entropy, so their likelihood floor sits about 40 nats above the mean-trained runs'. The mean-trained models are not "better" at -21.6 versus +19.4; they are being graded on an easier exam. Metrics with different floors are not one leaderboard.
 
 ### Where they all end up
 
@@ -244,7 +244,7 @@ This environment makes compounding vicious, and the reason generalizes to every 
 
 ## Removing the seam
 
-So the frozen recipe works, and it has a ceiling: every variant is drawing a confident ball in the wrong place by twenty steps. The question the rest of this post exists to answer is how much of that ceiling is the frozenness itself.
+So the frozen recipe works, and it has a ceiling: every variant is drawing a confident ball in the wrong place by twenty steps. The rest of this post asks how much of that ceiling is the frozenness itself.
 
 There are two candidate explanations sitting in the results above. The GRU spends capacity untangling and denoising a code that was shaped by reconstruction alone, which part 1 called the untangling tax. And it cannot push information *back* into the encoder, so anything reconstruction discarded is gone for good. Both are properties of the seam, not of recurrence.
 
@@ -254,12 +254,12 @@ Dreamer's answer is to delete the seam. One model, one loss, encoder trained by 
 
 Every filtering algorithm ever written has the same two beats. **Predict** where the world should be, from what you knew and what you did. Then **correct** that prediction with what you actually observe. A Kalman filter does it with matrices; an RSSM does it with a GRU and two small MLPs, and learns all of them.
 
-The state comes in two pieces, and the split is the design:
+The state comes in two pieces:
 
 - $h_t$, deterministic, 128 dimensions, carried by a GRU. This is memory. Given the past, it is a known quantity.
 - $z_t$, stochastic, 16 dimensions, resampled every step. This is everything the frame told you that memory could not have predicted.
 
-Why both? A purely deterministic state cannot represent uncertainty, and this world has genuine uncertainty in it, since the random action nudges are unpredictable by construction. A purely stochastic state has to re-derive the entire past at every step through a sampling bottleneck. Splitting them lets the model route predictable structure through $h$, where it is cheap and exact, and reserve the noisy channel for what actually needs it.
+Neither piece works alone. A purely deterministic state cannot represent uncertainty, and this world has genuine uncertainty in it, since the random action nudges are unpredictable by construction. A purely stochastic state has to re-derive the entire past at every step through a sampling bottleneck. Splitting them lets the model route predictable structure through $h$, where it is cheap and exact, and reserve the noisy channel for what actually needs it.
 
 The other half of the design is that the model gets asked the same question twice, once with the answer hidden and once with it visible. The **prior** $p(z_t \mid h_t)$ must guess the stochastic state from memory alone. The **posterior** $q(z_t \mid h_t, o_t)$ gets to look at the frame. Forcing the first to agree with the second is how dynamics get learned, and that forcing is a KL term.
 
@@ -268,7 +268,7 @@ The other half of the design is that the model gets asked the same question twic
 <figure class="wm-fig wm-swap">
   <img class="wm-light" src="/images/world-models/diagrams/rssm-cell-light.png" alt="One RSSM step. A GRU core takes the previous state and action to produce h. A dashed path goes to the prior head with no frame. A solid path takes the frame through an encoder to the posterior head. A KL bracket links the two heads. The sampled z and h feed a decoder.">
   <img class="wm-dark" src="/images/world-models/diagrams/rssm-cell-dark.png" alt="One RSSM step. A GRU core takes the previous state and action to produce h. A dashed path goes to the prior head with no frame. A solid path takes the frame through an encoder to the posterior head. A KL bracket links the two heads. The sampled z and h feed a decoder.">
-  <figcaption><strong>Figure 7.</strong> One RSSM step. The KL bracket is the only thing connecting prediction to perception.</figcaption>
+  <figcaption><strong>Figure 7.</strong> One RSSM step. The dashed path predicts without the frame; the solid path corrects with it.</figcaption>
 </figure>
 
 One step, given frame $o_t$ and action $a_t$:
@@ -283,15 +283,15 @@ $$z_t \sim q, \qquad \hat{o}_t = \mathrm{dec}\big([h_t, z_t]\big), \qquad \hat{r
 
 Trace the two paths in figure 7. The dashed one goes up: $h_t$ to the prior head, no frame anywhere near it. The solid one goes down: the frame enters through the encoder, joins $h_t$, and produces the posterior. They meet at the orange bracket, which is the only thing in the architecture connecting prediction to perception.
 
-Three choices in there that the first half of this post paid for:
+The first half of this post paid for three of the choices in there:
 
 **The decoder sees $[h_t, z_t]$, not $z_t$ alone.** Reconstruction can lean on the deterministic path, which frees $z$ to carry only what $h$ could not predict. This is Dreamer's arrangement, and it is most of the explanation for the reconstruction result further down.
 
-**$z_t$ is always sampled, never the mean.** The 2x2 grid above showed that feeding a dynamics model noisy inputs is what makes it robust to its own errors in open loop. Here it is not a training trick; it is what the architecture does.
+**$z_t$ is always sampled, never the mean.** The 2x2 grid above showed that feeding a dynamics model noisy inputs is what makes it robust to its own errors in open loop. What was a training trick there is just how the architecture works here.
 
 **$\sigma$ has a floor of 0.1 on both heads**, ten times higher than the GRU's. It is the Dreamer default, and it doubles as insurance against the $\sigma$-collapse failure mode described above.
 
-The encoder and decoder are the same conv stacks as part 1's VAE, and $h$ is the same 128 as the GRU's. That is deliberate, and it holds up when you count: the RSSM is 1.57M parameters, and the frozen pipeline it replaces is 1.39M (VAE) plus 0.077M (GRU), so 1.47M. Seven percent apart. Whatever is about to happen to the drift curve, it is not because I brought a bigger model. **Nothing about the networks got smarter. Only the training signal changed.**
+The encoder and decoder are the same conv stacks as part 1's VAE, and $h$ is the same 128 as the GRU's. That is deliberate, and it holds up when you count: the RSSM is 1.57M parameters, and the frozen pipeline it replaces is 1.39M (VAE) plus 0.077M (GRU), so 1.47M. Seven percent apart. Whatever is about to happen to the drift curve, it is not because I brought a bigger model: nothing about the networks got smarter, only the training signal changed.
 
 ## The loss
 
@@ -299,16 +299,16 @@ $$\mathcal{L} = \sum_t \Big[ \lVert o_t - \hat{o}_t \rVert^2 + \lVert r_t - \hat
 
 The reward term is switched off for everything in the comparison below: the plain ball has no reward, so its targets are all zeros and the head contributes nothing. It exists because an agent will need it, and it earns its keep in the last section, since a world model that cannot predict reward cannot host a policy.
 
-Structurally this is part 1's ELBO with the sequence wrapped around it, same reconstruction term, same KL. One thing changed, and it changes everything: **the KL is against a learned prior**, not against $\mathcal{N}(0, I)$.
+Structurally this is part 1's ELBO with the sequence wrapped around it, same reconstruction term, same KL. One thing changed: **the KL is against a learned prior**, not against $\mathcal{N}(0, I)$.
 
 That single difference is why the collapse that ate part 1's first run never happened here. I trained with $\beta = 1$ from step zero, warmup knob untouched, and the KL settled at about 1.4 nats and stayed alive for 20k steps. The reason is a change in what "ignore the latent" costs. Against a fixed prior, the model can drive the KL to zero by matching $\mathcal{N}(0,I)$ and pay nothing, which on 98%-black frames is a comfortable optimum. Against a prior that can *chase* the posterior, the KL is only large when the frame carried something the dynamics genuinely failed to predict, so carrying information is cheap from the first gradient step and there is no collapsed configuration to fall into.
 
 <figure class="wm-fig">
   <img src="/images/world-models/rssm-loss-curves.png" alt="Three panels: total loss falling and flattening, reconstruction falling with validation tracking training, and KL falling from about 8 nats to about 1.4 without reaching zero.">
-  <figcaption><strong>Figure 8.</strong> RSSM training. The KL panel on the right is the one to read: it settles, and it never touches zero.</figcaption>
+  <figcaption><strong>Figure 8.</strong> RSSM training, $\beta = 1$ from step zero, no warmup.</figcaption>
 </figure>
 
-What I look for in the third panel is the shape: KL falls from about 8 nats and settles at 1.4 without ever touching zero, and validation tracks training the whole way. A KL pinned at zero is the collapse we know by name from part 1; a KL that oscillates or climbs is an unstable prior. This one is neither. The spike at step 4000 is real, in both the train and validation traces, and it recovers within a few hundred steps. I have no explanation for it beyond a hard batch, which is the honest thing to say about a bump that never recurred.
+What I look for in the third panel is the shape: KL falls from about 8 nats and settles at 1.4 without ever touching zero, and validation tracks training the whole way. A KL pinned at zero is the collapse we know by name from part 1; a KL that oscillates or climbs is an unstable prior. This one is neither. The spike at step 4000 is real, in both the train and validation traces, and it recovers within a few hundred steps. I have no explanation for it beyond a hard batch, and it never came back.
 
 ### The one trick: KL balancing
 
@@ -334,7 +334,7 @@ def kl_balanced(mu_q, sig_q, mu_p, sig_p, alpha: float = 0.8):
 
 Read it as a negotiation with deliberately asymmetric pressure. Eighty percent of the gradient pulls the prior toward what perception concluded, which is how the dynamics get learned. Twenty percent regularizes perception toward what was predictable, enough to keep the posterior from inventing detail the prior can never match, not enough to collapse it into the prior's ignorance.
 
-This is the single most load-bearing stabilization trick in the build, and it is four lines. It is also easy to get backwards, so there is a test: at $\alpha = 1$ the posterior parameters receive exactly zero KL gradient, checked with `jax.grad`. Write that test. Sign errors here produce a model that trains, converges, and is quietly wrong.
+No stabilization trick in the build carries more weight, and it is four lines. It is also easy to get backwards, so there is a test: at $\alpha = 1$ the posterior parameters receive exactly zero KL gradient, checked with `jax.grad`. Write that test. Sign errors here produce a model that trains, converges, and is quietly wrong.
 
 ### Training
 
@@ -358,7 +358,7 @@ Elided: the reward head's MSE term and the carry's return value. The full functi
 
 Inputs are pixel sequences now, not precomputed latents: batches of 32 sequences of 33 frames, with the encoder inside the training graph. Everything else is pinned to the frozen run, with the same dataset file, the same splits, the same 32 transitions, the same warm-up 4 and horizon 30 for evaluation, and the same ridge probe.
 
-One protocol difference worth explaining. The GRU masked the first four transitions out of the loss because with $h_0 = 0$ the velocity was unknowable. Here there is no mask: the posterior sees $o_t$ at every step, so early states are *corrected* rather than blind. The evaluation still uses warm-up 4, for comparability.
+One protocol difference needs explaining. The GRU masked the first four transitions out of the loss because with $h_0 = 0$ the velocity was unknowable. Here there is no mask: the posterior sees $o_t$ at every step, so early states are *corrected* rather than blind. The evaluation still uses warm-up 4, for comparability.
 
 It trained in one shot. No learning-rate drop, no beta warmup, no instability, and I had lined up both levers in the design doc and used neither. RSSMs have a reputation for being touchy, and I record the non-event here so that the next person's expectations are calibrated by something other than my anxiety.
 
@@ -374,7 +374,7 @@ It trained in one shot. No learning-rate drop, no beta warmup, no instability, a
 | drift @30 | n/a | 0.0177 | **0.0129** |
 | reconstruction (summed) | 0.28 | inherits the VAE | **0.033** |
 
-The middle column is generous on purpose: it takes the best of the four GRU variants *per row*, so the frozen recipe is represented by `residual-mean` on the short horizons, `residual-sample` on the long ones and `direct-mean` on the probes. RSSM probes are on $h$ alone, 128 dimensions, capacity-matched against the GRU's $h$, which is the comparison this whole post was built to make fair. Adding $z$ to the probe input buys about 0.003 more.
+The middle column is generous on purpose: it takes the best of the four GRU variants *per row*, so the frozen recipe is represented by `residual-mean` on the short horizons, `residual-sample` on the long ones and `direct-mean` on the probes. RSSM probes are on $h$ alone, 128 dimensions, capacity-matched against the GRU's $h$. Adding $z$ to the probe input buys about 0.003 more.
 
 <figure class="wm-fig">
   <img src="/images/world-models/three-model-comparison.png" alt="Left: three drift curves on a log axis, the joint model an order of magnitude below the two frozen ones and still under the upper reference line at horizon 30. Right: a bar chart of velocity probe R squared reading 0.00, 0.81 and 0.96.">
@@ -383,7 +383,7 @@ The middle column is generous on purpose: it takes the best of the four GRU vari
 
 The blue curve enters an order of magnitude below both frozen models: 11 times better at one step, 13 times at five. Before reading that as a dynamics result, subtract the decoders.
 
-Each pipeline's drift is bounded below by its own reconstruction error, meaning what that decoder manages when it *is* handed the frame, and those two floors are nothing alike: 0.00027 per pixel for the frozen stack, 0.000032 for the joint one. Measured against its own floor, the frozen GRU's best one-step prediction sits about 30% above it. The RSSM's sits *at* it: 0.000031 against a floor of 0.000032, which is as close as two separately-measured numbers ever get. So the faithful one-step statement is not "11 times better". It is that predicting one step ahead costs the RSSM nothing measurable beyond redrawing the frame it already has, while the frozen model pays about 30% extra for the same step, and that the 11 times is that fact multiplied by a better decoder.
+Each pipeline's drift is bounded below by its own reconstruction error, meaning what that decoder manages when it *is* handed the frame, and those two floors are nothing alike: 0.00027 per pixel for the frozen stack, 0.000032 for the joint one. Measured against its own floor, the frozen GRU's best one-step prediction sits about 30% above it. The RSSM's sits *at* it: 0.000031 against a floor of 0.000032, which is as close as two separately-measured numbers ever get. So the faithful one-step statement: predicting one step ahead costs the RSSM nothing measurable beyond redrawing the frame it already has, the frozen model pays about 30% extra for the same step, and the "11 times better" is that fact multiplied by a better decoder.
 
 The horizons where the floors stop mattering are the interesting ones anyway. By $k = 30$ the frozen model sits 65 times above its floor and the joint one 400 times above its own, so the decoders have dropped out of the comparison entirely. There the RSSM reads 0.0129, just above the mean-image line at 0.011, and nowhere near the 0.022 ceiling where every frozen variant had already parked. Read against the reference levels derived earlier, that says the joint model still retains genuine information about the true trajectory at a horizon where the frozen recipe had fully decorrelated into "a perfect ball in an uncorrelated place".
 
@@ -394,7 +394,7 @@ The horizons where the floors stop mattering are the interesting ones anyway. By
 
 Through $k=15$ the rows are hard to tell apart. At $k=22$, and this is the frame I keep coming back to, the imagined ball is at the bottom edge, *mid-bounce*, where the real one is. No frozen variant ever predicted a bounce correctly that far out, and a bounce is where the dynamics are least linear and the smallest position error flips the outcome. By $k=30$ the two have finally separated, which is exactly what drift@30 = 0.0129 says: not tracking any more, not decorrelated either.
 
-### Two things worth understanding about why
+### Why it wins
 
 **The encoder stopped being an adversary.** In the frozen pipeline the GRU spent capacity untangling and denoising a code that had been shaped by reconstruction alone. Here the encoder is shaped by the prediction loss from the start, so the latent arrives prediction-ready.
 
@@ -442,15 +442,15 @@ The follow task in motion, which is the shot this whole series was built to take
   <figcaption><strong>Figure 14.</strong> A policy whose entire training experience was 15-step hallucinations, running in the real environment.</figcaption>
 </figure>
 
-Two findings from that experiment are worth more than the scores.
+Two findings from that experiment matter more than the scores.
 
-**The imagination was pessimistic, not exploitative.** The left panel of figure 12 plots imagined reward against real reward. I built it expecting to catch the actor conning its own reward head, the classic model-based failure. The opposite happened: imagined reward sits near 0.2 while real reward climbs past 0.8. The cause is horizon bias. Imagination only ever sees 15-step windows starting from random replay states, most of which are far from the goal, so it mostly measures transit time; real 200-step episodes let the agent park on the goal and collect. **Imagined return is not an estimate of episode return. It is an estimate of local improvement.**
+**The imagination was pessimistic, not exploitative.** The left panel of figure 12 plots imagined reward against real reward. I built it expecting to catch the actor conning its own reward head, the classic model-based failure. The opposite happened: imagined reward sits near 0.2 while real reward climbs past 0.8. The cause is horizon bias. Imagination only ever sees 15-step windows starting from random replay states, most of which are far from the goal, so it mostly measures transit time; real 200-step episodes let the agent park on the goal and collect. Imagined return is an estimate of local improvement, not of episode return.
 
 **The harder task produced the better policy, because it produced the better world model.** Follow beats hover 0.879 to 0.652, and the standard deviations are the tell: 0.025 against 0.228. The hover world model overfit its 400 static goal positions, the first train/validation gap of the entire project, and represents the goal weakly, so on some episodes it simply mislocates the target and the actor inherits the error. The follow model never had that option: 400 goal *trajectories* forced it to track, and it probes goal position at 0.99. Its actor locks on every single episode.
 
 The policy is a mirror held up to the world model. Every flaw transfers.
 
-And one more entry for the file part 1 opened on probes lying in specific ways: the hover model's goal probe read 0.12, which looks damning until you notice that a static goal means the probe's fit set contains 25 effectively distinct target values dressed up as thousands of rows. Ridge memorizes 25 points in 128 dimensions and whiffs on the unseen 25. **A probe needs variance in its target within its fit distribution, or it measures nothing.**
+And one more entry for the file part 1 opened on probes lying in specific ways: the hover model's goal probe read 0.12, which looks damning until you notice that a static goal means the probe's fit set contains 25 effectively distinct target values dressed up as thousands of rows. Ridge memorizes 25 points in 128 dimensions and whiffs on the unseen 25. A probe needs variance in its target within its fit distribution, or it measures nothing.
 
 ## Where this breaks
 
@@ -466,7 +466,7 @@ The parts of all this I would not defend in a paper.
 
 **The comparison is capacity-matched, not compute-matched.** All the models got 20k steps. The RSSM does far more work per step, with an encoder and decoder inside a 33-step scan versus a GRU over precomputed latents, so it consumed more compute for the same step count. If your constraint is wall-clock rather than architecture, the frozen recipe is cheaper per unit of progress, and its two phases can be debugged independently.
 
-**And the honest scoreboard on the ceiling question.** I asked how much of the frozen recipe's 20-step wall was frozenness. The RSSM at horizon 30 is at 0.0129 and still climbing toward the same reference lines. Joint training did not remove the wall; it moved it. The frozen models cross the mean-image level at $k \approx 10$, the RSSM at $k \approx 28$, so a factor of about three in horizon, plus an order of magnitude in error everywhere short of that. Large practically, not qualitatively: both models eventually lose the timeline. That is what a stochastic environment does to open-loop prediction, and nothing here escapes it.
+**And the scoreboard on the ceiling question.** I asked how much of the frozen recipe's 20-step wall was frozenness. The RSSM at horizon 30 is at 0.0129 and still climbing toward the same reference lines. Joint training did not remove the wall; it moved it. The frozen models cross the mean-image level at $k \approx 10$, the RSSM at $k \approx 28$, so a factor of about three in horizon, plus an order of magnitude in error everywhere short of that. Large practically, not qualitatively: both models eventually lose the timeline. That is what a stochastic environment does to open-loop prediction, and nothing here escapes it.
 
 ## Try it yourself
 
@@ -496,6 +496,6 @@ uv run train-ac --wm-run runs/rssm/follow --data data/ball_follow.npz \
 
 Velocity $R^2$: 0.00, then 0.81, then 0.96. Open-loop error at five steps: an order of magnitude. Reconstruction: better from the model that was not only reconstructing. And at the end, an agent that learned to chase a moving target from 500 offline episodes and about five GPU-minutes of dreaming, with pixels in, nudges out, and ground truth touched only to grade it.
 
-The through-line is one sentence, and it is worth more than any of the numbers: **a representation is shaped by the loss that reaches it.** Train an encoder on reconstruction and you get a code that knows what a frame looks like. Train it on prediction and you get a code that knows what the world does next, and, as it turns out, one that also knows better what the frame looks like.
+The through-line is one sentence: **a representation is shaped by the loss that reaches it.** Train an encoder on reconstruction and you get a code that knows what a frame looks like. Train it on prediction and you get a code that knows what the world does next, and, as it turns out, one that also knows better what the frame looks like.
 
 Next stop is the environment this was all rehearsal for: the same recipe, pointed at DOOM's `take_cover`, where nobody hands you the true state and every measurement in this series has to be earned a different way.

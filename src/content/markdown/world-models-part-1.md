@@ -15,9 +15,9 @@ featured: true
  <figcaption>Left, a real episode. Right, the same episode rebuilt frame by frame from sixteen numbers each, by the model this post is about. It never misses. It also has no idea which way the ball is going.</figcaption>
 </figure>
 
-A model can reconstruct every frame you show it, pixel for pixel, and still know nothing about how the world moves. That sentence is easy to nod along to and hard to believe until you watch it happen to your own code, with your own numbers, on a dataset small enough to hold in your head.
+A model can reconstruct every frame you show it, pixel for pixel, and still know nothing about how the world moves. I found that easy to nod along to and hard to actually believe until it happened in my own code, on a dataset small enough to hold in my head.
 
-So this series builds the whole thing from scratch, on a world I wrote myself. Three models, in the order the field discovered them: a VAE, then Ha and Schmidhuber's frozen-encoder recurrent model from *World Models* (2018), then Dreamer's RSSM. One dataset, one evaluation protocol, one number that decides who wins.
+So this series builds the whole thing from scratch, on a world I wrote myself. Three models, in the order the field discovered them: a VAE, then Ha and Schmidhuber's frozen-encoder recurrent model from *World Models* (2018), then Dreamer's RSSM. All three run on the same dataset under the same evaluation protocol, and one number decides who wins.
 
 That number is $R^2 = 0.00$, and this post is about earning the right to trust it.
 
@@ -66,7 +66,7 @@ def ridge_fit(X, y, lam: float = 1e-3):
  return w, b
 ```
 
-Two decisions inside that are worth defending, because both bite later. The probe is **linear** on purpose: a nonlinear probe with enough capacity recovers position from almost anything, including a randomly initialized network, so it measures the probe rather than the model. And it is fit on one set of *episodes* and scored on another. Frames inside one episode are near-duplicates of their neighbours; split at the frame level and you have leaked your test set into your training set through a wall of correlated pixels.
+Two decisions in there bite later, so I'll defend them now. The probe is **linear** on purpose: a nonlinear probe with enough capacity recovers position from almost anything, including a randomly initialized network, so it measures the probe rather than the model. And it is fit on one set of *episodes* and scored on another. Frames inside one episode are near-duplicates of their neighbours; split at the frame level and you have leaked your test set into your training set through a wall of correlated pixels.
 
 A warning that will get its own section later: this instrument lies in specific, learnable ways. It gets caught lying before this post ends.
 
@@ -202,7 +202,7 @@ Units, because they bite for the rest of the series: reconstruction is squared e
 
 `base` is posterior collapse, the canonical VAE failure: the KL hit zero inside the first thousand steps and never came back, and the reconstruction grid is a row of black squares.
 
-A zero KL sounds like efficiency, since the code costs nothing, so it is worth being precise about why it is fatal. Against a unit Gaussian prior the KL vanishes in exactly one configuration:
+A zero KL sounds like efficiency, since the code costs nothing. It is fatal for a specific reason. Against a unit Gaussian prior the KL vanishes in exactly one configuration:
 
 $$\mathrm{KL}\big(q(z \mid o) \Vert \mathcal{N}(0, I)\big) = 0 \text{for every } o \quad\Longleftrightarrow\quad \mu(o) \equiv 0, \sigma(o) \equiv 1$$
 
@@ -210,9 +210,9 @@ The posterior is *the same distribution for every frame*. Whatever the encoder c
 
 $$I(O; Z) \le \mathbb{E}_o\big[\mathrm{KL}\big(q(z \mid o) \Vert p(z)\big)\big]$$
 
-so a KL of zero nats means $z$ carries zero information about the frame it came from. The decoder is not being handed a compressed picture. It is being handed noise, and the best thing any function of pure noise can do under squared error is ignore its input and emit a constant.
+so a KL of zero nats means $z$ carries zero information about the frame it came from. The decoder is being handed noise rather than a compressed picture, and the best thing any function of pure noise can do under squared error is ignore its input and emit a constant.
 
-Which constant? That was the detective moment. The reconstruction number sat at **11.17** for twenty thousand steps and refused to move, and 11.17 is not a random value. It is this:
+Which constant? The reconstruction number sat at **11.17** for twenty thousand steps and refused to move, and 11.17 turns out to be a very particular value:
 
 $$\min_c \mathbb{E}\lVert o - c \rVert^2 = \sum_{\text{pixels}} \mathrm{Var}(o_i) = 1024 \times (0.1045)^2 \approx 11.17$$
 
@@ -267,16 +267,16 @@ Every ball lands where it should, slightly softer than the original: the sub-pix
  <figcaption><strong>Figure 6.</strong> Sixteen draws of z from the prior, decoded. The generative check a reconstruction grid cannot give you.</figcaption>
 </figure>
 
-Most are single round balls somewhere in the box, which says the aggregate posterior actually covers the prior. A code that only decoded properly on its own training inputs would produce mush here. A handful show a second, fainter blob, which is the honest reading of "approximately covers": there are regions of the prior that no frame maps to, and the decoder has never been asked what lives there.
+Most are single round balls somewhere in the box, which says the aggregate posterior actually covers the prior. A code that only decoded properly on its own training inputs would produce mush here. A handful show a second, fainter blob, which is the fine print on "approximately covers": there are regions of the prior that no frame maps to, and the decoder has never been asked what lives there.
 
-Neither grid shows the model doing the one thing this project is about: holding on to something across time. It cannot, of course, because every frame here is encoded independently, but it is worth watching the independence in motion. This is the clip from the top of the post, now with the stakes attached:
+Neither grid shows the model doing the one thing this project is about: holding on to something across time. It cannot, of course, because every frame here is encoded independently. Here is the clip from the top of the post again, with the stakes attached:
 
 <figure class="wm-fig wm-pixel">
  <img src="/images/world-models/vae-recon-rollout.gif" alt="Animated side by side. Left, a real episode of the ball bouncing. Right, the same episode reconstructed frame by frame, tracking it closely.">
  <figcaption><strong>Figure 7.</strong> The opening rollout again, <code>warmup5k</code> on the right. Two hundred frames, each one encoded with no knowledge of the last.</figcaption>
 </figure>
 
-It tracks perfectly, and it tracks *statelessly*. Nothing carries over between those frames. Hold that thought until the end of this post, because a model that follows a ball this well for 200 frames is about to score zero on the one question that needs two of them.
+It tracks perfectly, and it tracks *statelessly*. Nothing carries over between those frames. A model that follows a ball this well for 200 frames is about to score zero on the one question that needs two of them.
 
 ## The probe disagrees with the reconstructions
 
@@ -294,7 +294,7 @@ Every ball lands in the right place, at the right size, with the right softness.
  <figcaption><strong>Figure 9.</strong> Linear probe predictions against truth, 5,000 held-out points per panel.</figcaption>
 </figure>
 
-Left, $\beta = 0.1$: $R^2 = 0.35$, and look at the *shape* of the failure. Predictions snake around the diagonal in smooth filaments, doubling back on themselves near $x \approx 15$. That is not noise. That is a curved code being read by a straight instrument. Right, $\beta = 1$ with warmup: $R^2 = 0.75$, the cloud is a diagonal band, and the residual structure near the walls is where the blob gets clipped.
+Left, $\beta = 0.1$: $R^2 = 0.35$, and look at the *shape* of the failure. Predictions snake around the diagonal in smooth filaments, doubling back on themselves near $x \approx 15$. That is not noise; it is a curved code being read by a straight instrument. Right, $\beta = 1$ with warmup: $R^2 = 0.75$, the cloud is a diagonal band, and the residual structure near the walls is where the blob gets clipped.
 
 Same architecture, same data, same 20k steps. Better reconstructions, half the probe score.
 
@@ -338,7 +338,7 @@ And ridge regression does not care about magnitude: rescale a code by any $\vare
 
 Why can't the model itself cash that in? Signal-to-noise. The decoder does not see $\mu(o)$; it sees $z = \mu(o) + \sigma\epsilon$ with $\sigma \approx 1$. Its input SNR is $\lVert\mu\rVert/\sigma \approx 0.005$, so the position signal is two hundred times below the sampling noise. The probe reads $\mu$ directly, at infinite SNR. Same encoder, two different channels: one noiseless and informative, one noisy and empty. Both measurements are correct. They measure different things.
 
-This rhymes with an older result worth knowing: linear probes on *randomly initialized* convolutional networks beat chance comfortably, because a stack of convolutions is a feature extractor before it has learned anything at all. My collapsed encoder is that result's trained-then-flattened cousin. If architecture alone can carry a probe, then a probe alone cannot certify learning.
+This rhymes with an older result: linear probes on *randomly initialized* convolutional networks beat chance comfortably, because a stack of convolutions is a feature extractor before it has learned anything at all. My collapsed encoder is that result's trained-then-flattened cousin. If architecture alone can carry a probe, then a probe alone cannot certify learning.
 
 The rule this bought, which every later post in the series obeys:
 
@@ -351,11 +351,11 @@ The rule this bought, which every later post in the series obeys:
 
 Velocity probe, all three runs, healthy and dead: $R^2 = 0.00$.
 
-This is not a bug and not a tuning failure. It is a property of the renderer, and you can read it off the environment code. The observation is `_render(x, y, params)`, a function of position alone. Velocity does not appear. Formally, $I(o_t; v_t \mid x_t, y_t) = 0$: given the position, the frame carries exactly zero additional information about the motion. No single-frame encoder, at any capacity, with any $\beta$, trained for any number of steps, can do better than chance here.
+This is a property of the renderer rather than a bug or a tuning failure, and you can read it off the environment code. The observation is `_render(x, y, params)`, a function of position alone. Velocity does not appear. Formally, $I(o_t; v_t \mid x_t, y_t) = 0$: given the position, the frame carries exactly zero additional information about the motion. No single-frame encoder, at any capacity, with any $\beta$, trained for any number of steps, can do better than chance here.
 
 Velocity lives in the *difference between frames*, and a VAE never sees two frames at once.
 
-That zero is the baseline. Everything the next two posts do is an attempt to move it, and the honest way to grade a dynamics model is to ask what it recovers that a single frame provably cannot contain.
+That zero is the baseline. Everything the next two posts do is an attempt to move it, and the fair way to grade a dynamics model is to ask what it recovers that a single frame provably cannot contain.
 
 ## Where this breaks
 
