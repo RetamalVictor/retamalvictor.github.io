@@ -1285,3 +1285,95 @@ body {
 .blog-content details > *:last-child {
   margin-bottom: 1.5rem;
 }
+
+/* ---------------------------------------------------------------------------
+   World-models series figures.
+
+   Two kinds. Plotted results are PNGs on a near-white ground, so they sit on
+   a deliberate paper plate that reads as intentional in dark mode instead of
+   glaring. Schematics ship as transparent light/dark pairs and swap with the
+   theme, so they inherit the page background either way.
+   --------------------------------------------------------------------------- */
+
+.blog-content .wm-fig {
+  margin: 2rem 0;
+}
+
+.blog-content .wm-fig img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
+
+/* Small pixel-art frames. Left at natural size a 264px gif is lost in the
+   column, and stretched to full width it turns to mush, so cap it and keep
+   the upscale nearest-neighbour. */
+.blog-content .wm-fig.wm-pixel img {
+  width: 100%;
+  max-width: 420px;
+  image-rendering: pixelated;
+}
+
+/* Paper plate for the light-ground result figures. */
+.blog-content .wm-fig:not(.wm-swap) img {
+  background: #fcfcfb;
+  padding: 0.75rem;
+  border: 1px solid rgb(var(--c-border));
+  border-radius: 2px;
+}
+
+.blog-content .wm-fig figcaption {
+  margin-top: 0.6rem;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: rgb(var(--c-gray-500));
+  text-align: left;
+}
+
+/* Theme-swapped schematics: transparent background, one variant visible. */
+.blog-content .wm-swap .wm-dark { display: none; }
+[data-theme="dark"] .blog-content .wm-swap .wm-light { display: none; }
+[data-theme="dark"] .blog-content .wm-swap .wm-dark { display: block; }
+
+/* ---------------------------------------------------------------------------
+   Justified body copy for long-form posts.
+
+   Justification without hyphenation opens rivers of whitespace, so hyphens
+   are on and the browser is allowed to break long words. Headings, captions,
+   tables and code keep their own alignment. Narrow screens fall back to
+   ragged right, where a short measure makes justification look broken.
+   --------------------------------------------------------------------------- */
+
+.blog-content p,
+.blog-content li,
+.blog-content blockquote {
+  text-align: justify;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+  overflow-wrap: break-word;
+}
+
+/* Never justify things that are not running prose. */
+.blog-content figcaption,
+.blog-content th,
+.blog-content td,
+.blog-content pre,
+.blog-content pre * {
+  text-align: left;
+  hyphens: manual;
+}
+
+@media (max-width: 620px) {
+  .blog-content p,
+  .blog-content li,
+  .blog-content blockquote {
+    text-align: left;
+  }
+}
+
+/* The opening figure sits directly under the page header. */
+.blog-content .wm-hero {
+  margin-top: 0;
+  margin-bottom: 2.25rem;
+}
