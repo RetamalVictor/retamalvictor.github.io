@@ -61,7 +61,7 @@ export class ServicesPage {
                 <!-- Header -->
                 <header class="sticky top-0 z-40">
                     <div class="win-bar">
-                        <span class="win-title">/services/index.htm</span>
+                        <span class="win-title">/services/index.html</span>
                         <span class="win-controls" aria-hidden="true"><i></i><i></i><i></i></span>
                     </div>
                     <div class="bg-dark-surface border-b border-dark-border">

@@ -713,7 +713,7 @@ export class MapfDemo {
             <div class="flex items-center justify-between gap-3 ${c ? '' : 'mt-3'}">
                 <div class="flex items-baseline gap-1.5 flex-shrink-0">
                     <span id="mapf-score-${key}" class="${c ? 'text-lg' : 'text-2xl'} font-bold leading-none tabular-nums">—</span>
-                    <span class="text-[9px] uppercase tracking-wide text-[rgb(var(--c-gray-500))]">every robot home</span>
+                    <span class="text-[9px] uppercase tracking-wide text-[rgb(var(--c-gray-500))] truncate">${c ? 'all home' : 'every robot home'}</span>
                 </div>
                 <div id="mapf-history-${key}" class="flex gap-[2px] flex-wrap justify-end"></div>
             </div>
@@ -799,8 +799,8 @@ export class MapfDemo {
             <div class="${c ? 'px-3 py-1.5' : 'px-4 py-2'} border-b border-[rgb(var(--c-border))] bg-[rgb(var(--c-bg))] flex items-center justify-between gap-3 flex-wrap flex-shrink-0">
                 <div class="flex items-center gap-2 min-w-0">
                     <span class="text-[rgb(var(--c-accent))] text-sm">●</span>
-                    <span class="text-sm font-medium">Multi-robot path finding</span>
-                    <span class="text-xs text-[rgb(var(--c-gray-500))]">
+                    <span class="text-sm font-medium truncate">Multi-robot path finding</span>
+                    <span class="hidden sm:inline text-xs text-[rgb(var(--c-gray-500))] truncate">
                         trained on ${comm.trainedAgents} robots · runs on any number
                     </span>
                 </div>
@@ -809,14 +809,18 @@ export class MapfDemo {
             ${hoodPanel}
 
             ${c ? `
-            <div class="flex-1 min-h-0 flex">
-                <div class="w-[11.5rem] flex-shrink-0 border-r border-[rgb(var(--c-border))] flex flex-col">
-                    <!-- The score sits above the scroll area: it is the one number
-                         worth watching, and it must not be the thing that gets cut. -->
-                    <div class="px-3 pt-2 pb-1.5 border-b border-[rgb(var(--c-border))]">${readout('comm')}</div>
-                    <div class="px-3 py-1.5 flex flex-col gap-1 overflow-y-auto overflow-x-hidden min-h-0">${controls}</div>
+            <div class="flex-1 min-h-0 min-w-0 flex">
+                <!-- Beside the board, not above it. The host is only ~256px tall on
+                     a phone, so stacking left the board 66px; a narrower column
+                     keeps it square and usable. -->
+                <div class="w-[6.75rem] sm:w-[11.5rem] flex-shrink-0 border-r border-[rgb(var(--c-border))]
+                            flex flex-col min-h-0">
+                    <!-- The score is the one number worth watching, so it sits
+                         outside the scroll area and cannot be the thing that gets cut. -->
+                    <div class="px-2 sm:px-3 pt-1.5 pb-1 border-b border-[rgb(var(--c-border))]">${readout('comm')}</div>
+                    <div class="px-2 sm:px-3 py-1.5 flex flex-col gap-1 overflow-y-auto overflow-x-hidden min-h-0">${controls}</div>
                 </div>
-                <div class="flex-1 min-h-0 p-2">${boardCanvas('comm')}</div>
+                <div class="flex-1 min-w-0 min-h-0 p-1.5 sm:p-2">${boardCanvas('comm')}</div>
             </div>
             ${legend}` : `
             <div class="px-4 py-3 gap-x-6 gap-y-3 border-b border-[rgb(var(--c-border))] flex flex-wrap items-end">

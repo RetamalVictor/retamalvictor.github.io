@@ -3,11 +3,11 @@
     <div class="absolute top-0 left-0 w-full h-full pointer-events-none" style="background: radial-gradient(ellipse 55% 50% at 0% 0%, rgb(var(--c-accent) / 0.10) 0%, transparent 55%)"></div>
 
     <div class="max-w-6xl mx-auto px-4 sm:px-6 pt-8 pb-6 lg:pt-12 lg:pb-6 w-full relative">
-        <div class="grid lg:grid-cols-2 gap-8 lg:gap-12 items-start">
+        <div class="grid lg:grid-cols-2 gap-8 lg:gap-12 items-start min-w-0">
             <!-- Intro -->
             <div class="fade-in-up win">
                 <div class="win-bar">
-                    <span class="win-title">index.htm</span>
+                    <span class="win-title">index.html</span>
                     <span class="win-controls" aria-hidden="true"><i></i><i></i><i></i></span>
                 </div>
 
@@ -49,23 +49,23 @@
             </div>
 
             <!-- 3D Viewer Column -->
-            <div id="demo-section">
+            <div id="demo-section" class="min-w-0">
                 <!-- Demo Tab Bar -->
                 <div class="flex items-center justify-between mb-3">
-                    <div id="demo-tabs" class="flex gap-1">
-                        <button data-demo="ibvs" class="demo-tab px-3 py-1.5 text-sm rounded-t-lg border-b-2 transition-colors text-gray-400 border-transparent hover:text-gray-300 hover:border-gray-600">
+                    <div id="demo-tabs" class="flex gap-1 overflow-x-auto flex-nowrap -mb-px">
+                        <button data-demo="ibvs" class="demo-tab flex-shrink-0 whitespace-nowrap px-3 py-1.5 text-sm rounded-t-lg border-b-2 transition-colors text-gray-400 border-transparent hover:text-gray-300 hover:border-gray-600">
                             IBVS
                         </button>
-                        <button data-demo="ternary" class="demo-tab px-3 py-1.5 text-sm rounded-t-lg border-b-2 transition-colors text-gray-400 border-transparent hover:text-gray-300 hover:border-gray-600">
+                        <button data-demo="ternary" class="demo-tab flex-shrink-0 whitespace-nowrap px-3 py-1.5 text-sm rounded-t-lg border-b-2 transition-colors text-gray-400 border-transparent hover:text-gray-300 hover:border-gray-600">
                             Ternary LM
                         </button>
-                        <button data-demo="drone-racing" class="demo-tab px-3 py-1.5 text-sm rounded-t-lg border-b-2 transition-colors text-accent-cyan border-accent-cyan bg-dark-surface/50">
+                        <button data-demo="drone-racing" class="demo-tab flex-shrink-0 whitespace-nowrap px-3 py-1.5 text-sm rounded-t-lg border-b-2 transition-colors text-accent-cyan border-accent-cyan bg-dark-surface/50">
                             <span class="font-bold">Drone Racing</span>
                         </button>
-                        <button data-demo="depth" class="demo-tab px-3 py-1.5 text-sm rounded-t-lg border-b-2 transition-colors text-gray-400 border-transparent hover:text-gray-300 hover:border-gray-600">
+                        <button data-demo="depth" class="demo-tab flex-shrink-0 whitespace-nowrap px-3 py-1.5 text-sm rounded-t-lg border-b-2 transition-colors text-gray-400 border-transparent hover:text-gray-300 hover:border-gray-600">
                             <span class="font-bold">Depth</span>
                         </button>
-                        <button data-demo="mapf" class="demo-tab px-3 py-1.5 text-sm rounded-t-lg border-b-2 transition-colors text-gray-400 border-transparent hover:text-gray-300 hover:border-gray-600">
+                        <button data-demo="mapf" class="demo-tab flex-shrink-0 whitespace-nowrap px-3 py-1.5 text-sm rounded-t-lg border-b-2 transition-colors text-gray-400 border-transparent hover:text-gray-300 hover:border-gray-600">
                             <span class="font-bold">Robot Fleet</span>
                         </button>
                     </div>
@@ -79,7 +79,7 @@
                 <!-- Demo Container -->
                 <div id="demo-container" class="relative">
                     <div class="three-container h-80 lg:h-96">
-                        <div id="hero-three-scene" class="w-full h-full flex items-center justify-center">
+                        <div id="hero-three-scene" class="w-full h-full min-w-0 flex items-center justify-center">
                             <div class="text-center text-gray-500">
                                 <div class="animate-pulse mb-4">
                                     <svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">

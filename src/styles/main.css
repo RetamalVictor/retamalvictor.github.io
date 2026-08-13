@@ -834,7 +834,10 @@ body {
    Demo containers
    --------------------------------------------------------------------------- */
 .three-container {
-  @apply relative w-full h-64 md:h-80 overflow-hidden;
+  /* No height here. The markup sets its own (h-80 lg:h-96) and a height in this
+     rule silently overrode it, leaving phones with 256px where 320 was asked
+     for. Callers that set none still get one from the fallback below. */
+  @apply relative w-full min-w-0 overflow-hidden;
   background-color: rgb(var(--c-bg));
   border: 1px solid rgb(var(--c-border));
   border-radius: 4px;
@@ -1376,4 +1379,41 @@ body {
 .blog-content .wm-hero {
   margin-top: 0;
   margin-bottom: 2.25rem;
+}
+
+
+/* ---------------------------------------------------------------------------
+   Wide content in long-form posts
+
+   A table of results, a rendered equation or a long code line is often wider
+   than a phone. The page itself must never scroll sideways, so each of these
+   scrolls within its own box instead of being silently cut off at the screen
+   edge - which is what was happening: a four-column table lost its last column
+   with no way to reach it.
+   --------------------------------------------------------------------------- */
+
+.blog-content table {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.blog-content .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 0.35rem;
+}
+
+.blog-content pre {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.blog-content img,
+.blog-content svg,
+.blog-content video {
+  max-width: 100%;
+  height: auto;
 }

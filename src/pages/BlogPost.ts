@@ -264,7 +264,7 @@ export class BlogPostPage {
             <div class="min-h-screen flex items-center justify-center p-6">
                 <div class="win max-w-md w-full text-center">
                     <div class="win-bar">
-                        <span class="win-title">404.htm</span>
+                        <span class="win-title">404.html</span>
                         <span class="win-controls" aria-hidden="true"><i></i><i></i><i></i></span>
                     </div>
                     <div class="win-body">

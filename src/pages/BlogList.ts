@@ -66,7 +66,7 @@ export class BlogListPage {
                 <!-- Header -->
                 <header class="sticky top-0 z-40">
                     <div class="win-bar">
-                        <span class="win-title">/blog/index.htm</span>
+                        <span class="win-title">/blog/index.html</span>
                         <span class="win-controls" aria-hidden="true"><i></i><i></i><i></i></span>
                     </div>
                     <div class="bg-dark-surface border-b border-dark-border">
@@ -163,7 +163,7 @@ export class BlogListPage {
             <div class="min-h-screen flex items-center justify-center p-6">
                 <div class="win max-w-md w-full">
                     <div class="win-bar">
-                        <span class="win-title">error.htm</span>
+                        <span class="win-title">error.html</span>
                         <span class="win-controls" aria-hidden="true"><i></i><i></i><i></i></span>
                     </div>
                     <div class="win-body text-center">
