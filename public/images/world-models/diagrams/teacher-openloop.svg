@@ -1,0 +1,149 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 538" color="#20242B" role="img"
+     aria-label="Two unrolled GRU chains. In teacher-forced training every input is a real encoded frame. In open-loop evaluation the model's own predictions feed back in as inputs after a warm-up, which are inputs it was never trained on.">
+  <style>
+    text { fill: #20242B; }
+    .lbl    { font: 13px Helvetica, Arial, sans-serif; }
+    .lbl-sm { font: 11.5px Helvetica, Arial, sans-serif; fill: #6A7280; }
+    .m      { font: italic 15px Georgia, 'Times New Roman', serif; }
+    .mi     { font: italic 13.5px Georgia, 'Times New Roman', serif; }
+    .ttl    { font: 600 13px Helvetica, Arial, sans-serif; }
+    .big    { font: 600 34px Helvetica, Arial, sans-serif; }
+    .sub    { font: 10px Helvetica, Arial, sans-serif; }
+    .sup    { font: 9.5px Helvetica, Arial, sans-serif; }
+    .up     { font-style: normal; }
+  </style>
+  <defs>
+    <marker id="arrI" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#20242B"/></marker>
+    <marker id="arrG" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8B939E"/></marker>
+    <marker id="arrT" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#0F8C7C"/></marker>
+    <marker id="arrA" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#C07A17"/></marker>
+    <marker id="arrV" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#7B5CC4"/></marker>
+    <radialGradient id="blob" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FFFFFF"/><stop offset="0.45" stop-color="#FFFFFF" stop-opacity="0.85"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect x="0" y="0" width="800" height="538" rx="6" fill="#F7F8F6"/>
+  <rect x="18" y="16" width="764" height="234" rx="6" fill="#FFFFFF" stroke="#D8DCE2" stroke-width="1"/>
+  <text x="34" y="40" text-anchor="start" class="ttl">(a) training — teacher forced</text>
+  <text x="34" y="59" text-anchor="start" class="lbl-sm">every input is a real encoded frame</text>
+  <rect x="59.0" y="74" width="90" height="36" rx="4" fill="#F2DDB8" stroke="#C07A17" stroke-width="1.3"/>
+  <text x="104" y="97" text-anchor="middle" class="lbl"><tspan class="m">z</tspan><tspan class="m sub" dy="4">1</tspan></text>
+  <polyline points="97,84 100.5,80 104,84" fill="none" stroke="#20242B" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="56.0" y="128" width="96" height="52" rx="4" fill="#F2DDB8" stroke="#C07A17" stroke-width="1.3"/>
+  <text x="104" y="149" text-anchor="middle" class="lbl">GRU</text>
+  <text x="104" y="170" text-anchor="middle" class="lbl"><tspan class="m">h</tspan><tspan class="m sub" dy="4">1</tspan></text>
+  <rect x="59.0" y="200" width="90" height="36" rx="4" fill="#E7EAEE" stroke="#8B939E" stroke-width="1.3"/>
+  <text x="104" y="223" text-anchor="middle" class="lbl"><tspan class="m">z</tspan><tspan class="m sub" dy="4">0</tspan></text>
+  <line x1="104" y1="200" x2="104" y2="182" stroke="#8B939E" stroke-width="1.3" marker-end="url(#arrG)"/>
+  <line x1="104" y1="128" x2="104" y2="112" stroke="#C07A17" stroke-width="1.3" marker-end="url(#arrA)"/>
+  <line x1="152.0" y1="154" x2="193.0" y2="154" stroke="#C07A17" stroke-width="1.3" marker-end="url(#arrA)"/>
+  <rect x="198.0" y="74" width="90" height="36" rx="4" fill="#F2DDB8" stroke="#C07A17" stroke-width="1.3"/>
+  <text x="243" y="97" text-anchor="middle" class="lbl"><tspan class="m">z</tspan><tspan class="m sub" dy="4">2</tspan></text>
+  <polyline points="236,84 239.5,80 243,84" fill="none" stroke="#20242B" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="195.0" y="128" width="96" height="52" rx="4" fill="#F2DDB8" stroke="#C07A17" stroke-width="1.3"/>
+  <text x="243" y="149" text-anchor="middle" class="lbl">GRU</text>
+  <text x="243" y="170" text-anchor="middle" class="lbl"><tspan class="m">h</tspan><tspan class="m sub" dy="4">2</tspan></text>
+  <rect x="198.0" y="200" width="90" height="36" rx="4" fill="#E7EAEE" stroke="#8B939E" stroke-width="1.3"/>
+  <text x="243" y="223" text-anchor="middle" class="lbl"><tspan class="m">z</tspan><tspan class="m sub" dy="4">1</tspan></text>
+  <line x1="243" y1="200" x2="243" y2="182" stroke="#8B939E" stroke-width="1.3" marker-end="url(#arrG)"/>
+  <line x1="243" y1="128" x2="243" y2="112" stroke="#C07A17" stroke-width="1.3" marker-end="url(#arrA)"/>
+  <line x1="291.0" y1="154" x2="332.0" y2="154" stroke="#C07A17" stroke-width="1.3" marker-end="url(#arrA)"/>
+  <rect x="337.0" y="74" width="90" height="36" rx="4" fill="#F2DDB8" stroke="#C07A17" stroke-width="1.3"/>
+  <text x="382" y="97" text-anchor="middle" class="lbl"><tspan class="m">z</tspan><tspan class="m sub" dy="4">3</tspan></text>
+  <polyline points="375,84 378.5,80 382,84" fill="none" stroke="#20242B" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="334.0" y="128" width="96" height="52" rx="4" fill="#F2DDB8" stroke="#C07A17" stroke-width="1.3"/>
+  <text x="382" y="149" text-anchor="middle" class="lbl">GRU</text>
+  <text x="382" y="170" text-anchor="middle" class="lbl"><tspan class="m">h</tspan><tspan class="m sub" dy="4">3</tspan></text>
+  <rect x="337.0" y="200" width="90" height="36" rx="4" fill="#E7EAEE" stroke="#8B939E" stroke-width="1.3"/>
+  <text x="382" y="223" text-anchor="middle" class="lbl"><tspan class="m">z</tspan><tspan class="m sub" dy="4">2</tspan></text>
+  <line x1="382" y1="200" x2="382" y2="182" stroke="#8B939E" stroke-width="1.3" marker-end="url(#arrG)"/>
+  <line x1="382" y1="128" x2="382" y2="112" stroke="#C07A17" stroke-width="1.3" marker-end="url(#arrA)"/>
+  <line x1="430.0" y1="154" x2="471.0" y2="154" stroke="#C07A17" stroke-width="1.3" marker-end="url(#arrA)"/>
+  <rect x="476.0" y="74" width="90" height="36" rx="4" fill="#F2DDB8" stroke="#C07A17" stroke-width="1.3"/>
+  <text x="521" y="97" text-anchor="middle" class="lbl"><tspan class="m">z</tspan><tspan class="m sub" dy="4">4</tspan></text>
+  <polyline points="514,84 517.5,80 521,84" fill="none" stroke="#20242B" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="473.0" y="128" width="96" height="52" rx="4" fill="#F2DDB8" stroke="#C07A17" stroke-width="1.3"/>
+  <text x="521" y="149" text-anchor="middle" class="lbl">GRU</text>
+  <text x="521" y="170" text-anchor="middle" class="lbl"><tspan class="m">h</tspan><tspan class="m sub" dy="4">4</tspan></text>
+  <rect x="476.0" y="200" width="90" height="36" rx="4" fill="#E7EAEE" stroke="#8B939E" stroke-width="1.3"/>
+  <text x="521" y="223" text-anchor="middle" class="lbl"><tspan class="m">z</tspan><tspan class="m sub" dy="4">3</tspan></text>
+  <line x1="521" y1="200" x2="521" y2="182" stroke="#8B939E" stroke-width="1.3" marker-end="url(#arrG)"/>
+  <line x1="521" y1="128" x2="521" y2="112" stroke="#C07A17" stroke-width="1.3" marker-end="url(#arrA)"/>
+  <line x1="569.0" y1="154" x2="610.0" y2="154" stroke="#C07A17" stroke-width="1.3" marker-end="url(#arrA)"/>
+  <rect x="615.0" y="74" width="90" height="36" rx="4" fill="#F2DDB8" stroke="#C07A17" stroke-width="1.3"/>
+  <text x="660" y="97" text-anchor="middle" class="lbl"><tspan class="m">z</tspan><tspan class="m sub" dy="4">5</tspan></text>
+  <polyline points="653,84 656.5,80 660,84" fill="none" stroke="#20242B" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="612.0" y="128" width="96" height="52" rx="4" fill="#F2DDB8" stroke="#C07A17" stroke-width="1.3"/>
+  <text x="660" y="149" text-anchor="middle" class="lbl">GRU</text>
+  <text x="660" y="170" text-anchor="middle" class="lbl"><tspan class="m">h</tspan><tspan class="m sub" dy="4">5</tspan></text>
+  <rect x="615.0" y="200" width="90" height="36" rx="4" fill="#E7EAEE" stroke="#8B939E" stroke-width="1.3"/>
+  <text x="660" y="223" text-anchor="middle" class="lbl"><tspan class="m">z</tspan><tspan class="m sub" dy="4">4</tspan></text>
+  <line x1="660" y1="200" x2="660" y2="182" stroke="#8B939E" stroke-width="1.3" marker-end="url(#arrG)"/>
+  <line x1="660" y1="128" x2="660" y2="112" stroke="#C07A17" stroke-width="1.3" marker-end="url(#arrA)"/>
+  <rect x="18" y="266" width="764" height="256" rx="6" fill="#FFFFFF" stroke="#D8DCE2" stroke-width="1"/>
+  <text x="34" y="290" text-anchor="start" class="ttl">(b) evaluation — open loop</text>
+  <text x="34" y="309" text-anchor="start" class="lbl-sm">after a 4-step warm-up, every input is the model's own output</text>
+  <rect x="59.0" y="324" width="90" height="36" rx="4" fill="#F2DDB8" stroke="#C07A17" stroke-width="1.3"/>
+  <text x="104" y="347" text-anchor="middle" class="lbl"><tspan class="m">z</tspan><tspan class="m sub" dy="4">1</tspan></text>
+  <polyline points="97,334 100.5,330 104,334" fill="none" stroke="#20242B" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="56.0" y="378" width="96" height="52" rx="4" fill="#F2DDB8" stroke="#C07A17" stroke-width="1.3"/>
+  <text x="104" y="399" text-anchor="middle" class="lbl">GRU</text>
+  <text x="104" y="420" text-anchor="middle" class="lbl"><tspan class="m">h</tspan><tspan class="m sub" dy="4">1</tspan></text>
+  <rect x="59.0" y="450" width="90" height="36" rx="4" fill="#E7EAEE" stroke="#8B939E" stroke-width="1.3"/>
+  <text x="104" y="473" text-anchor="middle" class="lbl"><tspan class="m">z</tspan><tspan class="m sub" dy="4">0</tspan></text>
+  <line x1="104" y1="450" x2="104" y2="432" stroke="#8B939E" stroke-width="1.3" marker-end="url(#arrG)"/>
+  <line x1="104" y1="378" x2="104" y2="362" stroke="#C07A17" stroke-width="1.3" marker-end="url(#arrA)"/>
+  <line x1="152.0" y1="404" x2="193.0" y2="404" stroke="#C07A17" stroke-width="1.3" marker-end="url(#arrA)"/>
+  <path d="M 149.0 342 C 199.0 342, 148.0 468, 196.0 468" fill="none" stroke="#7B5CC4" stroke-width="1.7" marker-end="url(#arrV)"/>
+  <rect x="198.0" y="324" width="90" height="36" rx="4" fill="#F2DDB8" stroke="#C07A17" stroke-width="1.3"/>
+  <text x="243" y="347" text-anchor="middle" class="lbl"><tspan class="m">z</tspan><tspan class="m sub" dy="4">2</tspan></text>
+  <polyline points="236,334 239.5,330 243,334" fill="none" stroke="#20242B" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="195.0" y="378" width="96" height="52" rx="4" fill="#F2DDB8" stroke="#C07A17" stroke-width="1.3"/>
+  <text x="243" y="399" text-anchor="middle" class="lbl">GRU</text>
+  <text x="243" y="420" text-anchor="middle" class="lbl"><tspan class="m">h</tspan><tspan class="m sub" dy="4">2</tspan></text>
+  <rect x="198.0" y="450" width="90" height="36" rx="4" fill="#E4DCF6" stroke="#7B5CC4" stroke-width="1.6"/>
+  <text x="243" y="473" text-anchor="middle" class="lbl"><tspan class="m">z</tspan><tspan class="m sub" dy="4">1</tspan></text>
+  <polyline points="236,460 239.5,456 243,460" fill="none" stroke="#20242B" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="243" y1="450" x2="243" y2="432" stroke="#7B5CC4" stroke-width="1.3" marker-end="url(#arrV)"/>
+  <line x1="243" y1="378" x2="243" y2="362" stroke="#C07A17" stroke-width="1.3" marker-end="url(#arrA)"/>
+  <line x1="291.0" y1="404" x2="332.0" y2="404" stroke="#C07A17" stroke-width="1.3" marker-end="url(#arrA)"/>
+  <path d="M 288.0 342 C 338.0 342, 287.0 468, 335.0 468" fill="none" stroke="#7B5CC4" stroke-width="1.7" marker-end="url(#arrV)"/>
+  <rect x="337.0" y="324" width="90" height="36" rx="4" fill="#F2DDB8" stroke="#C07A17" stroke-width="1.3"/>
+  <text x="382" y="347" text-anchor="middle" class="lbl"><tspan class="m">z</tspan><tspan class="m sub" dy="4">3</tspan></text>
+  <polyline points="375,334 378.5,330 382,334" fill="none" stroke="#20242B" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="334.0" y="378" width="96" height="52" rx="4" fill="#F2DDB8" stroke="#C07A17" stroke-width="1.3"/>
+  <text x="382" y="399" text-anchor="middle" class="lbl">GRU</text>
+  <text x="382" y="420" text-anchor="middle" class="lbl"><tspan class="m">h</tspan><tspan class="m sub" dy="4">3</tspan></text>
+  <rect x="337.0" y="450" width="90" height="36" rx="4" fill="#E4DCF6" stroke="#7B5CC4" stroke-width="1.6"/>
+  <text x="382" y="473" text-anchor="middle" class="lbl"><tspan class="m">z</tspan><tspan class="m sub" dy="4">2</tspan></text>
+  <polyline points="375,460 378.5,456 382,460" fill="none" stroke="#20242B" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="382" y1="450" x2="382" y2="432" stroke="#7B5CC4" stroke-width="1.3" marker-end="url(#arrV)"/>
+  <line x1="382" y1="378" x2="382" y2="362" stroke="#C07A17" stroke-width="1.3" marker-end="url(#arrA)"/>
+  <line x1="430.0" y1="404" x2="471.0" y2="404" stroke="#C07A17" stroke-width="1.3" marker-end="url(#arrA)"/>
+  <path d="M 427.0 342 C 477.0 342, 426.0 468, 474.0 468" fill="none" stroke="#7B5CC4" stroke-width="1.7" marker-end="url(#arrV)"/>
+  <rect x="476.0" y="324" width="90" height="36" rx="4" fill="#F2DDB8" stroke="#C07A17" stroke-width="1.3"/>
+  <text x="521" y="347" text-anchor="middle" class="lbl"><tspan class="m">z</tspan><tspan class="m sub" dy="4">4</tspan></text>
+  <polyline points="514,334 517.5,330 521,334" fill="none" stroke="#20242B" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="473.0" y="378" width="96" height="52" rx="4" fill="#F2DDB8" stroke="#C07A17" stroke-width="1.3"/>
+  <text x="521" y="399" text-anchor="middle" class="lbl">GRU</text>
+  <text x="521" y="420" text-anchor="middle" class="lbl"><tspan class="m">h</tspan><tspan class="m sub" dy="4">4</tspan></text>
+  <rect x="476.0" y="450" width="90" height="36" rx="4" fill="#E4DCF6" stroke="#7B5CC4" stroke-width="1.6"/>
+  <text x="521" y="473" text-anchor="middle" class="lbl"><tspan class="m">z</tspan><tspan class="m sub" dy="4">3</tspan></text>
+  <polyline points="514,460 517.5,456 521,460" fill="none" stroke="#20242B" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="521" y1="450" x2="521" y2="432" stroke="#7B5CC4" stroke-width="1.3" marker-end="url(#arrV)"/>
+  <line x1="521" y1="378" x2="521" y2="362" stroke="#C07A17" stroke-width="1.3" marker-end="url(#arrA)"/>
+  <line x1="569.0" y1="404" x2="610.0" y2="404" stroke="#C07A17" stroke-width="1.3" marker-end="url(#arrA)"/>
+  <path d="M 566.0 342 C 616.0 342, 565.0 468, 613.0 468" fill="none" stroke="#7B5CC4" stroke-width="1.7" marker-end="url(#arrV)"/>
+  <rect x="615.0" y="324" width="90" height="36" rx="4" fill="#F2DDB8" stroke="#C07A17" stroke-width="1.3"/>
+  <text x="660" y="347" text-anchor="middle" class="lbl"><tspan class="m">z</tspan><tspan class="m sub" dy="4">5</tspan></text>
+  <polyline points="653,334 656.5,330 660,334" fill="none" stroke="#20242B" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="612.0" y="378" width="96" height="52" rx="4" fill="#F2DDB8" stroke="#C07A17" stroke-width="1.3"/>
+  <text x="660" y="399" text-anchor="middle" class="lbl">GRU</text>
+  <text x="660" y="420" text-anchor="middle" class="lbl"><tspan class="m">h</tspan><tspan class="m sub" dy="4">5</tspan></text>
+  <rect x="615.0" y="450" width="90" height="36" rx="4" fill="#E4DCF6" stroke="#7B5CC4" stroke-width="1.6"/>
+  <text x="660" y="473" text-anchor="middle" class="lbl"><tspan class="m">z</tspan><tspan class="m sub" dy="4">4</tspan></text>
+  <polyline points="653,460 656.5,456 660,460" fill="none" stroke="#20242B" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="660" y1="450" x2="660" y2="432" stroke="#7B5CC4" stroke-width="1.3" marker-end="url(#arrV)"/>
+  <line x1="660" y1="378" x2="660" y2="362" stroke="#C07A17" stroke-width="1.3" marker-end="url(#arrA)"/>
+  <text x="770" y="500" text-anchor="end" class="lbl" style="fill:#7B5CC4">violet inputs: the model's own outputs — inputs it was never trained on</text>
+</svg>

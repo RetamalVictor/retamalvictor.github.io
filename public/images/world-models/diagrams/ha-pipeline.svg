@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 456" color="#20242B" role="img"
+     aria-label="Ha and Schmidhuber's two-phase recipe. Phase 1 trains a VAE on single frames. Phase 2 freezes the encoder and trains a GRU on latent sequences; a crossed-out arrow shows the dynamics loss never reaches the encoder.">
+  <style>
+    text { fill: #20242B; }
+    .lbl    { font: 13px Helvetica, Arial, sans-serif; }
+    .lbl-sm { font: 11.5px Helvetica, Arial, sans-serif; fill: #6A7280; }
+    .m      { font: italic 15px Georgia, 'Times New Roman', serif; }
+    .mi     { font: italic 13.5px Georgia, 'Times New Roman', serif; }
+    .ttl    { font: 600 13px Helvetica, Arial, sans-serif; }
+    .big    { font: 600 34px Helvetica, Arial, sans-serif; }
+    .sub    { font: 10px Helvetica, Arial, sans-serif; }
+    .sup    { font: 9.5px Helvetica, Arial, sans-serif; }
+    .up     { font-style: normal; }
+  </style>
+  <defs>
+    <marker id="arrI" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#20242B"/></marker>
+    <marker id="arrG" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8B939E"/></marker>
+    <marker id="arrT" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#0F8C7C"/></marker>
+    <marker id="arrA" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#C07A17"/></marker>
+    <marker id="arrV" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#7B5CC4"/></marker>
+    <radialGradient id="blob" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FFFFFF"/><stop offset="0.45" stop-color="#FFFFFF" stop-opacity="0.85"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect x="0" y="0" width="800" height="456" rx="6" fill="#F7F8F6"/>
+  <rect x="18" y="18" width="764" height="160" rx="6" fill="#FFFFFF" stroke="#D8DCE2" stroke-width="1"/>
+  <text x="34" y="44" text-anchor="start" class="ttl">(a) phase 1 — train the VAE on single frames</text>
+  <rect x="110" y="74" width="52" height="52" rx="3" fill="#0B0B0D" stroke="#8B939E" stroke-width="1"/>
+  <circle cx="131.8" cy="97.4" r="9.9" fill="url(#blob)"/>
+  <line x1="168" y1="100" x2="206" y2="100" stroke="#20242B" stroke-width="1.4" marker-end="url(#arrI)"/>
+  <rect x="214" y="74" width="120" height="52" rx="4" fill="#BFE5DF" stroke="#0F8C7C" stroke-width="1.4"/>
+  <text x="274" y="105" text-anchor="middle" class="lbl">encoder</text>
+  <line x1="340" y1="100" x2="378" y2="100" stroke="#20242B" stroke-width="1.4" marker-end="url(#arrI)"/>
+  <rect x="386" y="74" width="70" height="52" rx="4" fill="#E4DCF6" stroke="#7B5CC4" stroke-width="1.6"/>
+  <text x="421" y="105" text-anchor="middle" class="lbl"><tspan class="m">z</tspan></text>
+  <line x1="462" y1="100" x2="500" y2="100" stroke="#20242B" stroke-width="1.4" marker-end="url(#arrI)"/>
+  <rect x="508" y="74" width="120" height="52" rx="4" fill="#BFE5DF" stroke="#0F8C7C" stroke-width="1.4"/>
+  <text x="568" y="105" text-anchor="middle" class="lbl">decoder</text>
+  <line x1="634" y1="100" x2="672" y2="100" stroke="#20242B" stroke-width="1.4" marker-end="url(#arrI)"/>
+  <rect x="680" y="74" width="52" height="52" rx="3" fill="#0B0B0D" stroke="#8B939E" stroke-width="1"/>
+  <circle cx="701.8" cy="97.4" r="9.9" fill="url(#blob)"/>
+  <text x="421" y="160" text-anchor="middle" class="lbl-sm">loss: recon + <tspan class="mi" style="fill:#6A7280">β</tspan>KL — no dynamics anywhere</text>
+  <rect x="18" y="196" width="764" height="244" rx="6" fill="#FFFFFF" stroke="#D8DCE2" stroke-width="1"/>
+  <text x="34" y="222" text-anchor="start" class="ttl">(b) phase 2 — freeze it, train the GRU on latents</text>
+  <rect x="40" y="308" width="52" height="52" rx="3" fill="#0B0B0D" stroke="#8B939E" stroke-width="1"/>
+  <circle cx="61.8" cy="331.4" r="9.9" fill="url(#blob)"/>
+  <line x1="98" y1="334" x2="128" y2="334" stroke="#20242B" stroke-width="1.4" marker-end="url(#arrI)"/>
+  <rect x="136" y="308" width="124" height="52" rx="4" fill="#E7EAEE" stroke="#8B939E" stroke-width="1.4" stroke-dasharray="6 4"/>
+  <text x="198" y="331" text-anchor="middle" class="lbl">encoder</text>
+  <text x="198" y="349" text-anchor="middle" class="lbl-sm">(frozen)</text>
+  <text x="198" y="382" text-anchor="middle" class="lbl-sm">no gradient reaches here</text>
+  <line x1="266" y1="334" x2="296" y2="334" stroke="#20242B" stroke-width="1.4" marker-end="url(#arrI)"/>
+  <rect x="304" y="308" width="84" height="52" rx="4" fill="#E4DCF6" stroke="#7B5CC4" stroke-width="1.6"/>
+  <text x="346" y="339" text-anchor="middle" class="m">z<tspan class="sub" dy="4">t−1</tspan><tspan dy="-4"></tspan></text>
+  <rect x="304" y="374" width="84" height="44" rx="4" fill="#E7EAEE" stroke="#8B939E" stroke-width="1.4"/>
+  <text x="346" y="402" text-anchor="middle" class="m">a<tspan class="sub" dy="4">t</tspan><tspan dy="-4"></tspan></text>
+  <line x1="394" y1="334" x2="424" y2="334" stroke="#20242B" stroke-width="1.4" marker-end="url(#arrI)"/>
+  <path d="M 394 396 C 414 396, 412 352, 426 350" fill="none" stroke="#20242B" stroke-width="1.4" marker-end="url(#arrI)"/>
+  <rect x="432" y="302" width="120" height="64" rx="4" fill="#F2DDB8" stroke="#C07A17" stroke-width="1.4"/>
+  <text x="492" y="327" text-anchor="middle" class="lbl">GRU</text>
+  <text x="492" y="350" text-anchor="middle" class="m">h<tspan class="sub" dy="4">t</tspan><tspan dy="-4"></tspan></text>
+  <line x1="558" y1="334" x2="588" y2="334" stroke="#20242B" stroke-width="1.4" marker-end="url(#arrI)"/>
+  <rect x="596" y="308" width="120" height="52" rx="4" fill="#F2DDB8" stroke="#C07A17" stroke-width="1.4"/>
+  <text x="656" y="339" text-anchor="middle" class="m">μ<tspan class="sub" dy="4">t</tspan><tspan dy="-4">, σ</tspan><tspan class="sub" dy="4">t</tspan><tspan dy="-4"></tspan></text>
+  <text x="656" y="386" text-anchor="middle" class="m"><tspan class="up">−log N</tspan>(z<tspan class="sub" dy="4">t</tspan><tspan dy="-4"> | μ</tspan><tspan class="sub" dy="4">t</tspan><tspan dy="-4">, σ</tspan><tspan class="sub" dy="4">t</tspan><tspan dy="-4">)</tspan></text>
+  <path d="M 620 300 C 590 256, 330 252, 260 300" fill="none" stroke="#7B5CC4" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#arrV)"/>
+  <line x1="444" y1="255" x2="466" y2="277" stroke="#7B5CC4" stroke-width="2.6"/>
+  <line x1="466" y1="255" x2="444" y2="277" stroke="#7B5CC4" stroke-width="2.6"/>
+  <text x="612" y="238" text-anchor="middle" class="lbl" style="fill:#7B5CC4">the dynamics loss never</text>
+  <text x="612" y="254" text-anchor="middle" class="lbl" style="fill:#7B5CC4">reaches the encoder</text>
+</svg>

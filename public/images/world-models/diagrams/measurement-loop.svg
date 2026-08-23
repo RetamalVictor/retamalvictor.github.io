@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 330" color="#20242B" role="img"
+     aria-label="The measurement loop: a simulator emits a frame and a true state; a model turns the frame into a latent; a ridge probe maps the latent back to the true state and reports R squared.">
+  <style>
+    text { fill: #20242B; }
+    .lbl    { font: 13px Helvetica, Arial, sans-serif; }
+    .lbl-sm { font: 11.5px Helvetica, Arial, sans-serif; fill: #6A7280; }
+    .m      { font: italic 15px Georgia, 'Times New Roman', serif; }
+    .mi     { font: italic 13.5px Georgia, 'Times New Roman', serif; }
+    .ttl    { font: 600 13px Helvetica, Arial, sans-serif; }
+    .big    { font: 600 34px Helvetica, Arial, sans-serif; }
+    .sub    { font: 10px Helvetica, Arial, sans-serif; }
+    .sup    { font: 9.5px Helvetica, Arial, sans-serif; }
+    .up     { font-style: normal; }
+  </style>
+  <defs>
+    <marker id="arrI" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#20242B"/></marker>
+    <marker id="arrG" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8B939E"/></marker>
+    <marker id="arrT" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#0F8C7C"/></marker>
+    <marker id="arrA" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#C07A17"/></marker>
+    <marker id="arrV" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#7B5CC4"/></marker>
+    <radialGradient id="blob" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FFFFFF"/><stop offset="0.45" stop-color="#FFFFFF" stop-opacity="0.85"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect x="0" y="0" width="800" height="330" rx="6" fill="#F7F8F6"/>
+  <rect x="30" y="40" width="170" height="64" rx="4" fill="#E7EAEE" stroke="#8B939E" stroke-width="1.4"/>
+  <text x="115" y="63" text-anchor="middle" class="lbl">simulator</text>
+  <text x="115" y="88" text-anchor="middle" class="m">(x, y, v<tspan class="sub" dy="4">x</tspan><tspan dy="-4">, v</tspan><tspan class="sub" dy="4">y</tspan><tspan dy="-4">)</tspan></text>
+  <text x="115" y="124" text-anchor="middle" class="lbl-sm">ground truth exists here only</text>
+  <text x="115" y="140" text-anchor="middle" class="lbl-sm">because the simulator is mine</text>
+  <line x1="206" y1="72" x2="248" y2="72" stroke="#20242B" stroke-width="1.4" marker-end="url(#arrI)"/>
+  <rect x="254" y="46" width="52" height="52" rx="3" fill="#0B0B0D" stroke="#8B939E" stroke-width="1"/>
+  <circle cx="275.8" cy="69.4" r="9.9" fill="url(#blob)"/>
+  <text x="280" y="119" text-anchor="middle" class="lbl-sm">frame <tspan class="m">o</tspan><tspan class="mi sub" dy="3">t</tspan><tspan dy="-3">, 32×32</tspan></text>
+  <line x1="312" y1="72" x2="358" y2="72" stroke="#20242B" stroke-width="1.4" marker-end="url(#arrI)"/>
+  <rect x="366" y="40" width="210" height="64" rx="4" fill="#BFE5DF" stroke="#0F8C7C" stroke-width="1.4"/>
+  <text x="471" y="63" text-anchor="middle" class="lbl">model</text>
+  <text x="471" y="86" text-anchor="middle" class="lbl">(VAE / GRU / RSSM)</text>
+  <line x1="471" y1="106" x2="471" y2="206" stroke="#7B5CC4" stroke-width="1.6" marker-end="url(#arrV)"/>
+  <text x="481" y="160" text-anchor="start" class="lbl-sm">latent <tspan class="m">z</tspan> (or state <tspan class="m">h</tspan>)</text>
+  <path d="M 200 100 C 240 130, 236 180, 262 208" fill="none" stroke="#8B939E" stroke-width="1.4" marker-end="url(#arrG)"/>
+  <rect x="170" y="212" width="170" height="60" rx="4" fill="#E7EAEE" stroke="#8B939E" stroke-width="1.4"/>
+  <text x="255" y="247" text-anchor="middle" class="lbl">true state <tspan class="m">s</tspan><tspan class="m sub" dy="4">t</tspan></text>
+  <line x1="346" y1="242" x2="372" y2="242" stroke="#8B939E" stroke-width="1.4" marker-end="url(#arrG)"/>
+  <rect x="380" y="210" width="182" height="64" rx="4" fill="#E4DCF6" stroke="#7B5CC4" stroke-width="1.6"/>
+  <text x="471" y="236" text-anchor="middle" class="lbl">ridge probe</text>
+  <text x="471" y="260" text-anchor="middle" class="m">ŝ = Wz + b</text>
+  <line x1="568" y1="242" x2="602" y2="242" stroke="#7B5CC4" stroke-width="1.6" marker-end="url(#arrV)"/>
+  <rect x="610" y="210" width="100" height="64" rx="4" fill="#F7F8F6" stroke="#7B5CC4" stroke-width="1.8"/>
+  <text x="660" y="252" text-anchor="middle" class="m" style="font-size:30px; fill:#7B5CC4">R<tspan dy="-12" style="font-size:18px">2</tspan></text>
+  <text x="660" y="294" text-anchor="middle" class="lbl-sm">the number the whole</text>
+  <text x="660" y="310" text-anchor="middle" class="lbl-sm">series argues about</text>
+</svg>

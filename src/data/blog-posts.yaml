@@ -3,8 +3,8 @@ posts:
     title: "World Models From Scratch, Part 2: Frozen Versus Joint"
     date: "2026-08-12"
     tags: ["machine-learning", "world-models", "rssm", "dreamer", "jax"]
-    summary: "The zero from part 1 becomes 0.81 with a GRU bolted onto a frozen encoder, and 0.96 when the encoder is allowed to learn from the prediction loss. Along the way: a model that posts the best one-step error in the experiment and leaves the data manifold entirely by the thirtieth prediction, and an agent trained on nothing but hallucinations."
-    readTime: "34 min"
+    summary: "The zero from part 1 becomes 0.81 with a GRU bolted onto a frozen encoder, and 0.96 when the encoder learns from the prediction loss. Along the way: a model with the best one-step error in the experiment that leaves the data manifold by its thirtieth prediction, and an agent trained on nothing but hallucinations."
+    readTime: "20 min"
     notebook: ""
     featured: true
 
@@ -12,8 +12,8 @@ posts:
     title: "World Models From Scratch, Part 1: A Ball, a VAE, and a Number That Would Not Move"
     date: "2026-08-11"
     tags: ["machine-learning", "world-models", "vae", "jax", "representation-learning"]
-    summary: "A VAE can reconstruct every frame perfectly and still know nothing about how the world moves. Building a toy environment where I know the ground truth, then using a linear probe to catch the latent out. Posterior collapse, the price of a nat, and why a dead model scored 0.74."
-    readTime: "22 min"
+    summary: "A VAE can reconstruct every frame perfectly and still know nothing about how the world moves. A toy environment where I know the ground truth, a linear probe that catches the latent out, a collapse that converged to exactly 11.17, and a dead model that scored 0.74."
+    readTime: "13 min"
     notebook: ""
     featured: true
 

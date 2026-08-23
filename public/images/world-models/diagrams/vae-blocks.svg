@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 420" color="#20242B" role="img"
+     aria-label="The VAE end to end: three stride-2 convolutions encode a 32 by 32 frame to mu and log variance, a sample z of 16 dimensions is drawn, and a mirrored decoder rebuilds the frame. The reconstruction loss spans the round trip; the KL term attaches at z.">
+  <style>
+    text { fill: #20242B; }
+    .lbl    { font: 13px Helvetica, Arial, sans-serif; }
+    .lbl-sm { font: 11.5px Helvetica, Arial, sans-serif; fill: #6A7280; }
+    .m      { font: italic 15px Georgia, 'Times New Roman', serif; }
+    .mi     { font: italic 13.5px Georgia, 'Times New Roman', serif; }
+    .ttl    { font: 600 13px Helvetica, Arial, sans-serif; }
+    .big    { font: 600 34px Helvetica, Arial, sans-serif; }
+    .sub    { font: 10px Helvetica, Arial, sans-serif; }
+    .sup    { font: 9.5px Helvetica, Arial, sans-serif; }
+    .up     { font-style: normal; }
+  </style>
+  <defs>
+    <marker id="arrI" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#20242B"/></marker>
+    <marker id="arrG" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8B939E"/></marker>
+    <marker id="arrT" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#0F8C7C"/></marker>
+    <marker id="arrA" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#C07A17"/></marker>
+    <marker id="arrV" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#7B5CC4"/></marker>
+    <radialGradient id="blob" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FFFFFF"/><stop offset="0.45" stop-color="#FFFFFF" stop-opacity="0.85"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect x="0" y="0" width="800" height="420" rx="6" fill="#F7F8F6"/>
+  <text x="22" y="24" text-anchor="start" class="ttl" style="fill:#0F8C7C">encoder  <tspan class="m">q</tspan>(<tspan class="m">z</tspan> | <tspan class="m">o</tspan>)</text>
+  <text x="22" y="406" text-anchor="start" class="ttl" style="fill:#0F8C7C">decoder  <tspan class="m">p</tspan>(<tspan class="m">o</tspan> | <tspan class="m">z</tspan>)</text>
+  <rect x="28" y="74" width="52" height="52" rx="3" fill="#0B0B0D" stroke="#8B939E" stroke-width="1"/>
+  <circle cx="49.8" cy="97.4" r="9.9" fill="url(#blob)"/>
+  <text x="54" y="146" text-anchor="middle" class="lbl"><tspan class="m">o</tspan><tspan class="m sub" dy="4">t</tspan></text>
+  <text x="54" y="162" text-anchor="middle" class="lbl-sm">32×32×1</text>
+  <line x1="86" y1="100" x2="110" y2="100" stroke="#8B939E" stroke-width="1.4" marker-end="url(#arrG)"/>
+  <polygon points="118,73.0 128,66.0 182,66.0 172,73.0" fill="#DCF0EC" stroke="#0F8C7C" stroke-width="1.1" stroke-linejoin="round"/>
+  <polygon points="172,73.0 182,66.0 182,120.0 172,127.0" fill="#9ED3C9" stroke="#0F8C7C" stroke-width="1.1" stroke-linejoin="round"/>
+  <rect x="118" y="73.0" width="54" height="54" fill="#BFE5DF" stroke="#0F8C7C" stroke-width="1.1"/>
+  <text x="150" y="146" text-anchor="middle" class="lbl">Conv 32</text>
+  <text x="150" y="162" text-anchor="middle" class="lbl-sm">4×4 s2</text>
+  <text x="150" y="178" text-anchor="middle" class="lbl-sm">16×16×32</text>
+  <line x1="187" y1="100" x2="231" y2="100" stroke="#8B939E" stroke-width="1.4" marker-end="url(#arrG)"/>
+  <polygon points="238,79.0 253,69.0 295,69.0 280,79.0" fill="#DCF0EC" stroke="#0F8C7C" stroke-width="1.1" stroke-linejoin="round"/>
+  <polygon points="280,79.0 295,69.0 295,111.0 280,121.0" fill="#9ED3C9" stroke="#0F8C7C" stroke-width="1.1" stroke-linejoin="round"/>
+  <rect x="238" y="79.0" width="42" height="42" fill="#BFE5DF" stroke="#0F8C7C" stroke-width="1.1"/>
+  <text x="266" y="146" text-anchor="middle" class="lbl">Conv 64</text>
+  <text x="266" y="162" text-anchor="middle" class="lbl-sm">4×4 s2</text>
+  <text x="266" y="178" text-anchor="middle" class="lbl-sm">8×8×64</text>
+  <line x1="300" y1="100" x2="344" y2="100" stroke="#8B939E" stroke-width="1.4" marker-end="url(#arrG)"/>
+  <polygon points="351,85.0 371,72.0 401,72.0 381,85.0" fill="#DCF0EC" stroke="#0F8C7C" stroke-width="1.1" stroke-linejoin="round"/>
+  <polygon points="381,85.0 401,72.0 401,102.0 381,115.0" fill="#9ED3C9" stroke="#0F8C7C" stroke-width="1.1" stroke-linejoin="round"/>
+  <rect x="351" y="85.0" width="30" height="30" fill="#BFE5DF" stroke="#0F8C7C" stroke-width="1.1"/>
+  <text x="376" y="146" text-anchor="middle" class="lbl">Conv 128</text>
+  <text x="376" y="162" text-anchor="middle" class="lbl-sm">4×4 s2</text>
+  <text x="376" y="178" text-anchor="middle" class="lbl-sm">4×4×128</text>
+  <line x1="406" y1="100" x2="450" y2="100" stroke="#8B939E" stroke-width="1.4" marker-end="url(#arrG)"/>
+  <rect x="457" y="65" width="14" height="70" rx="2" fill="#BFE5DF" stroke="#0F8C7C" stroke-width="1.1"/>
+  <line x1="459" y1="73" x2="469" y2="73" stroke="#FFFFFF" stroke-opacity="0.7" stroke-width="0.8"/>
+  <line x1="459" y1="81" x2="469" y2="81" stroke="#FFFFFF" stroke-opacity="0.7" stroke-width="0.8"/>
+  <line x1="459" y1="89" x2="469" y2="89" stroke="#FFFFFF" stroke-opacity="0.7" stroke-width="0.8"/>
+  <line x1="459" y1="97" x2="469" y2="97" stroke="#FFFFFF" stroke-opacity="0.7" stroke-width="0.8"/>
+  <line x1="459" y1="105" x2="469" y2="105" stroke="#FFFFFF" stroke-opacity="0.7" stroke-width="0.8"/>
+  <line x1="459" y1="113" x2="469" y2="113" stroke="#FFFFFF" stroke-opacity="0.7" stroke-width="0.8"/>
+  <line x1="459" y1="121" x2="469" y2="121" stroke="#FFFFFF" stroke-opacity="0.7" stroke-width="0.8"/>
+  <text x="464" y="146" text-anchor="middle" class="lbl">Dense</text>
+  <text x="464" y="162" text-anchor="middle" class="lbl-sm">256</text>
+  <rect x="523" y="50" width="12" height="30" rx="2" fill="#BFE5DF" stroke="#0F8C7C" stroke-width="1.1"/>
+  <line x1="525" y1="58" x2="533" y2="58" stroke="#FFFFFF" stroke-opacity="0.7" stroke-width="0.8"/>
+  <line x1="525" y1="66" x2="533" y2="66" stroke="#FFFFFF" stroke-opacity="0.7" stroke-width="0.8"/>
+  <rect x="523" y="120" width="12" height="30" rx="2" fill="#BFE5DF" stroke="#0F8C7C" stroke-width="1.1"/>
+  <line x1="525" y1="128" x2="533" y2="128" stroke="#FFFFFF" stroke-opacity="0.7" stroke-width="0.8"/>
+  <line x1="525" y1="136" x2="533" y2="136" stroke="#FFFFFF" stroke-opacity="0.7" stroke-width="0.8"/>
+  <text x="529" y="42" text-anchor="middle" class="m">μ</text>
+  <text x="529" y="168" text-anchor="middle" class="lbl">log <tspan class="m">σ</tspan><tspan class="sup" dy="-5">2</tspan></text>
+  <line x1="475" y1="90" x2="518" y2="68" stroke="#8B939E" stroke-width="1.4" marker-end="url(#arrG)"/>
+  <line x1="475" y1="110" x2="518" y2="132" stroke="#8B939E" stroke-width="1.4" marker-end="url(#arrG)"/>
+  <rect x="595" y="176" width="14" height="44" rx="2" fill="#E4DCF6" stroke="#7B5CC4" stroke-width="1.1"/>
+  <line x1="597" y1="184" x2="607" y2="184" stroke="#FFFFFF" stroke-opacity="0.7" stroke-width="0.8"/>
+  <line x1="597" y1="192" x2="607" y2="192" stroke="#FFFFFF" stroke-opacity="0.7" stroke-width="0.8"/>
+  <line x1="597" y1="200" x2="607" y2="200" stroke="#FFFFFF" stroke-opacity="0.7" stroke-width="0.8"/>
+  <line x1="597" y1="208" x2="607" y2="208" stroke="#FFFFFF" stroke-opacity="0.7" stroke-width="0.8"/>
+  <line x1="539" y1="65" x2="591" y2="186" stroke="#7B5CC4" stroke-width="1.4" marker-end="url(#arrV)"/>
+  <line x1="539" y1="135" x2="591" y2="210" stroke="#7B5CC4" stroke-width="1.4" marker-end="url(#arrV)"/>
+  <text x="619" y="192" text-anchor="start" class="m" style="fill:#7B5CC4">z = μ + σ ⊙ ε</text>
+  <text x="619" y="212" text-anchor="start" class="lbl-sm"><tspan class="m">z</tspan>, 16 dims</text>
+  <text x="619" y="236" text-anchor="start" class="m" style="fill:#7B5CC4">β <tspan class="up">KL</tspan>(q(z | o) || <tspan class="up">N</tspan>(0, I))</text>
+  <rect x="369" y="265" width="14" height="70" rx="2" fill="#BFE5DF" stroke="#0F8C7C" stroke-width="1.1"/>
+  <line x1="371" y1="273" x2="381" y2="273" stroke="#FFFFFF" stroke-opacity="0.7" stroke-width="0.8"/>
+  <line x1="371" y1="281" x2="381" y2="281" stroke="#FFFFFF" stroke-opacity="0.7" stroke-width="0.8"/>
+  <line x1="371" y1="289" x2="381" y2="289" stroke="#FFFFFF" stroke-opacity="0.7" stroke-width="0.8"/>
+  <line x1="371" y1="297" x2="381" y2="297" stroke="#FFFFFF" stroke-opacity="0.7" stroke-width="0.8"/>
+  <line x1="371" y1="305" x2="381" y2="305" stroke="#FFFFFF" stroke-opacity="0.7" stroke-width="0.8"/>
+  <line x1="371" y1="313" x2="381" y2="313" stroke="#FFFFFF" stroke-opacity="0.7" stroke-width="0.8"/>
+  <line x1="371" y1="321" x2="381" y2="321" stroke="#FFFFFF" stroke-opacity="0.7" stroke-width="0.8"/>
+  <text x="376" y="346" text-anchor="middle" class="lbl">Dense</text>
+  <text x="376" y="362" text-anchor="middle" class="lbl-sm">4·4·128</text>
+  <text x="376" y="378" text-anchor="middle" class="lbl-sm">4×4×128</text>
+  <path d="M 593 216 C 535 216, 519 300, 389 300" fill="none" stroke="#7B5CC4" stroke-width="1.5" marker-end="url(#arrV)"/>
+  <polygon points="238,279.0 253,269.0 295,269.0 280,279.0" fill="#DCF0EC" stroke="#0F8C7C" stroke-width="1.1" stroke-linejoin="round"/>
+  <polygon points="280,279.0 295,269.0 295,311.0 280,321.0" fill="#9ED3C9" stroke="#0F8C7C" stroke-width="1.1" stroke-linejoin="round"/>
+  <rect x="238" y="279.0" width="42" height="42" fill="#BFE5DF" stroke="#0F8C7C" stroke-width="1.1"/>
+  <text x="266" y="346" text-anchor="middle" class="lbl">ConvT 64</text>
+  <text x="266" y="362" text-anchor="middle" class="lbl-sm">4×4 s2</text>
+  <text x="266" y="378" text-anchor="middle" class="lbl-sm">8×8×64</text>
+  <line x1="363" y1="300" x2="301" y2="300" stroke="#8B939E" stroke-width="1.4" marker-end="url(#arrG)"/>
+  <polygon points="118,273.0 128,266.0 182,266.0 172,273.0" fill="#DCF0EC" stroke="#0F8C7C" stroke-width="1.1" stroke-linejoin="round"/>
+  <polygon points="172,273.0 182,266.0 182,320.0 172,327.0" fill="#9ED3C9" stroke="#0F8C7C" stroke-width="1.1" stroke-linejoin="round"/>
+  <rect x="118" y="273.0" width="54" height="54" fill="#BFE5DF" stroke="#0F8C7C" stroke-width="1.1"/>
+  <text x="150" y="346" text-anchor="middle" class="lbl">ConvT 32</text>
+  <text x="150" y="362" text-anchor="middle" class="lbl-sm">4×4 s2</text>
+  <text x="150" y="378" text-anchor="middle" class="lbl-sm">16×16×32</text>
+  <line x1="232" y1="300" x2="188" y2="300" stroke="#8B939E" stroke-width="1.4" marker-end="url(#arrG)"/>
+  <line x1="112" y1="300" x2="86" y2="300" stroke="#8B939E" stroke-width="1.4" marker-end="url(#arrG)"/>
+  <rect x="28" y="274" width="52" height="52" rx="3" fill="#0B0B0D" stroke="#8B939E" stroke-width="1"/>
+  <circle cx="49.8" cy="297.4" r="9.9" fill="url(#blob)"/>
+  <text x="54" y="346" text-anchor="middle" class="lbl"><tspan class="m">ô</tspan><tspan class="m sub" dy="4">t</tspan></text>
+  <text x="54" y="362" text-anchor="middle" class="lbl-sm">32×32×1</text>
+  <line x1="54" y1="170" x2="54" y2="266" stroke="#6A7280" stroke-width="1.1" stroke-dasharray="4 3"/>
+  <text x="64" y="212" text-anchor="start" class="lbl" style="fill:#6A7280">reconstruction  <tspan class="m" style="fill:#6A7280">||o</tspan><tspan class="m sub" dy="3" style="fill:#6A7280">t</tspan><tspan class="m" dy="-3" style="fill:#6A7280"> − ô</tspan><tspan class="m sub" dy="3" style="fill:#6A7280">t</tspan><tspan class="m" dy="-3" style="fill:#6A7280">||</tspan><tspan class="sup" dy="-5" style="fill:#6A7280">2</tspan></text>
+</svg>
