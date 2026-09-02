@@ -9,6 +9,7 @@
  */
 
 import puppeteer from 'puppeteer';
+import yamlParser from 'js-yaml';
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -41,6 +42,15 @@ function getPosts() {
     title: titles[index] || slug,
     summary: summaries[index] || '',
   }));
+}
+
+/**
+ * The hero demos, in tab order. Same file the home page's structured data
+ * reads, so llms.txt and the JSON-LD cannot drift apart.
+ */
+function getDemos() {
+  const raw = fs.readFileSync(path.join(ROOT, 'src/data/demos.yaml'), 'utf-8');
+  return yamlParser.load(raw).demos || [];
 }
 
 function getRoutes() {
@@ -148,6 +158,7 @@ function generateSitemap(routes) {
  */
 function generateLlmsTxt() {
   const posts = getPosts();
+  const demos = getDemos();
 
   const lines = [
     '# Victor Retamal',
@@ -173,11 +184,17 @@ function generateLlmsTxt() {
     '',
     ...posts.map(post => `- [${post.title}](${SITE_URL}/blog/${post.slug})${post.summary ? `: ${post.summary}` : ''}`),
     '',
+    '## Interactive demos',
+    '',
+    `The home page (${SITE_URL}) carries ${demos.length} simulations behind a tab`,
+    'strip, each with a "How it works" panel. The physics, control and inference all',
+    'execute in the browser via WebGL and ONNX Runtime - describing any of them as a',
+    'recording would be inaccurate.',
+    '',
+    ...demos.map(demo => `- ${demo.name}: ${demo.summary}`),
+    '',
     '## Notes',
     '',
-    '- The demos on the home page (visual servoing, drone racing with MPC, monocular',
-    '  depth, a ternary-weight language model) execute in the browser via WebGL and',
-    '  ONNX Runtime. Descriptions of them as recordings would be inaccurate.',
     '- The site sets no cookies and runs no analytics or tracking.',
     '- Contact details are behind the mail buttons in the footer rather than in the',
     '  markup, to keep the address away from scrapers.',

@@ -7,6 +7,9 @@ import { isMemoryConstrained } from '../utils/deviceCapability.js';
  */
 export type DemoType = 'ibvs' | 'ternary' | 'drone-racing' | 'depth' | 'mapf';
 
+/** The tab the hero opens on, and the panel that is showing before anyone clicks. */
+export const DEFAULT_DEMO: DemoType = 'drone-racing';
+
 /**
  * Interface for demo instances
  */
@@ -51,7 +54,7 @@ const CONFIRM_ABOVE_MB = 20;
  */
 export class DemoManager {
     private containerId: string;
-    private activeDemo: DemoType = 'drone-racing';
+    private activeDemo: DemoType = DEFAULT_DEMO;
     private currentInstance: DemoInstance | null = null;
     private onDemoChange: DemoChangeCallback | null = null;
     /** Heavy demos the reader has already accepted the download for. */

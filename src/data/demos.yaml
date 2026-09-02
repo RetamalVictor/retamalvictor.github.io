@@ -1,0 +1,88 @@
+# The interactive demos in the hero tab strip, in tab order.
+#
+# The rich "How it works" markup lives in managers/InfoPanelController.ts and is
+# what a reader sees. What is here is the plain-language version of the same
+# thing, for consumers that cannot open a slide-in panel: the ItemList in the
+# home page's structured data (utils/seo.ts) and llms.txt (scripts/prerender.mjs).
+#
+# Keep a summary true to its panel. If the panel changes, this changes with it.
+demos:
+  - id: ibvs
+    name: "Image-Based Visual Servoing (IBVS)"
+    summary: >-
+      A quadrotor tracks a moving target from camera feedback alone, with no
+      position estimate anywhere in the loop. The control law v = lambda * L+ * e
+      drives the error between observed and desired image features to zero, where
+      L is the interaction matrix relating feature motion to camera velocity. The
+      drone is underactuated, so lateral motion has to come from tilting: a PD
+      attitude controller turns the desired velocity into roll and pitch.
+    keywords:
+      - visual servoing
+      - robot control
+      - quadrotor dynamics
+      - computer vision
+      - pinhole camera model
+
+  - id: ternary
+    name: "Ternary-Weight Language Model"
+    summary: >-
+      A LLaMA-style transformer - RMSNorm, RoPE, grouped-query attention, SwiGLU -
+      whose linear layers carry ternary weights constrained to {-1, 0, +1}, after
+      BitNet b1.58. Weights are packed at 2 bits each with per-channel FP16 scales,
+      roughly 8x smaller than FP16, and the model generates text client-side in the
+      browser. The architecture is conventional; the weight representation and the
+      execution strategy are the point.
+    keywords:
+      - quantization
+      - BitNet b1.58
+      - large language models
+      - transformer inference
+      - on-device machine learning
+
+  - id: drone-racing
+    name: "Drone Racing with Model Predictive Control"
+    summary: >-
+      Model Predictive Control for autonomous drone racing, solved by Sequential
+      Quadratic Programming in real time. The model carries a 14-dimensional state
+      (position, velocity, attitude quaternion, actuator states) and four inputs
+      (collective thrust and three body rates); the controller looks 500 ms ahead
+      and re-solves the quadratic program every step to pick thrust and angular
+      rate commands that carry the drone through the next gates.
+    keywords:
+      - model predictive control
+      - sequential quadratic programming
+      - trajectory optimization
+      - quadrotor dynamics
+      - autonomous drone racing
+
+  - id: depth
+    name: "Real-Time Monocular Depth Estimation"
+    summary: >-
+      MiDaS v2.1 with an EfficientNet-Lite backbone, run over a live webcam feed
+      through ONNX Runtime Web at 256x256 input resolution. The network predicts
+      relative - ordinal, not metric - depth from a single RGB image, which is then
+      back-projected through approximate camera intrinsics into a 3D point cloud.
+      Inference happens on the reader's device; no frame leaves the browser.
+    keywords:
+      - monocular depth estimation
+      - MiDaS
+      - ONNX Runtime Web
+      - point cloud
+      - edge inference
+
+  - id: mapf
+    name: "Decentralised Robot Fleet (Multi-Agent Path Finding)"
+    summary: >-
+      A graph neural network routes a fleet of robots through a shared warehouse
+      with no central planner. Each robot sees only a 5x5 local window in two
+      channels - what is around it, and which way its goal lies - which a small CNN
+      compresses to 64 numbers. A K=3 graph filter over the four nearest neighbours
+      within four cells is the only place robots exchange anything. The weights are
+      shared and mention fleet size nowhere, so a policy trained on 10 robots runs
+      200 of them.
+    keywords:
+      - multi-agent path finding
+      - graph neural networks
+      - multi-agent reinforcement learning
+      - decentralised control
+      - imitation learning

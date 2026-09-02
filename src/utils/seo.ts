@@ -2,6 +2,8 @@
  * SEO Manager - Dynamic meta tag management for SPA
  */
 
+import { DEMOS } from './demos.js';
+
 const SITE_URL = 'https://victor-retamal.com';
 const SITE_NAME = 'Victor Retamal';
 const DEFAULT_IMAGE = `${SITE_URL}/images/og-image.png`;
@@ -151,6 +153,35 @@ class SEOManager {
             url: SITE_URL,
             inLanguage: 'en',
             author: this.person(),
+        });
+
+        // The demos are the substance of the home page, and each one's
+        // explanation sits behind a tab and a button. The markup is in the
+        // document either way, but this states plainly what all five are, so
+        // nothing has to infer the machine learning ones from a slide-in panel.
+        this.setJsonLd('demos-jsonld', {
+            '@context': 'https://schema.org',
+            '@type': 'ItemList',
+            name: 'Interactive robotics and machine learning demos',
+            description: 'Simulations on the home page. The physics, control and inference all run client-side, in the browser.',
+            itemListOrder: 'https://schema.org/ItemListUnordered',
+            numberOfItems: DEMOS.length,
+            itemListElement: DEMOS.map((demo, index) => ({
+                '@type': 'ListItem',
+                position: index + 1,
+                item: {
+                    '@type': 'WebApplication',
+                    name: demo.name,
+                    description: demo.summary,
+                    url: `${SITE_URL}/#demo-section`,
+                    applicationCategory: 'Simulation',
+                    operatingSystem: 'Any',
+                    browserRequirements: 'Requires JavaScript',
+                    isAccessibleForFree: true,
+                    keywords: demo.keywords.join(', '),
+                    author: this.person(),
+                },
+            })),
         });
     }
 

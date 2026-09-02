@@ -1,4 +1,4 @@
-import type { DemoType } from './DemoManager.js';
+import { DEFAULT_DEMO, type DemoType } from './DemoManager.js';
 
 /**
  * Info panel content structure
@@ -1036,6 +1036,11 @@ export class InfoPanelController {
         this.overlay.addEventListener('click', () => this.close());
 
         document.addEventListener('keydown', this.boundHandleEscape);
+
+        // Show the panel the hero opens on. Done here rather than waiting for
+        // the demo manager so the explanations are in the document even if
+        // WebGL never comes up - which is the case in the pre-renderer.
+        this.setContent(DEFAULT_DEMO);
     }
 
     /**
@@ -1083,6 +1088,43 @@ export class InfoPanelController {
     }
 
     /**
+     * Render every demo's explanation into the panel, once.
+     *
+     * The obvious implementation swaps one demo's markup into the panel each
+     * time the tab changes, and for a reader that is fine. It is not fine for
+     * anything that reads the page instead of clicking through it: crawlers,
+     * search indexes and language models get whatever demo happened to be
+     * showing when the page settled, and the other four explanations - most of
+     * them the machine learning ones - exist only inside a bundle nobody
+     * parses. So all five go in the document and switching only moves the
+     * `hidden` attribute.
+     *
+     * Two details keep the panel looking exactly as it did. `hidden` rather
+     * than a class, because the panel's `space-y-6` is
+     * `> :not([hidden]) ~ :not([hidden])` and the attribute is what stops the
+     * visible panel inheriting a top margin meant to separate it from its
+     * invisible siblings. And the sections keep their own `space-y-6` wrapper,
+     * so the screen-reader heading sits outside it: as a sibling it would push
+     * the first section down by a margin it never used to have.
+     */
+    private renderPanels(content: HTMLElement): void {
+        if (content.dataset.panelsRendered === 'true') return;
+
+        content.innerHTML = (Object.keys(INFO_PANEL_CONTENT) as DemoType[])
+            .map(demoType => {
+                const panel = INFO_PANEL_CONTENT[demoType];
+                return `
+            <article data-demo-panel="${demoType}" hidden>
+                <h2 class="sr-only">${panel.title}</h2>
+                <div class="space-y-6">${panel.content}</div>
+            </article>`;
+            })
+            .join('');
+
+        content.dataset.panelsRendered = 'true';
+    }
+
+    /**
      * Update panel content for a specific demo type
      */
     public setContent(demoType: DemoType): void {
@@ -1090,9 +1132,13 @@ export class InfoPanelController {
         const content = document.getElementById('info-panel-content');
         if (!title || !content) return;
 
-        const panelData = INFO_PANEL_CONTENT[demoType];
-        title.textContent = panelData.title;
-        content.innerHTML = panelData.content;
+        this.renderPanels(content);
+
+        title.textContent = INFO_PANEL_CONTENT[demoType].title;
+
+        content.querySelectorAll<HTMLElement>('[data-demo-panel]').forEach(panel => {
+            panel.hidden = panel.dataset.demoPanel !== demoType;
+        });
     }
 
     /**
