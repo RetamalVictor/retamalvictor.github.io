@@ -3,14 +3,14 @@
 
 site:
   title: "Victor Retamal"
-  description: "Machine Learning Engineer - Building autonomous systems and writing about the journey"
+  description: "Machine Learning & Robotics Engineer - Building autonomous systems and writing about the journey"
   url: "https://victor-retamal.com"
   language: "en"
   copyright: "© 2026 Victor Retamal"
 
 personal:
   name: "Victor Retamal"
-  title: "Machine Learning Engineer"
+  title: "Machine Learning & Robotics Engineer"
   subtitle: "I build autonomous systems and write about my work."
   label: "ML Engineer"
   location: ""
@@ -23,7 +23,7 @@ personal:
 bio:
   short: "ML Engineer specializing in computer vision, reinforcement learning, and multi-agent systems applied to autonomous robotics."
   long: |
-    I'm a Machine Learning Engineer advancing the state of autonomous systems through cutting-edge ML algorithms
+    I'm a Machine Learning & Robotics Engineer advancing the state of autonomous systems through cutting-edge ML algorithms
     applied to robotics challenges. I develop novel deep learning architectures, computer vision models,
     and reinforcement learning algorithms that enable intelligent behavior in UAVs, ground robots, and multi-agent systems.
 

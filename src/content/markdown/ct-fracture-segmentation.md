@@ -2,12 +2,12 @@
 title: "From CT Scan to Fracture Map: A Practical Guide to 3D Medical Image Segmentation"
 date: "2026-05-02"
 tags: ["medical-imaging", "3d-segmentation", "deep-learning", "nnunet"]
-summary: "How I built a pelvic fracture segmentation pipeline - and the single design decision that mattered more than the model. ABBC methodology, two-stage architecture with nnU-Net, and what actually matters when training on 3D medical data."
+summary: "How I rebuilt a pelvic fracture segmentation pipeline around ABBC, the representation that won PENGWIN 2024. Label generation, a two-stage nnU-Net architecture, and what actually matters when training on 3D medical data."
 readTime: "25 min"
 featured: true
 ---
 
-*How I built a pelvic fracture segmentation pipeline - and the single design decision that mattered more than the model.*
+*How I rebuilt a pelvic fracture segmentation pipeline around ABBC - the prediction target that mattered more than the model.*
 
 ---
 
@@ -17,7 +17,9 @@ I spent weeks on this project. The model architecture wasn't what made it work. 
 
 **What made it work was changing what I asked the network to predict.**
 
-Instead of asking a neural network to label 30 arbitrary fragment classes, I asked it to predict 4 geometric properties - interior, surface, fracture line, background. From those 4 predictions, I recovered 30 labeled fragments using classical algorithms. This single design decision - the choice of **prediction target** - was the difference between a pipeline that couldn't learn and one that achieved state-of-the-art results.
+That change isn't my idea. The representation is **ABBC** (Adaptive Border Boundary Core), introduced by the MIC-DKFZ team who won PENGWIN 2024 with IoU-F = 0.9296 [5]. Rather than labeling 30 arbitrary fragment classes, the network predicts 4 geometric properties - interior, surface, fracture line, background - and the 30 labeled fragments come back out through classical post-processing. My work was the reproduction: building the label generation and its 34 unit tests, training the two-stage pipeline, and recovering instances from what the network predicted.
+
+So read the numbers here as a training log, not a leaderboard entry. My best run reaches 0.860 EMA Dice on the 4-class ABBC task, fold 0 of 5. That measures agreement on geometry classes, not the fragment-wise IoU-F that PENGWIN actually scores, and it is not comparable to the 0.9296 above.
 
 This post walks through the full pipeline. But keep that thesis in mind: when you're stuck on a segmentation problem, before reaching for a bigger model or more data, ask yourself if you're asking the network the right question.
 
@@ -432,6 +434,8 @@ Training on 100 cases (ABBC labels, fold 0 of 5-fold cross-validation, ResEncL p
 | 150 | 0.89 | 0.90 | 0.60 | 0.78 |
 | 250 | 0.91 | 0.92 | 0.72 | 0.81 |
 | 385 | ~0.92 | ~0.93 | 0.72-0.76 | 0.860 |
+
+These are Dice scores on the 4 ABBC geometry classes, not the fragment-wise IoU-F that PENGWIN scores. The two aren't comparable: IoU-F asks whether fragment 3 was correctly separated from fragment 4, and that is settled in post-processing, downstream of everything in this table.
 
 > **Border is the hardest class** - it occupies 1-3 voxels at fracture lines, making it both rare (class imbalance) and difficult (requires precise localization). It's also the most clinically important: the fracture line is what separates fragments. At epoch 385, border Dice is still climbing - justifying long training runs (the original DKFZ team trained for 1000 epochs).
 

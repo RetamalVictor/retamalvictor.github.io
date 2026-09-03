@@ -97,7 +97,7 @@ export class ServicesPage {
                             <h2 class="title-3d text-3xl md:text-4xl font-black text-white mb-3 leading-tight">
                                 Victor <span class="text-accent-cyan">Retamal</span>
                             </h2>
-                            <p class="pill mb-5">Senior Machine Learning Engineer</p>
+                            <p class="pill mb-5">Machine Learning & Robotics Engineer</p>
 
                             <p class="text-gray-400 text-lg leading-relaxed mb-6 max-w-2xl">
                                 ML and robotics engineer with 6+ years building sim-to-real pipelines, multi-agent systems,

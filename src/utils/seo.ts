@@ -120,7 +120,7 @@ class SEOManager {
      */
     home(): void {
         this.updateAll({
-            title: 'Victor Retamal - ML & Robotics Engineer',
+            title: 'Victor Retamal - Machine Learning & Robotics Engineer',
             description: 'ML and robotics engineer working on computer vision, reinforcement learning and multi-agent systems for autonomous robots.',
             url: SITE_URL,
         });
@@ -130,20 +130,17 @@ class SEOManager {
             ...this.person(),
             description: 'Currently teaching machines to think and move. I design intelligent systems that learn from the world and act in it. ML and robotics engineer working on sim-to-real pipelines, multi-agent reinforcement learning, computer vision and medical imaging.',
             knowsAbout: [
-                'Machine Learning',
-                'Deep Learning',
-                'Robotics',
-                'Reinforcement Learning',
-                'Multi-Agent Systems',
+                'Multi-Agent Reinforcement Learning',
+                'Sim-to-Real Robotics',
+                'Model Predictive Control',
+                'Neural Network Quantization',
                 'Computer Vision',
-                'Control Systems Engineering',
-                'Inference and Performance Optimization',
-                'Medical Imaging',
+                '3D Medical Image Segmentation',
             ],
-            alumniOf: {
-                '@type': 'EducationalOrganization',
-                name: 'Vrije Universiteit Amsterdam',
-            },
+            alumniOf: [
+                { '@type': 'EducationalOrganization', name: 'Vrije Universiteit Amsterdam' },
+                { '@type': 'EducationalOrganization', name: 'University of Amsterdam' },
+            ],
         });
 
         this.setJsonLd('website-jsonld', {
@@ -281,11 +278,11 @@ class SEOManager {
                 '@type': 'Person',
                 name: 'Victor Retamal',
                 url: SITE_URL,
-                jobTitle: 'Senior Machine Learning Engineer',
-                alumniOf: {
-                    '@type': 'EducationalOrganization',
-                    name: 'Vrije Universiteit Amsterdam & University of Amsterdam',
-                },
+                jobTitle: 'Machine Learning & Robotics Engineer',
+                alumniOf: [
+                    { '@type': 'EducationalOrganization', name: 'Vrije Universiteit Amsterdam' },
+                    { '@type': 'EducationalOrganization', name: 'University of Amsterdam' },
+                ],
             },
             serviceType: 'Engineering Consulting',
             areaServed: 'Online',
@@ -337,7 +334,7 @@ class SEOManager {
             '@type': 'Person',
             name: SITE_NAME,
             url: SITE_URL,
-            jobTitle: 'ML & Robotics Engineer',
+            jobTitle: 'Machine Learning & Robotics Engineer',
             sameAs: [
                 'https://github.com/RetamalVictor',
                 'https://www.linkedin.com/in/victor-retamal/',

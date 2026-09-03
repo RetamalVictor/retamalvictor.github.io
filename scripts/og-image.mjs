@@ -95,7 +95,7 @@ const CARD = `<!DOCTYPE html>
       <span class="controls"><i></i><i></i><i></i></span>
     </div>
     <div class="body">
-      <div class="badge">ML &amp; Robotics Engineer</div>
+      <div class="badge">Machine Learning &amp; Robotics Engineer</div>
       <h1>I'm <span>Victor</span>,<br>I teach machines to think and move.</h1>
       <p>Sim-to-real robotics &middot; multi-agent RL &middot; computer vision &middot; medical imaging</p>
       <div class="foot">
