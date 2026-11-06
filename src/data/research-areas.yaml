@@ -43,25 +43,25 @@ areas:
 publications:
   # Areas above reference these by index, so new entries go on the end
   - title: "Automatic Segmentation of Cardiac Structures from 2D Echocardiographic Images using Transformers"
-    authors: ["Anne Chel", "Mats Gonggrijp", "Victor Kyriacou", "Victor Retamal", "Laura Latorre Moreno", "Navchetan Awasthi"]
+    authors: ["A Chel", "M Gonggrijp", "V Kyriacou", "V Retamal Guiberteau", "L Latorre Moreno", "N Awasthi"]
     journal: "IEEE SAUS"
     date: 2024
     doi: "10.1109/SAUS61785.2024.10563657"
 
   - title: "From Shadows to Light: A Swarm Robotics Approach with Onboard Control for Seeking Dynamic Sources in Constrained Environments"
-    authors: ["Tugay Alperen Karagüzel", "Victor Retamal", "Nicolas Cambier", "Eliseo Ferrante"]
+    authors: ["TA Karagüzel", "V Retamal", "N Cambier", "E Ferrante"]
     journal: "IEEE RAL"
     date: 2023
     doi: "10.1109/LRA.2023.3331897"
 
   - title: "Onboard Controller Design for Nano UAV Swarm in Operator-Guided Collective Behaviors"
-    authors: ["Tugay Alperen Karagüzel", "Victor Retamal", "Eliseo Ferrante"]
+    authors: ["TA Karagüzel", "V Retamal", "E Ferrante"]
     journal: "IEEE ICRA"
     date: 2023
     doi: "10.1109/ICRA48891.2023.10160630"
 
   - title: "Speed-Based Trajectory Tracking Control for Fixed-Wing UAV"
-    authors: ["Alejandro Potes", "Victor Retamal", "Atharva Wakode", "Javier Garcia", "Agata Barciś", "Hoa Nguyen"]
+    authors: ["A Potes", "V Retamal", "A Wakode", "J Garcia", "A Barciś", "H Nguyen"]
     journal: "ICUAS"
     date: 2026
     doi: ""
