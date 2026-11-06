@@ -3,9 +3,9 @@
 text { fill: #20242B; }
 .name { font: 700 22px Helvetica, Arial, sans-serif; letter-spacing: -0.3px; }
 .name-sm { font: 700 18px Helvetica, Arial, sans-serif; }
-.cap { font: italic 17px Georgia, 'Times New Roman', serif; fill: #6A7280; }
-.cap-sm { font: italic 15px Georgia, 'Times New Roman', serif; fill: #6A7280; }
-.lbl-sm { font: 14px Helvetica, Arial, sans-serif; fill: #6A7280; }
+.cap { font: 18px Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; fill: #363B43; }
+.cap-sm { font: 16.5px Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; fill: #363B43; }
+.lbl-sm { font: 15px Helvetica, Arial, sans-serif; fill: #363B43; }
 .bl { fill: #0B57D0; }
 </style>
 <defs>

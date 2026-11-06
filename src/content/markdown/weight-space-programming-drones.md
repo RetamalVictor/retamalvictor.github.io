@@ -11,7 +11,7 @@ featured: true
 # Weight-Space Programming for Drones: Editing PX4's Neural Flight Controller Without Training
 
 <figure class="wm-fig wm-hero wm-diagram">
- <img src="/images/weight-surgeon/hero_method_v5.svg" alt="Three stations left to right. The original RAPTOR weights as a weight matrix and a climb that overshoots; Claude Opus in the middle, exchanging edits and recordings with a harness; the same weight matrix with one blue cell and a clean climb.">
+ <img src="/images/weight-surgeon/hero_method_v7.svg" alt="Three stations left to right. The original RAPTOR weights as a weight matrix and a climb that overshoots; Claude Opus in the middle, exchanging edits and recordings with a harness; the same weight matrix with one blue cell and a clean climb.">
  <figcaption>One repair, start to finish. Grey is the original RAPTOR weights, the controller PX4 ships. Blue is the same controller with one entry of its GRU input matrix changed, judged on starts the model never flew.</figcaption>
 </figure>
 
@@ -33,6 +33,20 @@ So the question here is narrow. Take the weights of a flight controller that has
 
 [RAPTOR](https://arxiv.org/abs/2509.11481) (Eschmann et al., 2025) is one small recurrent network, a GRU with 16 units and 2,084 weights, trained to fly quadrotors from palm-sized to several kilograms without retuning. PX4 ships it as the experimental `mc_raptor` module. The weights operated on here are [the checkpoint PX4 pins](https://github.com/rl-tools/px4-blob/blob/bc6683a9a2cff29bede2add18c0d7e3ac0cc9c27/policy.tar) for [that module](https://github.com/PX4/PX4-Autopilot/tree/bf59c29e8b8cb9ac66729efc8ce26e41a875f634/src/modules/mc_raptor). Throughout, the original RAPTOR weights are that checkpoint untouched, and the merged controller is the same network after the eleven edits described below, the output of this tool.
 
+<details>
+<summary>The network, in one figure</summary>
+<figure class="wm-fig wm-diagram">
+ <img src="/images/weight-surgeon/network_v3.svg" alt="Pipeline left to right. A column of 22 input cells in five slices: position error, rotation matrix, velocity error, body rates, previous output. Then a dense layer, a 16-unit GRU with a loop arrow carrying its state to the next step, a dense output layer, and four motor command cells under a quad glyph.">
+ <figcaption>Dense, GRU, dense: 2,084 weights, stepped at 100 Hz. The GRU state is the only memory, and the previous output is fed back as an input.</figcaption>
+</figure>
+<ul>
+ <li><strong>It sees</strong> its own state relative to the reference: position error clipped to half a metre per axis, attitude as the full rotation matrix, velocity error clipped to a metre per second, body rates straight from the gyro, and its own output from the last step.</li>
+ <li><strong>It does not see</strong> absolute position, reference velocity, battery, motor speed, a map or a camera. Every trajectory looks like "where I am relative to where I should be right now".</li>
+ <li><strong>It commands motors directly.</strong> One value per motor from minus one to one, which PX4 maps to throttle and hands to the mixer. There is no attitude or rate loop underneath.</li>
+ <li><strong>The clips are why the fast eight fails.</strong> At the 3.5 s period the position error saturates, so the policy cannot tell a half-metre lag from a two-metre one. That is the wide orbit in the clip further down.</li>
+</ul>
+</details>
+
 It is a good controller. It also has habits. On a **5-inch racing quad**, the Flightmare racer from the rl-tools vehicle registry, which sits outside its training range, it hovers a hand's width above the setpoint and overshoots a step climb badly. On the **30 g Crazyflie** it hovers a little low and drops a fraction of its recoveries from a tumbled release. On the **2 kg x500**, PX4's own development quad, it is well behaved until pushed. Nobody injected these. They are what the original RAPTOR weights do, and they are the kind of thing a control engineer would normally go after with a gain table.
 
 <figure class="wm-fig">
@@ -45,7 +59,7 @@ It is a good controller. It also has habits. On a **5-inch racing quad**, the Fl
 Every repair runs the same five steps.
 
 <figure class="wm-fig wm-diagram">
- <img src="/images/weight-surgeon/loop_v4.svg" alt="Five boxes left to right: fly, brief, edit, submit, verdict. An amber loop above the edit box is labelled harness: it owns the live weights and the budget, flies each edit and returns the recording. A line underneath says nothing is hidden from the model and nothing is injected.">
+ <img src="/images/weight-surgeon/loop_v6.svg" alt="Five boxes left to right: fly, brief, edit, submit, verdict. An amber loop above the edit box is labelled harness: it owns the live weights and the budget, flies each edit and returns the recording. A line underneath says nothing is hidden from the model and nothing is injected.">
  <figcaption>The model works in a sandbox and never touches the live weights directly: every edit and every flight goes through the harness. The verdict is computed on starts it never flew, across every vehicle and scenario, and a run with a regression is a failed run.</figcaption>
 </figure>
 
@@ -89,7 +103,7 @@ Six ordinary cells first, easiest behaviour first: two hovers, two steps, a figu
 ## Testing with SITL and more realistic simulations
 
 <figure class="wm-fig wm-diagram">
- <img src="/images/weight-surgeon/deploy_sitl_v5.svg" alt="The merged controller fans out into two lanes that end in the same Isaac Sim box. Top: the x500 lane, a PX4 box labelled mc_raptor exchanging actuator commands and IMU, GPS and barometer data with a Pegasus MAVLink box inside Isaac Sim. Bottom: the racer lane, our 100 Hz script with observation, GRU and rotor stages exchanging forces and pose with Isaac Sim directly. Frames go out as mp4.">
+ <img src="/images/weight-surgeon/deploy_sitl_v7.svg" alt="The merged controller fans out into two lanes that end in the same Isaac Sim box. Top: the x500 lane, a PX4 box labelled mc_raptor exchanging actuator commands and IMU, GPS and barometer data with a Pegasus MAVLink box inside Isaac Sim. Bottom: the racer lane, our 100 Hz script with observation, GRU and rotor stages exchanging forces and pose with Isaac Sim directly. Frames go out as mp4.">
  <figcaption>Two routes out of numpy, both landing in Isaac Sim. The racer flies through our own policy and rotor model. The x500 goes through PX4's real module, which loads the same policy.tar the harness exports, with Isaac as the plant behind a MAVLink bridge.</figcaption>
 </figure>
 
@@ -103,7 +117,7 @@ The racer route is the pretty one. Isaac Sim provides two rigid bodies with the 
 The x500 route is **the one that matters to anyone running PX4**. The harness exports a `policy.tar` the module accepts as its own, self-test block included. The file goes where the module loads it, PX4 SITL boots with the x500's rotor geometry, and the real `mc_raptor` runs the inference in C++ with EKF2 estimating the state from simulated sensors. Isaac Sim is the plant on the other end of a MAVLink link, through the Pegasus Simulator backend, in lockstep. Nothing in PX4 knows the weights were edited. On the fast figure-eight the original weights settle on the same wide lagging orbit they found in numpy, and the merged controller flies the eight.
 
 <figure class="wm-fig wm-video">
- <video autoplay loop muted playsinline controls preload="metadata" aria-label="Two side-by-side views of an x500 quad in a warehouse, flown by PX4. Left, the original RAPTOR weights circle wide of a red figure-eight reference; right, the merged controller traces it closely in blue."><source src="/images/weight-surgeon/px4_x500_eight_fast_side_by_side.mp4" type="video/mp4"></video>
+ <video autoplay loop muted playsinline controls preload="metadata" aria-label="Two side-by-side views of an x500 quad in a warehouse, flown by PX4. Left, the original RAPTOR weights circle wide of a red figure-eight reference; right, the merged controller traces it closely in blue."><source src="/images/weight-surgeon/px4_x500_eight_fast_side_by_side_px4logo.mp4" type="video/mp4"></video>
  <figcaption>PX4 SITL in Isaac Sim on the 3.5 s figure-eight, both runs aligned on the moment the RAPTOR mode took over. Left: original RAPTOR weights, real mc_raptor inference. Right: merged controller, loaded by the module from our policy.tar. Red is the reference the module generated from its activation pose, blue is the flown path.</figcaption>
 </figure>
 

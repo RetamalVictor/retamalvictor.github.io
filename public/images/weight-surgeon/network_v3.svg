@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="400" viewBox="0 0 1180 400" color="#20242B" role="img" aria-label="RAPTOR's policy: 22 inputs (position error, rotation matrix, velocity error, body rates, previous output) through a dense ReLU layer, a 16-unit GRU and a dense output layer to four motor commands.">
+<style>
+text { fill: #20242B; }
+.name { font: 700 22px Helvetica, Arial, sans-serif; letter-spacing: -0.3px; }
+.name-sm { font: 700 18px Helvetica, Arial, sans-serif; }
+.cap { font: 18px Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; fill: #363B43; }
+.cap-sm { font: 16.5px Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; fill: #363B43; }
+.lbl-sm { font: 15px Helvetica, Arial, sans-serif; fill: #363B43; }
+.bl { fill: #0B57D0; }
+</style>
+<defs>
+<marker id="arr" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#20242B"/></marker>
+<marker id="arrB" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#0B57D0"/></marker>
+<marker id="arrA" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#C07A17"/></marker>
+<marker id="arrG" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#5B6570"/></marker>
+</defs>
+<rect width="1180" height="400" rx="6" fill="#F7F8F6"/>
+<text x="314.0" y="42" text-anchor="middle" class="name-sm">22 inputs, 100 Hz</text>
+<rect x="300" y="66" width="28" height="10" fill="#F2DDB8" stroke="#8B939E" stroke-width="0.8"/>
+<rect x="300" y="77" width="28" height="10" fill="#F2DDB8" stroke="#8B939E" stroke-width="0.8"/>
+<rect x="300" y="88" width="28" height="10" fill="#F2DDB8" stroke="#8B939E" stroke-width="0.8"/>
+<text x="286" y="87.5" text-anchor="end" class="cap-sm">position error, ±0.5 m</text>
+<rect x="300" y="103" width="28" height="10" fill="#FFFFFF" stroke="#8B939E" stroke-width="0.8"/>
+<rect x="300" y="114" width="28" height="10" fill="#FFFFFF" stroke="#8B939E" stroke-width="0.8"/>
+<rect x="300" y="125" width="28" height="10" fill="#FFFFFF" stroke="#8B939E" stroke-width="0.8"/>
+<rect x="300" y="136" width="28" height="10" fill="#FFFFFF" stroke="#8B939E" stroke-width="0.8"/>
+<rect x="300" y="147" width="28" height="10" fill="#FFFFFF" stroke="#8B939E" stroke-width="0.8"/>
+<rect x="300" y="158" width="28" height="10" fill="#FFFFFF" stroke="#8B939E" stroke-width="0.8"/>
+<rect x="300" y="169" width="28" height="10" fill="#FFFFFF" stroke="#8B939E" stroke-width="0.8"/>
+<rect x="300" y="180" width="28" height="10" fill="#FFFFFF" stroke="#8B939E" stroke-width="0.8"/>
+<rect x="300" y="191" width="28" height="10" fill="#FFFFFF" stroke="#8B939E" stroke-width="0.8"/>
+<text x="286" y="157.5" text-anchor="end" class="cap-sm">attitude, 3×3 rotation matrix</text>
+<rect x="300" y="206" width="28" height="10" fill="#F2DDB8" stroke="#8B939E" stroke-width="0.8"/>
+<rect x="300" y="217" width="28" height="10" fill="#F2DDB8" stroke="#8B939E" stroke-width="0.8"/>
+<rect x="300" y="228" width="28" height="10" fill="#F2DDB8" stroke="#8B939E" stroke-width="0.8"/>
+<text x="286" y="227.5" text-anchor="end" class="cap-sm">velocity error, ±1 m/s</text>
+<rect x="300" y="243" width="28" height="10" fill="#FFFFFF" stroke="#8B939E" stroke-width="0.8"/>
+<rect x="300" y="254" width="28" height="10" fill="#FFFFFF" stroke="#8B939E" stroke-width="0.8"/>
+<rect x="300" y="265" width="28" height="10" fill="#FFFFFF" stroke="#8B939E" stroke-width="0.8"/>
+<text x="286" y="264.5" text-anchor="end" class="cap-sm">body rates</text>
+<rect x="300" y="280" width="28" height="10" fill="#DCE7FA" stroke="#8B939E" stroke-width="0.8"/>
+<rect x="300" y="291" width="28" height="10" fill="#DCE7FA" stroke="#8B939E" stroke-width="0.8"/>
+<rect x="300" y="302" width="28" height="10" fill="#DCE7FA" stroke="#8B939E" stroke-width="0.8"/>
+<rect x="300" y="313" width="28" height="10" fill="#DCE7FA" stroke="#8B939E" stroke-width="0.8"/>
+<text x="286" y="307.0" text-anchor="end" class="cap-sm">previous output</text>
+<path d="M358 195.0 H398" stroke="#20242B" stroke-width="1.6" fill="none" marker-end="url(#arr)"/>
+<path d="M400 153.0 L412 145.0 L562 145.0 L550 153.0 Z" fill="#DDE2E9" stroke="#8B939E" stroke-width="1"/>
+<path d="M550 153.0 L562 145.0 L562 229.0 L550 237.0 Z" fill="#C8CFD9" stroke="#8B939E" stroke-width="1"/>
+<rect x="400" y="153.0" width="150" height="84" fill="#E7EAEE" stroke="#8B939E" stroke-width="1.2"/>
+<text x="475.0" y="191.0" text-anchor="middle" class="name-sm">dense</text>
+<text x="475.0" y="213.0" text-anchor="middle" class="cap-sm">22 → 16, ReLU</text>
+<text x="475.0" y="263.0" text-anchor="middle" class="lbl-sm">368 weights</text>
+<path d="M562 195.0 H608" stroke="#20242B" stroke-width="1.6" fill="none" marker-end="url(#arr)"/>
+<path d="M610 135.0 L622 127.0 L792 127.0 L780 135.0 Z" fill="#C3D5F5" stroke="#0B57D0" stroke-width="1"/>
+<path d="M780 135.0 L792 127.0 L792 247.0 L780 255.0 Z" fill="#A9C1EE" stroke="#0B57D0" stroke-width="1"/>
+<rect x="610" y="135.0" width="170" height="120" fill="#DCE7FA" stroke="#0B57D0" stroke-width="1.2"/>
+<text x="695.0" y="191.0" text-anchor="middle" class="name-sm" fill="#0B57D0">GRU</text>
+<text x="695.0" y="213.0" text-anchor="middle" class="cap-sm">16 units</text>
+<text x="695.0" y="233.0" text-anchor="middle" class="cap-sm">the only memory</text>
+<text x="695.0" y="281.0" text-anchor="middle" class="lbl-sm">1,648 weights</text>
+<path d="M792 195.0 H838" stroke="#20242B" stroke-width="1.6" fill="none" marker-end="url(#arr)"/>
+<path d="M840 153.0 L852 145.0 L1002 145.0 L990 153.0 Z" fill="#DDE2E9" stroke="#8B939E" stroke-width="1"/>
+<path d="M990 153.0 L1002 145.0 L1002 229.0 L990 237.0 Z" fill="#C8CFD9" stroke="#8B939E" stroke-width="1"/>
+<rect x="840" y="153.0" width="150" height="84" fill="#E7EAEE" stroke="#8B939E" stroke-width="1.2"/>
+<text x="915.0" y="191.0" text-anchor="middle" class="name-sm">dense</text>
+<text x="915.0" y="213.0" text-anchor="middle" class="cap-sm">16 → 4</text>
+<text x="915.0" y="263.0" text-anchor="middle" class="lbl-sm">68 weights</text>
+<path d="M750 127.0 C750 65.0 640 65.0 640 125.0" stroke="#0B57D0" stroke-width="1.8" fill="none" marker-end="url(#arrB)"/>
+<text x="695.0" y="79.0" text-anchor="middle" class="cap-sm" fill="#0B57D0">state carried to the next step</text>
+<path d="M1002 195.0 H1048" stroke="#20242B" stroke-width="1.6" fill="none" marker-end="url(#arr)"/>
+<rect x="1050" y="159.0" width="28" height="17" fill="#DCE7FA" stroke="#0B57D0" stroke-width="0.9"/>
+<rect x="1050" y="177.0" width="28" height="17" fill="#DCE7FA" stroke="#0B57D0" stroke-width="0.9"/>
+<rect x="1050" y="195.0" width="28" height="17" fill="#DCE7FA" stroke="#0B57D0" stroke-width="0.9"/>
+<rect x="1050" y="213.0" width="28" height="17" fill="#DCE7FA" stroke="#0B57D0" stroke-width="0.9"/>
+<path d="M1051.0 112.0 L1077.0 138.0 M1051.0 138.0 L1077.0 112.0" stroke="#20242B" stroke-width="2.9" stroke-linecap="round" fill="none"/>
+<circle cx="1051.0" cy="112.0" r="7.8" fill="#FFFFFF" stroke="#20242B" stroke-width="1.8"/>
+<circle cx="1077.0" cy="112.0" r="7.8" fill="#FFFFFF" stroke="#20242B" stroke-width="1.8"/>
+<circle cx="1051.0" cy="138.0" r="7.8" fill="#FFFFFF" stroke="#20242B" stroke-width="1.8"/>
+<circle cx="1077.0" cy="138.0" r="7.8" fill="#FFFFFF" stroke="#20242B" stroke-width="1.8"/>
+<rect x="1057.5" y="118.5" width="13" height="13" rx="2.3" fill="#20242B"/>
+<circle cx="1064.0" cy="122.14" r="1.4" fill="#FFFFFF"/>
+<text x="1064.0" y="253.0" text-anchor="middle" class="cap-sm">4 motors, −1 to 1</text>
+<text x="1064.0" y="271.0" text-anchor="middle" class="cap-sm">no rate loop below</text>
+<path d="M1064.0 281.0 V372 H368 V302 H331" stroke="#0B57D0" stroke-width="1.4" fill="none" stroke-dasharray="5 4" marker-end="url(#arrB)"/>
+<text x="675.0" y="364" text-anchor="middle" class="cap-sm" fill="#0B57D0">last output, fed back</text>
+</svg>
