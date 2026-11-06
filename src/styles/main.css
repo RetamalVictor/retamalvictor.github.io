@@ -1399,6 +1399,37 @@ body {
   margin-bottom: 2.25rem;
 }
 
+/* A strip of short clips under the hero: four across, two across on a phone. */
+.blog-content .wm-strip .wm-strip-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+}
+.blog-content .wm-strip video,
+.blog-content .wm-fig.wm-strip img {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 1px solid rgb(var(--c-border));
+  border-radius: 2px;
+  background: #fcfcfb;
+}
+@media (max-width: 640px) {
+  .blog-content .wm-strip .wm-strip-row { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* Clips embedded as <video>: same plate as a result figure, full column width. */
+.blog-content .wm-fig.wm-video video {
+  display: block;
+  width: 100%;
+  margin: 0 auto;
+  background: #fcfcfb;
+  padding: 0.75rem;
+  border: 1px solid rgb(var(--c-border));
+  border-radius: 2px;
+}
+
 
 /* ---------------------------------------------------------------------------
    Wide content in long-form posts

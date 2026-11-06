@@ -116,7 +116,7 @@ export class BlogPostPage {
                 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'br', 'hr',
                 'ul', 'ol', 'li', 'dl', 'dt', 'dd',
                 'strong', 'em', 'b', 'i', 'u', 's', 'strike', 'del', 'ins',
-                'a', 'img', 'figure', 'figcaption',
+                'a', 'img', 'figure', 'figcaption', 'video', 'source',
                 'blockquote', 'pre', 'code', 'span',
                 'table', 'thead', 'tbody', 'tr', 'th', 'td',
                 'div', 'section', 'article', 'aside',
@@ -125,7 +125,8 @@ export class BlogPostPage {
             ALLOWED_ATTR: [
                 'href', 'src', 'alt', 'title', 'class', 'id', 'name',
                 'target', 'rel', 'width', 'height', 'loading',
-                'colspan', 'rowspan', 'scope', 'style'
+                'colspan', 'rowspan', 'scope', 'style',
+                'autoplay', 'loop', 'muted', 'playsinline', 'controls', 'poster', 'preload', 'type'
             ],
             ALLOW_DATA_ATTR: false,
             ADD_ATTR: ['target'],
@@ -136,7 +137,7 @@ export class BlogPostPage {
         // Fix image paths for production (add base URL)
         const baseUrl = import.meta.env.BASE_URL || '/';
         html = html.replace(
-            /(<img[^>]+src=["'])\/images\//g,
+            /(<(?:img|source|video)[^>]+(?:src|poster)=["'])\/images\//g,
             `$1${baseUrl}images/`
         );
 
