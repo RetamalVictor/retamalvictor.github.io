@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 392" color="#20242B" role="img"
+     aria-label="The one-step prior test. Three posterior states filtered from the last real Doom frames; from the last one a single prior step with the real action and no frame. The continue head is read from the posterior state and from the prior state. v1 goes from 0.049 to 0.988 (the cue evaporates); v2 from 0.945 to 0.957 (the cue survives the hop).">
+  <style>
+    text { fill: #20242B; }
+    .lbl    { font: 13px Helvetica, Arial, sans-serif; }
+    .lbl-sm { font: 11.5px Helvetica, Arial, sans-serif; fill: #6A7280; }
+    .m      { font: italic 15px Georgia, 'Times New Roman', serif; }
+    .mi     { font: italic 13.5px Georgia, 'Times New Roman', serif; }
+    .ttl    { font: 600 13px Helvetica, Arial, sans-serif; }
+    .big    { font: 600 34px Helvetica, Arial, sans-serif; }
+    .sub    { font: 10px Helvetica, Arial, sans-serif; }
+    .sup    { font: 9.5px Helvetica, Arial, sans-serif; }
+    .up     { font-style: normal; }
+  </style>
+  <defs>
+    <marker id="arrI" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#20242B"/></marker>
+    <marker id="arrG" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8B939E"/></marker>
+    <marker id="arrT" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#0F8C7C"/></marker>
+    <marker id="arrA" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#C07A17"/></marker>
+    <marker id="arrV" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#7B5CC4"/></marker>
+    <radialGradient id="blob" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FFFFFF"/><stop offset="0.45" stop-color="#FFFFFF" stop-opacity="0.85"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect x="0" y="0" width="800" height="392" rx="6" fill="#F7F8F6"/>
+  <text x="400" y="28" text-anchor="middle" class="lbl">a dream is a chain of prior steps: a cue that cannot survive one hop</text>
+  <text x="400" y="46" text-anchor="middle" class="lbl">does not exist in imagination</text>
+  <rect x="25.0" y="200" width="110" height="44" rx="4" fill="#FFFFFF" stroke="#0F8C7C" stroke-width="1.4"/>
+  <rect x="170.0" y="200" width="110" height="44" rx="4" fill="#FFFFFF" stroke="#0F8C7C" stroke-width="1.4"/>
+  <rect x="310.0" y="200" width="110" height="44" rx="4" fill="#BFE5DF" stroke="#0F8C7C" stroke-width="1.4"/>
+  <text x="80" y="228" text-anchor="middle" class="m">s<tspan class="sub" dy="4">T−2</tspan><tspan dy="-4"></tspan></text>
+  <text x="225" y="228" text-anchor="middle" class="m">s<tspan class="sub" dy="4">T−1</tspan><tspan dy="-4"></tspan></text>
+  <text x="365" y="228" text-anchor="middle" class="m">s<tspan class="sub" dy="4">post</tspan><tspan dy="-4"></tspan></text>
+  <line x1="139.0" y1="222.0" x2="166.0" y2="222.0" stroke="#0F8C7C" stroke-width="1.5" marker-end="url(#arrT)"/>
+  <line x1="284.0" y1="222.0" x2="306.0" y2="222.0" stroke="#0F8C7C" stroke-width="1.5" marker-end="url(#arrT)"/>
+  <line x1="424.0" y1="222.0" x2="496.0" y2="222.0" stroke="#C07A17" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrA)"/>
+  <rect x="500.0" y="200" width="110" height="44" rx="4" fill="#FBF3E6" stroke="#C07A17" stroke-width="1.4" stroke-dasharray="6 4"/>
+  <text x="555" y="228" text-anchor="middle" class="m">s<tspan class="sub" dy="4">prior</tspan><tspan dy="-4"></tspan></text>
+  <text x="460" y="176" text-anchor="middle" class="lbl" style="fill:#C07A17">one prior step</text>
+  <text x="460" y="192" text-anchor="middle" class="lbl" style="fill:#C07A17">real action, no frame</text>
+  <rect x="305" y="106" width="120" height="40" rx="4" fill="#E4DCF6" stroke="#7B5CC4" stroke-width="1.6"/>
+  <text x="365" y="131" text-anchor="middle" class="lbl"><tspan class="m">P</tspan>(cont.)</text>
+  <line x1="365" y1="196" x2="365" y2="152" stroke="#7B5CC4" stroke-width="1.6" marker-end="url(#arrV)"/>
+  <rect x="495" y="106" width="120" height="40" rx="4" fill="#E4DCF6" stroke="#7B5CC4" stroke-width="1.6"/>
+  <text x="555" y="131" text-anchor="middle" class="lbl"><tspan class="m">P</tspan>(cont.)</text>
+  <line x1="555" y1="196" x2="555" y2="152" stroke="#7B5CC4" stroke-width="1.6" marker-end="url(#arrV)"/>
+  <rect x="54" y="298" width="52" height="52" rx="3" fill="#0B0B0D" stroke="#8B939E" stroke-width="1"/>
+  <circle cx="80.0" cy="324.0" r="5.5" fill="url(#blob)"/>
+  <line x1="80" y1="294" x2="80" y2="252" stroke="#0F8C7C" stroke-width="1.5" marker-end="url(#arrT)"/>
+  <text x="80" y="372" text-anchor="middle" class="lbl"><tspan class="m">o</tspan><tspan class="m sub" dy="4">T−2</tspan></text>
+  <rect x="199" y="298" width="52" height="52" rx="3" fill="#0B0B0D" stroke="#8B939E" stroke-width="1"/>
+  <circle cx="225.0" cy="324.0" r="8.5" fill="url(#blob)"/>
+  <line x1="225" y1="294" x2="225" y2="252" stroke="#0F8C7C" stroke-width="1.5" marker-end="url(#arrT)"/>
+  <text x="225" y="372" text-anchor="middle" class="lbl"><tspan class="m">o</tspan><tspan class="m sub" dy="4">T−1</tspan></text>
+  <rect x="339" y="298" width="52" height="52" rx="3" fill="#0B0B0D" stroke="#8B939E" stroke-width="1"/>
+  <circle cx="365.0" cy="324.0" r="13" fill="url(#blob)"/>
+  <line x1="365" y1="294" x2="365" y2="252" stroke="#0F8C7C" stroke-width="1.5" marker-end="url(#arrT)"/>
+  <text x="365" y="372" text-anchor="middle" class="lbl"><tspan class="m">o</tspan><tspan class="m sub" dy="4">T</tspan></text>
+  <text x="387" y="372" text-anchor="start" class="lbl">the last real frame</text>
+  <text x="632" y="150" text-anchor="start" class="lbl-sm">posterior → prior</text>
+  <text x="632" y="190" text-anchor="start" class="lbl">v1   0.049 → 0.988</text>
+  <text x="632" y="208" text-anchor="start" class="lbl" style="fill:#A35D52">the cue evaporates</text>
+  <text x="632" y="248" text-anchor="start" class="lbl">v2   0.945 → 0.957</text>
+  <text x="632" y="266" text-anchor="start" class="lbl" style="fill:#0F8C7C">the cue survives the hop</text>
+</svg>

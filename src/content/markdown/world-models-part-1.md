@@ -29,7 +29,7 @@ featured: true
 
 A model can reconstruct every frame you show it, pixel for pixel, and still know nothing about how the world moves. I found that easy to nod along to and hard to believe until it happened in my own code, on a dataset small enough to hold in my head. So this series builds the whole thing from scratch, on a world I wrote: a VAE, then Ha and Schmidhuber's frozen-encoder recurrent model from *World Models* (2018), then the RSSM from Dreamer (Hafner et al., 2019). Same dataset, same evaluation, one number decides who wins.
 
-**What you need:** convolutional networks, maximum likelihood, and enough JAX to read a `lax.scan`. Code is at [github.com/RetamalVictor/world-models](https://github.com/RetamalVictor/world-models); every number below comes from a seeded run in that repo.
+**What you need:** convolutional networks, maximum likelihood, and enough JAX to read a `lax.scan`. Code is at [github.com/RetamalVictor/world-models-from-scratch](https://github.com/RetamalVictor/world-models-from-scratch); every number below comes from a seeded run in that repo.
 
 ---
 

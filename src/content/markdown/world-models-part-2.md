@@ -537,4 +537,4 @@ uv run train-ac --wm-run runs/rssm/follow --data data/ball_follow.npz \
 
 **A representation is shaped by the loss that reaches it.** Train an encoder on reconstruction and you get a code that knows what a frame looks like. Train it on prediction and you get a code that knows what the world does next, and, as it turns out, one that also knows better what the frame looks like.
 
-Next stop is the environment this was all rehearsal for: the same recipe, pointed at DOOM's `take_cover`, where nobody hands you the true state and every measurement in this series has to be earned a different way.
+Next: [part 3](/blog/world-models-part-3) is the environment this was all rehearsal for: the same recipe, pointed at DOOM's `take_cover`, where nobody hands you the true state and every measurement in this series has to be earned a different way.

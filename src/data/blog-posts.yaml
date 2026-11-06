@@ -8,6 +8,15 @@ posts:
     notebook: ""
     featured: true
 
+  - slug: "world-models-part-3"
+    title: "World Models From Scratch, Part 3: The Head That Learned the Wrong Death"
+    date: "2026-08-16"
+    tags: ["machine-learning", "world-models", "rssm", "dreamer", "reinforcement-learning", "vizdoom"]
+    summary: "The same recipe pointed at ViZDoom take_cover, where nobody hands you the true state. A death predictor with a near-perfect loss that almost never fired inside a dream, the one-step test that caught it, and an agent trained in imagination that survives 2.7x longer than random."
+    readTime: "15 min"
+    notebook: ""
+    featured: true
+
   - slug: "world-models-part-2"
     title: "World Models From Scratch, Part 2: Frozen Versus Joint"
     date: "2026-08-12"

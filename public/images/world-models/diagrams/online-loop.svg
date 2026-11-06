@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 330" color="#20242B" role="img"
+     aria-label="The online loop. ViZDoom take_cover produces one episode per round into a replay buffer of whole episodes; the world model takes 100 updates per round on 33-frame windows; the actor-critic takes 100 updates per round in imagination at horizon 15 and never sees a real frame; it picks the buttons for the next episode. A fresh actor is refit from the frozen model at the end.">
+  <style>
+    text { fill: #20242B; }
+    .lbl    { font: 13px Helvetica, Arial, sans-serif; }
+    .lbl-sm { font: 11.5px Helvetica, Arial, sans-serif; fill: #6A7280; }
+    .m      { font: italic 15px Georgia, 'Times New Roman', serif; }
+    .mi     { font: italic 13.5px Georgia, 'Times New Roman', serif; }
+    .ttl    { font: 600 13px Helvetica, Arial, sans-serif; }
+    .big    { font: 600 34px Helvetica, Arial, sans-serif; }
+    .sub    { font: 10px Helvetica, Arial, sans-serif; }
+    .sup    { font: 9.5px Helvetica, Arial, sans-serif; }
+    .up     { font-style: normal; }
+  </style>
+  <defs>
+    <marker id="arrI" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#20242B"/></marker>
+    <marker id="arrG" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8B939E"/></marker>
+    <marker id="arrT" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#0F8C7C"/></marker>
+    <marker id="arrA" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#C07A17"/></marker>
+    <marker id="arrV" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#7B5CC4"/></marker>
+    <radialGradient id="blob" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FFFFFF"/><stop offset="0.45" stop-color="#FFFFFF" stop-opacity="0.85"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect x="0" y="0" width="800" height="330" rx="6" fill="#F7F8F6"/>
+  <rect x="40" y="70" width="146" height="54" rx="4" fill="#E7EAEE" stroke="#8B939E" stroke-width="1.4"/>
+  <text x="113" y="92" text-anchor="middle" class="lbl">ViZDoom</text>
+  <text x="113" y="111" text-anchor="middle" class="lbl">take_cover</text>
+  <text x="113" y="54" text-anchor="middle" class="lbl-sm">the only place reality enters</text>
+  <rect x="306" y="70" width="170" height="54" rx="4" fill="#E7EAEE" stroke="#8B939E" stroke-width="1.4"/>
+  <text x="391" y="92" text-anchor="middle" class="lbl">replay buffer</text>
+  <text x="391" y="111" text-anchor="middle" class="lbl-sm" style="fill:#20242B">uint8, whole episodes</text>
+  <line x1="192" y1="97" x2="300" y2="97" stroke="#20242B" stroke-width="1.4" marker-end="url(#arrI)"/>
+  <text x="246" y="88" text-anchor="middle" class="lbl-sm">one episode / round</text>
+  <rect x="306" y="220" width="170" height="54" rx="4" fill="#BFE5DF" stroke="#0F8C7C" stroke-width="1.4"/>
+  <text x="391" y="242" text-anchor="middle" class="lbl">world model</text>
+  <text x="391" y="261" text-anchor="middle" class="lbl-sm" style="fill:#20242B">RSSM + four heads</text>
+  <line x1="391" y1="130" x2="391" y2="214" stroke="#20242B" stroke-width="1.4" marker-end="url(#arrI)"/>
+  <text x="403" y="166" text-anchor="start" class="lbl-sm">100 updates / round</text>
+  <text x="403" y="182" text-anchor="start" class="lbl-sm">33-frame windows</text>
+  <rect x="40" y="220" width="146" height="54" rx="4" fill="#F2DDB8" stroke="#C07A17" stroke-width="1.4"/>
+  <text x="113" y="252" text-anchor="middle" class="lbl">actor-critic</text>
+  <line x1="300" y1="247" x2="192" y2="247" stroke="#7B5CC4" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#arrV)"/>
+  <text x="246" y="198" text-anchor="middle" class="lbl" style="fill:#7B5CC4">the actor never</text>
+  <text x="246" y="214" text-anchor="middle" class="lbl" style="fill:#7B5CC4">sees a real frame</text>
+  <text x="246" y="296" text-anchor="middle" class="lbl" style="fill:#7B5CC4">100 updates / round</text>
+  <text x="246" y="312" text-anchor="middle" class="lbl" style="fill:#7B5CC4">imagination, horizon 15</text>
+  <line x1="113" y1="214" x2="113" y2="130" stroke="#20242B" stroke-width="1.4" marker-end="url(#arrI)"/>
+  <text x="121" y="150" text-anchor="start" class="lbl-sm">picks the buttons</text>
+  <text x="121" y="166" text-anchor="start" class="lbl-sm">for the next episode</text>
+  <line x1="482" y1="247" x2="612" y2="247" stroke="#C07A17" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrA)"/>
+  <text x="547" y="236" text-anchor="middle" class="lbl-sm">freeze, refit, score</text>
+  <rect x="620" y="220" width="160" height="54" rx="4" fill="#FBF3E6" stroke="#C07A17" stroke-width="1.4" stroke-dasharray="6 4"/>
+  <text x="700" y="242" text-anchor="middle" class="lbl">fresh actor,</text>
+  <text x="700" y="261" text-anchor="middle" class="lbl">refit at the end</text>
+  <text x="700" y="298" text-anchor="middle" class="lbl-sm">the model is the asset;</text>
+  <text x="700" y="314" text-anchor="middle" class="lbl-sm">the actor is cheap to regrow</text>
+</svg>
