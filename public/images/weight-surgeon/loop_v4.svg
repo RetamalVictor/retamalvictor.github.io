@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="270" viewBox="0 0 1180 270" color="#20242B" role="img" aria-label="The repair loop: fly the original RAPTOR weights and record an episode; write the brief; Claude forms a hypothesis, edits and flies through the harness; submits; the verdict is computed on new starts across every vehicle and scenario.">
+<style>
+text { fill: #20242B; }
+.name { font: 700 22px Helvetica, Arial, sans-serif; letter-spacing: -0.3px; }
+.name-sm { font: 700 18px Helvetica, Arial, sans-serif; }
+.cap { font: italic 17px Georgia, 'Times New Roman', serif; fill: #6A7280; }
+.cap-sm { font: italic 15px Georgia, 'Times New Roman', serif; fill: #6A7280; }
+.lbl-sm { font: 14px Helvetica, Arial, sans-serif; fill: #6A7280; }
+.bl { fill: #0B57D0; }
+</style>
+<defs>
+<marker id="arr" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#20242B"/></marker>
+<marker id="arrB" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#0B57D0"/></marker>
+<marker id="arrA" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#C07A17"/></marker>
+<marker id="arrG" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#5B6570"/></marker>
+</defs>
+<rect width="1180" height="270" rx="6" fill="#F7F8F6"/>
+<rect x="26.0" y="96" width="200" height="110" rx="14" fill="#FFFFFF" stroke="#20242B" stroke-width="1.3"/>
+<text x="126.0" y="134" text-anchor="middle" class="name">fly</text>
+<text x="126.0" y="162" text-anchor="middle" class="cap-sm">original RAPTOR</text>
+<text x="126.0" y="182" text-anchor="middle" class="cap-sm">weights, numpy l2f</text>
+<rect x="258.0" y="96" width="200" height="110" rx="14" fill="#FFFFFF" stroke="#20242B" stroke-width="1.3"/>
+<text x="358.0" y="134" text-anchor="middle" class="name">brief</text>
+<text x="358.0" y="162" text-anchor="middle" class="cap-sm">physics, recording,</text>
+<text x="358.0" y="182" text-anchor="middle" class="cap-sm">weights as text</text>
+<rect x="490.0" y="96" width="200" height="110" rx="14" fill="#DCE7FA" stroke="#0B57D0" stroke-width="1.3"/>
+<text x="590.0" y="134" text-anchor="middle" class="name">edit</text>
+<text x="590.0" y="162" text-anchor="middle" class="cap-sm">hypothesis,</text>
+<text x="590.0" y="182" text-anchor="middle" class="cap-sm">edit and fly</text>
+<rect x="722.0" y="96" width="200" height="110" rx="14" fill="#FFFFFF" stroke="#0B57D0" stroke-width="1.3"/>
+<text x="822.0" y="134" text-anchor="middle" class="name">submit</text>
+<text x="822.0" y="162" text-anchor="middle" class="cap-sm">the edit,</text>
+<text x="822.0" y="182" text-anchor="middle" class="cap-sm">and why</text>
+<rect x="954.0" y="96" width="200" height="110" rx="14" fill="#FFFFFF" stroke="#20242B" stroke-width="1.3"/>
+<text x="1054.0" y="134" text-anchor="middle" class="name">verdict</text>
+<text x="1054.0" y="162" text-anchor="middle" class="cap-sm">new starts,</text>
+<text x="1054.0" y="182" text-anchor="middle" class="cap-sm">every vehicle</text>
+<path d="M41.0 111 L59.0 129 M41.0 129 L59.0 111" stroke="#8B939E" stroke-width="2.0" stroke-linecap="round" fill="none"/>
+<circle cx="41.0" cy="111" r="5.4" fill="#E7EAEE" stroke="#8B939E" stroke-width="1.3"/>
+<circle cx="59.0" cy="111" r="5.4" fill="#E7EAEE" stroke="#8B939E" stroke-width="1.3"/>
+<circle cx="41.0" cy="129" r="5.4" fill="#E7EAEE" stroke="#8B939E" stroke-width="1.3"/>
+<circle cx="59.0" cy="129" r="5.4" fill="#E7EAEE" stroke="#8B939E" stroke-width="1.3"/>
+<rect x="45.5" y="115.5" width="9" height="9" rx="1.6" fill="#8B939E"/>
+<circle cx="50.0" cy="118.02" r="1.0" fill="#FFFFFF"/>
+<svg x="502.0" y="106" width="26.0" height="26.0" viewBox="0.0 0.0 24.0 24.0" overflow="visible"><g fill="#D97757"><path d="m4.7144 15.9555 4.7174-2.6471.079-.2307-.079-.1275h-.2307l-.7893-.0486-2.6956-.0729-2.3375-.0971-2.2646-.1214-.5707-.1215-.5343-.7042.0546-.3522.4797-.3218.686.0608 1.5179.1032 2.2767.1578 1.6514.0972 2.4468.255h.3886l.0546-.1579-.1336-.0971-.1032-.0972L6.973 9.8356l-2.55-1.6879-1.3356-.9714-.7225-.4918-.3643-.4614-.1578-1.0078.6557-.7225.8803.0607.2246.0607.8925.686 1.9064 1.4754 2.4893 1.8336.3643.3035.1457-.1032.0182-.0728-.164-.2733-1.3539-2.4467-1.445-2.4893-.6435-1.032-.17-.6194c-.0607-.255-.1032-.4674-.1032-.7285L6.287.1335 6.6997 0l.9957.1336.419.3642.6192 1.4147 1.0018 2.2282 1.5543 3.0296.4553.8985.2429.8318.091.255h.1579v-.1457l.1275-1.706.2368-2.0947.2307-2.6957.0789-.7589.3764-.9107.7468-.4918.5828.2793.4797.686-.0668.4433-.2853 1.8517-.5586 2.9021-.3643 1.9429h.2125l.2429-.2429.9835-1.3053 1.6514-2.0643.7286-.8196.85-.9046.5464-.4311h1.0321l.759 1.1293-.34 1.1657-1.0625 1.3478-.8804 1.1414-1.2628 1.7-.7893 1.36.0729.1093.1882-.0183 2.8535-.607 1.5421-.2794 1.8396-.3157.8318.3886.091.3946-.3278.8075-1.967.4857-2.3072.4614-3.4364.8136-.0425.0304.0486.0607 1.5482.1457.6618.0364h1.621l3.0175.2247.7892.522.4736.6376-.079.4857-1.2142.6193-1.6393-.3886-3.825-.9107-1.3113-.3279h-.1822v.1093l1.0929 1.0686 2.0035 1.8092 2.5075 2.3314.1275.5768-.3218.4554-.34-.0486-2.2039-1.6575-.85-.7468-1.9246-1.621h-.1275v.17l.4432.6496 2.3436 3.5214.1214 1.0807-.17.3521-.6071.2125-.6679-.1214-1.3721-1.9246L14.38 17.959l-1.1414-1.9428-.1397.079-.674 7.2552-.3156.3703-.7286.2793-.6071-.4614-.3218-.7468.3218-1.4753.3886-1.9246.3157-1.53.2853-1.9004.17-.6314-.0121-.0425-.1397.0182-1.4328 1.9672-2.1796 2.9446-1.7243 1.8456-.4128.164-.7164-.3704.0667-.6618.4008-.5889 2.386-3.0357 1.4389-1.882.929-1.0868-.0062-.1579h-.0546l-6.3385 4.1164-1.1293.1457-.4857-.4554.0608-.7467.2307-.2429 1.9064-1.3114Z"/></g></svg>
+<path d="M970.0 120 l6 7 l12 -14" stroke="#0B57D0" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M226.0 151.0 H257.0" stroke="#20242B" stroke-width="1.8" fill="none" marker-end="url(#arr)"/>
+<path d="M458.0 151.0 H489.0" stroke="#20242B" stroke-width="1.8" fill="none" marker-end="url(#arr)"/>
+<path d="M690.0 151.0 H721.0" stroke="#0B57D0" stroke-width="1.8" fill="none" marker-end="url(#arrB)"/>
+<path d="M922.0 151.0 H953.0" stroke="#0B57D0" stroke-width="1.8" fill="none" marker-end="url(#arrB)"/>
+<path d="M638.0 96 C638.0 24 542.0 24 542.0 95" stroke="#C07A17" stroke-width="1.8" fill="none" marker-end="url(#arrA)"/>
+<text x="654.0" y="50" class="name-sm" fill="#C07A17">harness</text>
+<text x="654.0" y="70" class="cap-sm">flies each edit,</text>
+<text x="654.0" y="88" class="cap-sm">returns the recording</text>
+<text x="590.0" y="248" text-anchor="middle" class="cap">no faults injected, no answer key</text>
+</svg>

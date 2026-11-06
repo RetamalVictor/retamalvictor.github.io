@@ -1,4 +1,13 @@
 posts:
+  - slug: "weight-space-programming-drones"
+    title: "Weight-Space Programming for Drones: Editing PX4's Neural Flight Controller Without Training"
+    date: "2026-11-06"
+    tags: ["robotics", "control", "drones", "px4", "llm", "weight-space-programming", "isaac-sim"]
+    summary: "RAPTOR is the small recurrent controller that ships in PX4. I gave its weights, the vehicle physics and a recording of its behaviour to Claude Opus and asked it to explain what it saw and change the weights so the behaviour changed. No training, no gradients, every edit judged on starts the model never flew. A showcase of what came out, with the caveats attached."
+    readTime: "6 min"
+    notebook: ""
+    featured: true
+
   - slug: "world-models-part-2"
     title: "World Models From Scratch, Part 2: Frozen Versus Joint"
     date: "2026-08-12"
