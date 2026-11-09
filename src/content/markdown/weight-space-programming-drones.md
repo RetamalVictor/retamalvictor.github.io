@@ -12,7 +12,7 @@ featured: true
 
 <figure class="wm-fig wm-hero wm-diagram">
  <img src="/images/weight-surgeon/hero_method_v7.svg" alt="Three stations left to right. The original RAPTOR weights as a weight matrix and a climb that overshoots; Claude Opus in the middle, exchanging edits and recordings with a harness; the same weight matrix with one blue cell and a clean climb.">
- <figcaption>One repair, start to finish. Grey is the original RAPTOR weights, the controller PX4 ships. Blue is the same controller with one entry of its GRU input matrix changed, judged on starts the model never flew.</figcaption>
+ <figcaption>One repair, start to finish. Grey is the original RAPTOR weights, the controller PX4 ships. Blue is the same controller with one entry of its GRU input matrix changed, judged on starts the model never flew. There is one set of weights for all three vehicles, so every edit is re-flown on all of them.</figcaption>
 </figure>
 
 <figure class="wm-fig wm-strip">
@@ -69,6 +69,8 @@ Nobody told the model how to work, and in every run it did roughly the same thin
 
 The racer's overshoot is the cleanest example of the kind of reasoning that came back. The module's input pipeline, which the harness reproduces for every vehicle, clips the position and velocity errors before the network sees them. On a step climb the network stares at a frozen input for most of the way up, keeps ramping collective, and only starts braking when the error unclips. A quadrotor brakes at roughly one g, so the overshoot scales with how hard the vehicle accelerated while blind, and the racer accelerates very hard. The fix was one entry of the GRU input matrix, routing a hidden unit that happens to fire only at the racer's low hover throttle into a gentler vertical gain. One number, and the other vehicles never notice it.
 
+It matters that they never notice, because there is only one set of weights. Nothing here is tuned per platform. An edit meant for the racer has to go through something only the racer switches on, and its hover throttle, far lower than the other two ever fly at, is exactly that.
+
 <figure class="wm-fig wm-video">
  <video autoplay loop muted playsinline controls preload="metadata" aria-label="Two racing quads in a warehouse scene fly a sideways step then a climb. The one with the white beacon climbs past the target and comes back down; the one with the blue beacon stops at the target."><source src="/images/weight-surgeon/isaac_racer_step_v3.mp4" type="video/mp4"></video>
  <figcaption>The same step, flown in Isaac Sim. White beacon: original RAPTOR weights. Blue beacon: merged controller. Same start, same physics, different numbers in the matrix.</figcaption>
@@ -107,7 +109,7 @@ Six ordinary cells first, easiest behaviour first: two hovers, two steps, a figu
  <figcaption>Two routes out of numpy, both landing in Isaac Sim. The racer flies through our own policy and rotor model. The x500 goes through PX4's real module, which loads the same policy.tar the harness exports, with Isaac as the plant behind a MAVLink bridge.</figcaption>
 </figure>
 
-The racer route is the pretty one. Isaac Sim provides two rigid bodies with the racer's mass and inertia, a warehouse and a camera. Our numpy policy and our rotor model run on each body at 100 Hz, PhysX integrates, RTX renders. Before trusting any clip I compared the Isaac flights with the numpy simulator on the same starts, and for hover, the step and the figure-eight they agree to about a centimetre. Tumbles diverge after half a second, as chaotic things do. The videos show the controller, not the renderer.
+For the racer, Isaac Sim provides two rigid bodies with the racer's mass and inertia, a warehouse and a camera. Our numpy policy and our rotor model run on each body at 100 Hz, PhysX integrates, RTX renders. Before trusting any clip I compared the Isaac flights with the numpy simulator on the same starts, and for hover, the step and the figure-eight they agree to about a centimetre. Tumbles diverge after half a second, as chaotic things do.
 
 <figure class="wm-fig wm-video">
  <video autoplay loop muted playsinline controls preload="metadata" aria-label="Two racing quads fly a three-dimensional course through a warehouse. The white-beacon quad cuts corners and lags; the blue-beacon quad holds the line."><source src="/images/weight-surgeon/isaac_racer_course_v3.mp4" type="video/mp4"></video>
@@ -125,8 +127,12 @@ The x500 route is **the one that matters to anyone running PX4**. The harness ex
 
 All of this is simulation. The numbers come from the simulator RAPTOR was trained in, with the module's observation pipeline copied from the PX4 source, and the PX4 flights use a Pegasus Iris body carrying the x500's mass and thrust, not the training twin.
 
+One run failed, and it belongs here with the rest. After the merge I asked for one more fix: the x500 thrown into the air, which crashes about one start in seven. Every crash is an upward throw. The controller cuts all four motors to stop the climb and, in the same hundred milliseconds, asks for a braking tilt, and an x500 at zero throttle has no torque left to stop the rotation it just started. It ends upside down. The edit took the horizontal-velocity inputs away from the hidden unit that fires at low throttle, and the crash rate fell from 14.7 % to 5.7 %.
+
+The verdict still said no. A hard upward throw makes the x500 cut its motors, and for that moment it looks like a racer to the network: the low-throttle unit from the step fix switches on. Weakening it saved the x500 and cost the racer, which flies on that unit all the time. Its figure-eight got 12 % worse, past the 10 % a run is allowed. So the merged controller in the videos does not carry the throw fix. A version that only acts when the motors are actually floored is what I would try next.
+
 I would also not read too much into how easily the model found these. The brief hands it the physics, the recording and the weights as text, which is more than I usually get, and 2,084 numbers is few enough to scan one at a time. A controller with a million weights is a different problem, and I have not tried it.
 
-Within those limits the result holds. The verdict was computed on seeds the model never flew, every run cleared it, and every edit arrived with a mechanism I could check against the recording. That is more than my gain tables usually come with.
+Within those limits the result holds. The verdict was computed on seeds the model never flew, every run that went into the merged controller cleared it, and every edit arrived with a mechanism I could check against the recording. That is more than my gain tables usually come with.
 
 Code, briefs, transcripts and every edit script: soon to be public.
